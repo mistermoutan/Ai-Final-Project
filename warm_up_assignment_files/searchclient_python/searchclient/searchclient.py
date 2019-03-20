@@ -77,7 +77,7 @@ class SearchClient:
                         print('Error, read invalid level character: {}'.format(char), file=sys.stderr, flush=True)
                         sys.exit(1)
                 row += 1
-            #self.initial_state = StateSA(maze, boxes, goals, agent)
+            self.initial_state = StateSA(maze, boxes, goals, agent)
 
         except Exception as ex:
             print('Error parsing level: {}.'.format(repr(ex)), file=sys.stderr, flush=True)

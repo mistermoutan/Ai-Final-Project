@@ -302,12 +302,12 @@ class StateSA:
                     child = self.copy()
                     child.agent_row = new_agent_row
                     child.agent_col = new_agent_col
-                    child._hash -= hash((self.agent_row, self.agent_col))
-                    child._hash += hash((new_agent_row, new_agent_col))
                     child.parent = self
                     child.action = action
                     child.g += 1
-                    child._hash = None
+                    child._hash -= hash((self.agent_row, self.agent_col))
+                    child._hash += hash((new_agent_row, new_agent_col))
+                    #child._hash = None
                     children.append(child)
             elif action.action_type is ActionType.Push:
                 if self.box_at(new_agent_row, new_agent_col):
@@ -385,8 +385,7 @@ class StateSA:
             prime = 31
             _hash = 1
             _hash = _hash * prime + self.box_hash()
-            _hash = _hash * prime + self.agent_row
-            _hash = _hash * prime + self.agent_col
+            _hash = _hash * prime + hash((self.agent_row, self.agent_col))
             self._hash = _hash
         return self._hash
 
