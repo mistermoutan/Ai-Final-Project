@@ -1,9 +1,10 @@
 import argparse
 import re
 import sys
+import traceback
 
 import memory
-from state import State
+from state import State, StateSA
 from strategy import StrategyBFS, StrategyDFS, StrategyBestFirst
 from heuristic import AStar, WAStar, Greedy
 
@@ -13,6 +14,7 @@ class SearchClient:
         self.initial_state = None
         
         colors_re = re.compile(r'^[a-z]+:\s*[0-9A-Z](\s*,\s*[0-9A-Z])*\s*$')
+        lines = []
         try:
             # Read lines for colors. There should be none of these in warmup levels.
             line = server_messages.readline().rstrip()
@@ -21,19 +23,53 @@ class SearchClient:
                 sys.exit(1)
             
             # Read lines for level.
-            self.initial_state = State()
-            row = 0
             while line:
+                lines.append(line)
+                line = server_messages.readline().rstrip()
+            #for line in lines:
+            #    print(line, file=sys.stderr, flush=True)
+
+            cols = max([len(line) for line in lines])
+            self.initial_state = State(rows=len(lines), cols=cols)
+            maze = [[True for _ in range(cols)] for _ in range(len(lines))]
+            agent = (0,0)
+            boxes = []
+            goals = []
+            type_count = 0
+            seen_types = {}
+            row = 0
+            for line in lines:
+                #print(line, file=sys.stderr, flush=True)
                 for col, char in enumerate(line):
-                    if char == '+': self.initial_state.walls[row][col] = True
+                    if char == '+':
+                        self.initial_state.walls[row][col] = True
+                        maze[row][col] = False
                     elif char in "0123456789":
                         if self.initial_state.agent_row is not None:
                             print('Error, encountered a second agent (client only supports one agent).', file=sys.stderr, flush=True)
                             sys.exit(1)
                         self.initial_state.agent_row = row
                         self.initial_state.agent_col = col
-                    elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ": self.initial_state.boxes[row][col] = char
-                    elif char in "abcdefghijklmnopqrstuvwxyz": self.initial_state.goals[row][col] = char
+                        agent = (row, col)
+                    elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                        self.initial_state.boxes[row][col] = char
+                        type = type_count
+                        if char.lower() in seen_types.keys():
+                            type = seen_types[char.lower()]
+                        else:
+                            seen_types[char.lower()] = type
+                            type_count += 1
+                        boxes.append((type, (row, col)))
+                    elif char in "abcdefghijklmnopqrstuvwxyz":
+                        self.initial_state.goals[row][col] = char
+                        self.initial_state.goal_dict[char].append((row, col))
+                        type = type_count
+                        if char.lower() in seen_types.keys():
+                            type = seen_types[char.lower()]
+                        else:
+                            seen_types[char.lower()] = type
+                            type_count += 1
+                        goals.append((type, (row, col)))
                     elif char == ' ':
                         # Free cell.
                         pass
@@ -41,9 +77,11 @@ class SearchClient:
                         print('Error, read invalid level character: {}'.format(char), file=sys.stderr, flush=True)
                         sys.exit(1)
                 row += 1
-                line = server_messages.readline().rstrip()
+            #self.initial_state = StateSA(maze, boxes, goals, agent)
+
         except Exception as ex:
             print('Error parsing level: {}.'.format(repr(ex)), file=sys.stderr, flush=True)
+            print(traceback.format_exc(), file=sys.stderr, flush=True)
             sys.exit(1)
     
     def search(self, strategy: 'Strategy') -> '[State, ...]':
@@ -85,7 +123,12 @@ def main(strategy_str: 'str'):
     
     # Read level and create the initial state of the problem.
     client = SearchClient(server_messages);
-
+    
+    # Default to BFS strategy.
+    if not strategy_str:
+        strategy_str = 'bfs'
+        print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)
+    
     strategy = None
     if strategy_str == 'bfs':
         strategy = StrategyBFS()
@@ -97,10 +140,6 @@ def main(strategy_str: 'str'):
         strategy = StrategyBestFirst(WAStar(client.initial_state, 5))
     elif strategy_str == 'greedy':
         strategy = StrategyBestFirst(Greedy(client.initial_state))
-    else:
-        # Default to BFS strategy.
-        strategy = StrategyBFS()
-        print('Defaulting to BFS search. Use arguments -bfs, -dfs, -astar, -wastar, or -greedy to set the search strategy.', file=sys.stderr, flush=True)
     
     solution = client.search(strategy)
     if solution is None:
@@ -138,5 +177,5 @@ if __name__ == '__main__':
     memory.max_usage = args.max_memory
     
     # Run client.
-    main(args.strategy)
+    main(args.strategy.lower())
 
