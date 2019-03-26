@@ -417,3 +417,41 @@ class StateSA:
             lines.append(''.join(line))
         return '\n'.join(lines)
 
+class StateMA:
+    _RNG = random.Random(1)
+
+    def __init__(self, maze: List[List[int]] = None, boxes: List[Tuple[int, Tuple[int, int], int]] = None,
+                 goals: List[Tuple[int, Tuple[int, int]]] = None, agents: List[Tuple[int, Tuple[int, int], int]] = None):
+        '''
+        :param maze: maze should be a grid containing true or false with false being walls and true being open spaces
+        :param boxes: boxes should be a list containing the following tuple: (type (number), position (x,y), color (number))
+        :param goals: goals should be a list containing the following tuple: (type (number), position (x,y))
+        :param agents: boxes should be a list containing the following tuple: (agentid (number), position (x,y), color (number))
+        :param agent: tuple of agent's position (x,y)
+        '''
+        if maze is None:
+            return
+
+        self.rows = len(maze)
+        self.cols = len(maze[0])
+        self.maze = maze
+
+        self.box_types = [b[0] for b in boxes]
+        self.box_positions = [b[1] for b in boxes]
+        self.box_colors = [b[2] for b in boxes]
+        self.box_at_position = {pos: i for i, pos in enumerate(self.box_positions)}
+
+        self.goal_types = [b[0] for b in goals]
+        self.goal_positions = [b[1] for b in goals]
+        self.goal_at_position = {pos: i for i, pos in enumerate(self.goal_positions)}
+
+        self.agent_id = [a[0] for a in agents]
+        self.agent_positions = [a[1] for a in agents]
+        self.agent_colors = [a[2] for a in agents]
+        self.agent_at_position = {pos: i for i, pos in enumerate(self.agent_at_position)}
+
+        self.parent = None
+        self.g = 0
+        self.action = None
+
+        self._hash = None
