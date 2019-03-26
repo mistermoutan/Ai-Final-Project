@@ -2,6 +2,7 @@
 #import re
 import sys
 import traceback
+from state import StateSA
 
 
 
@@ -56,7 +57,45 @@ class SearchClient:
             print('Error parsing level: {}.'.format(repr(ex)), file=sys.stderr, flush=True)
             print(traceback.format_exc(), file=sys.stderr, flush=True)
             sys.exit(1)
-    
+        
+        cols = max([len(line) for line in self.init])
+        maze = [[True for _ in range(cols)] for _ in range(len(self.init))]
+        agent = (0,0)
+        boxes = []
+        goals = []
+        type_count = 0
+        seen_types = {}
+        row = 0
+        for line in self.init:
+            for col, char in enumerate(line):
+                if char == '+':
+                    maze[row][col] = False
+                elif char in "0123456789":
+                    agent = (row, col)
+                elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    type = type_count
+                    if char.lower() in seen_types.keys():
+                        type = seen_types[char.lower()]
+                    else:
+                        seen_types[char.lower()] = type
+                        type_count += 1
+                    boxes.append((type, (row, col)))
+                elif char in "abcdefghijklmnopqrstuvwxyz":
+                    type = type_count
+                    if char.lower() in seen_types.keys():
+                        type = seen_types[char.lower()]
+                    else:
+                        seen_types[char.lower()] = type
+                        type_count += 1
+                    goals.append((type, (row, col)))
+                elif char == ' ':
+                    # Free cell.
+                    pass
+                else:
+                    print('Error, read invalid level character: {}'.format(char), file=sys.stderr, flush=True)
+                    sys.exit(1)
+            row += 1
+        self.initial_state = StateSA(maze, boxes, goals, agent)
         self.sendComment("Initialized SearchClient")
     def search(self, strategy: 'Strategy'):
         pass
