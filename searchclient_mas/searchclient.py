@@ -8,18 +8,48 @@ import traceback
 class SearchClient:
     def __init__(self, server_messages):
         #Adapt to data structure and split msg in parts.
+        self.domain = None
         self.levelname = None
-        self.colors = None
-        self.init = None
-        self.goal = None
+        self.colors = {}
+        self.init = []
+        self.goal = []
         try:
             line = server_messages.readline().rstrip()
-
+            case = 0
             while line:
-                #store msg in datastructure
-                print(line, file=sys.stderr, flush=True)
-                if line.rstrip()=="#end":
+                if line == "#domain":
+                    case =1
+                    next
+                elif line == "#levelname":
+                    case =2
+                    next
+                elif line == "#colors":
+                    case =3
+                    next
+                elif line == "#initial":
+                    case =4
+                    next
+                elif line == "#goal":
+                    case =5
+                    next
+                elif line.rstrip() == "#end":
                     break
+                else:
+                    if case == 1:
+                        self.domain = line
+                    elif case == 2:
+                        self.levelname = line
+                    elif case == 3:
+                        temp = line.split(':')
+                        self.colors[temp[0]]= temp[1]
+                    elif case == 4:
+                        self.init.append(line)
+                    elif case == 5:
+                        self.goal.append(line)
+                #store msg in datastructure
+                #print(line, file=sys.stderr, flush=True)
+                #if line.rstrip()=="#end":
+                #    break
                 line = server_messages.readline().rstrip()
 
         except Exception as ex:
