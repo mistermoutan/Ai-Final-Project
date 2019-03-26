@@ -20,7 +20,7 @@ Dir.W = Dir('W',  0, -1)
 
 
 class ActionType:
-    Move = Push = Pull = None
+    Move = Push = Pull = Wait = None
     
     def __init__(self, name: 'str'):
         '''
@@ -35,6 +35,7 @@ class ActionType:
 ActionType.Move = ActionType('Move')
 ActionType.Push = ActionType('Push')
 ActionType.Pull = ActionType('Pull')
+ActionType.Wait = ActionType('NoOp')
 
 
 class Action:
@@ -66,4 +67,6 @@ for agent_dir in (Dir.N, Dir.S, Dir.E, Dir.W):
         if agent_dir is not box_dir:
             # If not same directions.
             ALL_ACTIONS.append(Action(ActionType.Pull, agent_dir, box_dir))
+
+ALL_ACTIONS.append(ActionType.Wait)
 

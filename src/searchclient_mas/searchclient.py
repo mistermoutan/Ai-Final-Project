@@ -61,6 +61,7 @@ class SearchClient:
         goals = []
         type_count = 0
         seen_types = {}
+        self.agent_count = 0
         row = 0
         for line in self.init:
             for col, char in enumerate(line):
@@ -68,6 +69,7 @@ class SearchClient:
                     maze[row][col] = False
                 elif char in "0123456789":
                     agent = (row, col)
+                    self.agent_count+=1
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -99,9 +101,34 @@ class SearchClient:
         self.sendComment("Initialized SearchClient")
     def search(self, strategy: 'Strategy'):
         pass
-    def sendAction(self,action):
-        sys.stdout.write(str(action)+"\n")
+
+    '''
+    send joints action
+    format of actions : {agent:action}
+    agent - int
+    action - string acording to assignment sheet e.g "Push(move-dir-agent, move-dir-box)"
+    output to server <action0>; <action1>; ...; <action9>
+    example:
+        success = client.sendJointAction({0:"Move(E)",1:"Move(E)"})
+    return array of bools for every action in the actions dict. bool describing the success of the action
+    
+    '''
+    def sendJointAction(self,actions):
+        jointAction=""
+        #SingleAgent
+        if self.agent_count==1:
+            jointAction+=str(actions[0])+";"
+        #MultiAgent
+        else:
+            for i in range(self.agent_count):
+                if i in actions:
+                    jointAction+=actions[i]+";"
+                else:
+                    jointAction+="NoOp;"
+        sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
+        success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
+        return success
     def sendComment(self,comment):
         sys.stdout.write("#"+str(comment)+"\n")
         sys.stdout.flush()
@@ -112,6 +139,7 @@ def main():
     sys.stdout.flush()
     server_messages = sys.stdin
     client = SearchClient(server_messages)
+
 if __name__ == '__main__':
     # Run client.
     main()
