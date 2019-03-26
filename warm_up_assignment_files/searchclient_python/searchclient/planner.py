@@ -49,7 +49,6 @@ The last way of finding a plan is:
 
 make_plan - This method starts searching and stops when a plan is found or the state space is exhausted. 
 It returns None if it couldn't find a plan, or the plan itself otherwise
-
 """
 
 import heapq
