@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from action import ALL_ACTIONS, ActionType
+from action import ALL_ACTIONS, ActionType, Action
 from typing import List, Tuple
 import sys
 
@@ -427,7 +427,6 @@ class StateMA:
         :param boxes: boxes should be a list containing the following tuple: (type (number), position (x,y), color (number))
         :param goals: goals should be a list containing the following tuple: (type (number), position (x,y))
         :param agents: boxes should be a list containing the following tuple: (position (x,y), color (number))
-        :param agent: tuple of agent's position (x,y)
         '''
         if maze is None:
             return
@@ -454,3 +453,105 @@ class StateMA:
         self.action = None
 
         self._hash = None
+
+    def is_free(self, row: 'int', col: 'int') -> 'bool':
+        return self.maze[row][col] and \
+                (row, col) not in self.box_at_position and \
+                (row, col) not in self.agent_at_position
+
+    def box_at(self, row: 'int', col: 'int') -> 'bool':
+        return (row, col) in self.box_at_position
+
+    def copy(self):
+        # TODO make a shallow copy solution
+        maze = self.maze
+        boxes = [(i,j,k) for i,j,k in zip(self.box_types ,self.box_positions, self.box_colors)]
+        goals = [(i,j) for i,j in zip(self.goal_types ,self.goal_positions)]
+        agents = [(i,j) for i,j in zip(self.agent_at_position ,self.agent_colors)]
+
+        return StateMA(maze, boxes, goals, agents)
+
+    def move(self, agent, dir):
+        x0, y0 = self.agent_positions[agent]
+
+        x1 = x0 + dir[0]
+        y1 = y0 + dir[1]
+
+        if self.is_free(x1, y1):
+            del self.agent_at_position[(x0,y0)]
+            self.agent_at_position[(x1,y1)] = agent
+            self.agent_positions[agent] = (x1,y1)
+            return True
+        return False
+
+    def push(self, agent, agent_dir, box_dir):
+        agent_x, agent_y = self.agent_positions[agent]
+        new_agent_x = agent_x + agent_dir[0]
+        new_agent_y = agent_y + agent_dir[1]
+        if not self.box_at_position[(new_agent_x, new_agent_y)]:
+            return False
+
+        box_id = self.box_at_position[(new_agent_x, new_agent_y)]
+
+        if self.box_colors[box_id] != self.agent_colors[agent]:
+            return False
+
+        new_box_x = new_agent_x + box_dir[0]
+        new_box_y = new_agent_y + box_dir[0]
+
+        if not self.is_free(new_box_x, new_box_y):
+            return False
+
+        del self.agent_at_position[(agent_x, agent_y)]
+        self.agent_at_position[(new_agent_x, new_agent_y)] = agent
+        self.agent_positions[agent] = (new_agent_x, new_agent_y)
+
+        del self.box_at_position[(new_agent_x, new_agent_y)]
+        self.box_at_position[new_box_x, new_box_y] = box_id
+        self.box_positions[box_id] = (new_box_x, new_box_y)
+
+
+    def pull(self, agent, agent_dir, box_dir):
+        agent_x, agent_y = self.agent_positions[agent]
+        new_agent_x = agent_x + agent_dir[0]
+        new_agent_y = agent_y + agent_dir[1]
+
+        if not self.is_free(new_agent_x, new_agent_y):
+            return False
+
+        box_x = agent_x + box_dir[0]
+        box_y = agent_y + box_dir[1]
+
+        if not self.box_at(box_x, box_y):
+            return False
+
+        box_id = self.box_at_position[(box_x, box_y)]
+
+        if self.box_colors[box_id] != self.agent_colors[agent]:
+            return False
+
+        del self.agent_at_position[(agent_x, agent_y)]
+        self.agent_at_position[(new_agent_x, new_agent_y)] = agent
+        self.agent_positions[agent] = (new_agent_x, new_agent_y)
+
+        del self.box_at_position[(box_x, box_y)]
+        self.box_at_position[agent_x, agent_y] = box_id
+        self.box_positions[box_id] = (agent_x, agent_y)
+
+
+    def get_child(self, actions: List[Action]):
+        child = self.copy()
+        for i, a in enumerate(actions):
+            if a is not None:
+                agent_dir = (a.action.agent_dir.d_row, a.action.agent_dir.d_col)
+                if a.action_type is ActionType.Move:
+                    if not child.move(i, agent_dir):
+                        return None
+                if a.action_type is ActionType.Push:
+                    if not child.push(i, agent_dir, (action.box_dir.d_row, action.box_dir.d_col)):
+                        return None
+                if a.action_type is ActionType.Pull:
+                    if not child.pull(i, agent_dir, (action.box_dir.d_row, action.box_dir.d_col)):
+                        return None
+
+        return child
