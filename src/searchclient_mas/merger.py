@@ -1,5 +1,6 @@
-from action import ActionType
+from action import *
 from planner import Planner
+from state import StateMA
 
 class MergeState(object):
     def __init__(self, game_state, agent_id, agent_plan, master_plan, master_plan_index, agent_plan_index=None, g_value = 0):
@@ -22,7 +23,7 @@ class MergeState(object):
         action[self.agent_id] = self.agent_plan[self.agent_plan_index]
         
         #Determine the state resulting from applying this action vector
-        next_game_state = self.game_state.next_state(action)
+        next_game_state = self.game_state.get_child(action)
 
         if next_game_state == None:
             return None
@@ -40,10 +41,11 @@ class MergeState(object):
     def merge_state_after_wait(self):
         #Determine the next action vector
         action = self.master_plan[self.master_plan_index]
-        action[self.agent_id] = ActionType.Wait
+        action[self.agent_id] = None
+        #ActionType.Wait
         
         #Determine the state resulting from applying this action vector
-        next_game_state = self.game_state.next_state(action)
+        next_game_state = self.game_state.get_child(action)
 
         if next_game_state == None:
             return None
@@ -95,8 +97,43 @@ class MergeState(object):
 
 
 def merge(agent_id, agent_plan, master_plan, master_plan_index, initial_game_state):        
-        initial_state = MergeState(initial_game_state, agent_id, agent_plan, master_plan, master_plan_index=master_plan_index)
+        initial_state = MergeState(
+            game_state=initial_game_state, 
+            agent_id = agent_id, 
+            agent_plan =agent_plan, 
+            master_plan = master_plan, 
+            master_plan_index=master_plan_index, 
+            agent_plan_index=0)
         merge_planner = Planner(initial_state)
         revised_agent_plan = merge_planner.make_plan()
         print(revised_agent_plan)
+
+
+maze = [
+        [False,False,False,False,False],
+        [False,True,True,True,False],
+        [False,True,True,True,False],
+        [False,True,True,True,False],
+        [False,False,False,False,False]
+    ]
+
+boxes = [(0,(3,2),0)]
+agent = [((2,3),0), ((1,2),1)]
+goals = []
+
+initial_state = StateMA(maze,boxes,goals,agent)
+
+ME = Action(ActionType.Move, Dir.E, None)
+PN = Action(ActionType.Push, Dir.N, Dir.N)
+PNW = Action(ActionType.Push, Dir.N, Dir.W)
+PWW = Action(ActionType.Push, Dir.W, Dir.W)
+
+print(ME.agent_dir)
+
+master_plan = [[ME, None], [PN, None], [PNW, None], [PWW, None]]
+agent_plan = [ME, ME]
+
+
+
+merge(1, agent_plan, master_plan, 0, initial_state)
 

@@ -446,7 +446,7 @@ class StateMA:
 
         self.agent_positions = [a[0] for a in agents]
         self.agent_colors = [a[1] for a in agents]
-        self.agent_at_position = {pos: i for i, pos in enumerate(self.agent_at_position)}
+        self.agent_at_position = {pos: i for i, pos in enumerate(self.agent_positions)}
 
         self.parent = None
         self.g = 0
@@ -488,7 +488,7 @@ class StateMA:
         agent_x, agent_y = self.agent_positions[agent]
         new_agent_x = agent_x + agent_dir[0]
         new_agent_y = agent_y + agent_dir[1]
-        if not self.box_at_position[(new_agent_x, new_agent_y)]:
+        if not self.box_at(new_agent_x, new_agent_y):
             return False
 
         box_id = self.box_at_position[(new_agent_x, new_agent_y)]
@@ -543,15 +543,15 @@ class StateMA:
         child = self.copy()
         for i, a in enumerate(actions):
             if a is not None:
-                agent_dir = (a.action.agent_dir.d_row, a.action.agent_dir.d_col)
+                agent_dir = (a.agent_dir.d_row, a.agent_dir.d_col)
                 if a.action_type is ActionType.Move:
                     if not child.move(i, agent_dir):
                         return None
                 if a.action_type is ActionType.Push:
-                    if not child.push(i, agent_dir, (action.box_dir.d_row, action.box_dir.d_col)):
+                    if not child.push(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col)):
                         return None
                 if a.action_type is ActionType.Pull:
-                    if not child.pull(i, agent_dir, (action.box_dir.d_row, action.box_dir.d_col)):
+                    if not child.pull(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col)):
                         return None
 
         return child
