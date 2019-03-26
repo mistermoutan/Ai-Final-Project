@@ -16,43 +16,61 @@ class MergeState(object):
     def copy(self):
         return MergeState(self.game_state, self.agent_id, self.agent_plan, self.master_plan, self.master_plan_index, self.agent_plan_index, self.g_value)
 
+    def merge_state_after_next_move(self):
+        #Determine the next action vector
+        action = self.master_plan[self.master_plan_index]
+        action[self.agent_id] = self.agent_plan[self.agent_plan_index]
+        
+        #Determine the state resulting from applying this action vector
+        next_game_state = self.game_state.next_state(action)
+
+        if next_game_state == None:
+            return None
+        
+        next_merge_state = self.copy()
+        next_merge_state.game_state = next_game_state
+        next_merge_state.master_plan_index += 1
+        next_merge_state.agent_plan_index += 1
+        next_merge_state.g_value += 1
+        next_merge_state.parent = self
+        next_merge_state.performed_move = True
+
+        return next_merge_state
+
+    def merge_state_after_wait(self):
+        #Determine the next action vector
+        action = self.master_plan[self.master_plan_index]
+        action[self.agent_id] = ActionType.Wait
+        
+        #Determine the state resulting from applying this action vector
+        next_game_state = self.game_state.next_state(action)
+
+        if next_game_state == None:
+            return None
+        
+        #Note that we do not increment agent_plan_index, since we wait instead of performing the action
+        next_merge_state = self.copy()
+        next_merge_state.game_state = next_game_state
+        next_merge_state.master_plan_index += 1
+        next_merge_state.g_value += 1
+        next_merge_state.parent = self
+        next_merge_state.performed_move = False
+
+        return next_merge_state
+
+
+
     def get_children(self):
-        action_vector = self.master_plan[self.master_plan_index]
-        
         children = []
-
-        #produce the state resulting from making the next move in the action plan
-        next_action = action_vector[:]
-        next_action[self.agent_id] = self.agent_plan[self.agent_plan_index]
         
-        #If there is a conflict after this action, game_state_after_move is None
-        game_state_after_move = self.game_state.next_state(next_action)
-        #Make a new MergeState if next game state isn't None
-        if game_state_after_move:
-            s1 = self.copy()
-            s1.game_state = game_state_after_move
-            s1.master_plan_index += 1
-            s1.agent_plan_index +=1
-            s1.g_value += 1
-            s1.parent = self
-            s1.performed_move = True
-            children.append(s1)
-
-
-        #produce the state resulting from waiting a step 
-        wait_action = action_vector[:]
-        wait_action[self.agent_id] = ActionType.Wait
-        game_state_after_wait = self.game_state.next_state(wait_action)
-        if game_state_after_wait:        
-            s2 = self.copy()
-            s2.game_state = game_state_after_wait
-            s2.master_plan_index += 1
-            #Note that the agent_plan_index remains the same because we inserted a wai action
-            s2.g_value += 1
-            s2.parent = self
-            s2.performed_move = False
-            children.append(s2)
-
+        state_after_move = self.merge_state_after_next_move()
+        if state_after_move:
+            children.append(state_after_move)
+        
+        state_after_wait = self.merge_state_after_wait()
+        if state_after_wait:
+            children.append(state_after_wait)
+        
         return children
 
     def heuristic(self):
