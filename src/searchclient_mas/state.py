@@ -497,7 +497,7 @@ class StateMA:
             return False
 
         new_box_x = new_agent_x + box_dir[0]
-        new_box_y = new_agent_y + box_dir[0]
+        new_box_y = new_agent_y + box_dir[1]
 
         if not self.is_free(new_box_x, new_box_y):
             return False
@@ -509,6 +509,8 @@ class StateMA:
         del self.box_at_position[(new_agent_x, new_agent_y)]
         self.box_at_position[new_box_x, new_box_y] = box_id
         self.box_positions[box_id] = (new_box_x, new_box_y)
+
+        return True
 
 
     def pull(self, agent, agent_dir, box_dir):
@@ -538,6 +540,8 @@ class StateMA:
         self.box_at_position[agent_x, agent_y] = box_id
         self.box_positions[box_id] = (agent_x, agent_y)
 
+        return True
+
 
     def get_child(self, actions: List[Action]):
         child = self.copy()
@@ -555,3 +559,22 @@ class StateMA:
                         return None
 
         return child
+
+    def __repr__(self):
+        lines = []
+        for row in range(self.rows):
+            line = []
+            for col in range(self.cols):
+                pos = (row,col)
+                agent = self.agent_at_position.get(pos, None)
+                box   = self.box_at_position.get(pos, None)
+                wall  = ' ' if self.maze[row][col] else '+'
+                if agent != None:
+                    line.append(str(agent))
+                elif box != None:
+                    line.append(str(box))
+                else:
+                    line.append(wall)
+            lines.append("".join(line))
+        x = "\n".join(lines)
+        return x
