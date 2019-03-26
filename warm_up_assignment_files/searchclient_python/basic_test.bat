@@ -1,1 +1,0 @@
-java -jar ../old_server.jar -l ../levels/friendofDFS.lvl -c "python searchclient/searchclient.py -bfs" -g 150 -t 300
