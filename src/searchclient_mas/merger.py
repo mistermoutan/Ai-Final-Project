@@ -76,9 +76,9 @@ class MergeState(object):
         return performed_moves.reverse()
 
 
-def merge(agent_id, agent_plan, master_plan, master_plan_index, initial_game_state):
-        
+def merge(agent_id, agent_plan, master_plan, master_plan_index, initial_game_state):        
         initial_state = MergeState(initial_game_state, agent_id, agent_plan, master_plan, master_plan_index=master_plan_index)
         merge_planner = Planner(initial_state)
         revised_agent_plan = merge_planner.make_plan()
         print(revised_agent_plan)
+
