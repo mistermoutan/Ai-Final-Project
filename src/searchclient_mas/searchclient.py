@@ -127,7 +127,6 @@ class SearchClient:
                     jointAction+="NoOp;"
         sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
-        #print(sys.stdin.readline().rstrip(), file=sys.stderr, flush=True)
         success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
         return success
     def sendComment(self,comment):
@@ -140,8 +139,7 @@ def main():
     sys.stdout.flush()
     server_messages = sys.stdin
     client = SearchClient(server_messages)
-    #success = client.sendJointAction({0:"Move(E)",1:"Move(E)"})
-    #client.sendComment(success)
+
 if __name__ == '__main__':
     # Run client.
     main()
