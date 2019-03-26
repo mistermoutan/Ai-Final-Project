@@ -47,10 +47,6 @@ class SearchClient:
                         self.init.append(line)
                     elif case == 5:
                         self.goal.append(line)
-                #store msg in datastructure
-                #print(line, file=sys.stderr, flush=True)
-                #if line.rstrip()=="#end":
-                #    break
                 line = server_messages.readline().rstrip()
 
         except Exception as ex:
@@ -80,7 +76,17 @@ class SearchClient:
                         seen_types[char.lower()] = type
                         type_count += 1
                     boxes.append((type, (row, col)))
-                elif char in "abcdefghijklmnopqrstuvwxyz":
+                elif char == ' ':
+                    # Free cell.
+                    pass
+                else:
+                    print('Error, read invalid level character: {}'.format(char), file=sys.stderr, flush=True)
+                    sys.exit(1)
+            row += 1
+        row = 0
+        for line in self.goal:
+            for col, char in enumerate(line):
+                if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
                         type = seen_types[char.lower()]
@@ -88,12 +94,6 @@ class SearchClient:
                         seen_types[char.lower()] = type
                         type_count += 1
                     goals.append((type, (row, col)))
-                elif char == ' ':
-                    # Free cell.
-                    pass
-                else:
-                    print('Error, read invalid level character: {}'.format(char), file=sys.stderr, flush=True)
-                    sys.exit(1)
             row += 1
         self.initial_state = StateSA(maze, boxes, goals, agent)
         self.sendComment("Initialized SearchClient")
