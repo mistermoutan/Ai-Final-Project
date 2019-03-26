@@ -426,7 +426,7 @@ class StateMA:
         :param maze: maze should be a grid containing true or false with false being walls and true being open spaces
         :param boxes: boxes should be a list containing the following tuple: (type (number), position (x,y), color (number))
         :param goals: goals should be a list containing the following tuple: (type (number), position (x,y))
-        :param agents: boxes should be a list containing the following tuple: (agentid (number), position (x,y), color (number))
+        :param agents: boxes should be a list containing the following tuple: (position (x,y), color (number))
         :param agent: tuple of agent's position (x,y)
         '''
         if maze is None:
@@ -445,9 +445,8 @@ class StateMA:
         self.goal_positions = [b[1] for b in goals]
         self.goal_at_position = {pos: i for i, pos in enumerate(self.goal_positions)}
 
-        self.agent_id = [a[0] for a in agents]
-        self.agent_positions = [a[1] for a in agents]
-        self.agent_colors = [a[2] for a in agents]
+        self.agent_positions = [a[0] for a in agents]
+        self.agent_colors = [a[1] for a in agents]
         self.agent_at_position = {pos: i for i, pos in enumerate(self.agent_at_position)}
 
         self.parent = None
