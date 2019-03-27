@@ -50,7 +50,6 @@ The last way of finding a plan is:
 make_plan - This method starts searching and stops when a plan is found or the state space is exhausted. 
 It returns None if it couldn't find a plan, or the plan itself otherwise
 """
-
 import heapq
 
 def default_heuristic(state):
@@ -66,13 +65,14 @@ def default_get_children(state):
     return state.get_children()
 
 class Planner(object):
-    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None):
+    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None, maximum_length_of_solution = None):
         #Setting the functions used to explore the state space
         #Use implementaitons in state unless new functions are provided 
         self.get_children = get_children if get_children else default_get_children
         self.is_goal_state = is_goal_state if is_goal_state else default_is_goal_state
         self.extract_plan = extract_plan if extract_plan else default_extract_plan
         self.heuristic = heuristic if heuristic else default_heuristic
+        
         
         #Adding the initial state to the frontier
         self.frontier = []
@@ -82,14 +82,15 @@ class Planner(object):
 
 
         #Initialize remaining variables
+        self.maximum_length_of_solution = maximum_length_of_solution
         self.expanded_set = set()
         self.plan = None
+        
 
     
     def expand_one_state(self):
         #TODO: Fix this: it's not very good. What if there is no solution and the state space is exhausted?
         assert len(self.frontier) > 0, "state space exhausted in planner"
-
 
         #Extract the state with minimum heuristic value from the frontier
         result = heapq.heappop(self.frontier)
