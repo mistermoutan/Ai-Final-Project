@@ -75,8 +75,6 @@ class MergeState(object):
         return self.get_next_merge_state(should_wait_for_one_step=True)
 
     def get_children(self):
-        children = []
-
         # If the agent plan cannot fit within the master plan, it might extend beyond the 
         # length of the action plan. In this case we add a NoOp action vector for each move
         # in the action plan that extends beyond the master plan
@@ -143,6 +141,9 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         print(revised_agent_plan)
 
 
+
+
+
 maze = [
         [False,False,False,False,False],
         [False,True,True,True,False],
@@ -152,10 +153,8 @@ maze = [
     ]
 
 boxes = [(3,(2,3),0)]
-agent = [((2,1),0), ((3,2),1)]
+agent = [((2,1),1), ((3,2),0)]
 goals = []
-
-initial_state = StateMA(maze,boxes,goals,agent)
 
 ME = Action(ActionType.Move, Dir.E, None)
 MS = Action(ActionType.Move, Dir.S, None)
@@ -164,9 +163,10 @@ PN = Action(ActionType.Push, Dir.N, Dir.N)
 PNW = Action(ActionType.Push, Dir.N, Dir.W)
 PWW = Action(ActionType.Push, Dir.W, Dir.W)
 
-master_plan = [[ME, None], [PN, None], [PNW, None], [PWW, None]]
-agent_plan = [ME, ME, MS, MW, MW]
-#agent_plan = [MW, MW]
+initial_state = StateMA(maze,boxes,goals,agent)
 
-merge(1, agent_plan, master_plan, 0, initial_state)
+master_plan = [[None, ME], [None, PN], [None, PNW], [None, PWW]]
+agent_plan = [ME, ME, MS, MW, MW]
+
+merge(0, agent_plan, master_plan, 0, initial_state)
 

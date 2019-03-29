@@ -467,7 +467,7 @@ class StateMA:
         maze = self.maze
         boxes = [(i,j,k) for i,j,k in zip(self.box_types ,self.box_positions, self.box_colors)]
         goals = [(i,j) for i,j in zip(self.goal_types ,self.goal_positions)]
-        agents = [(i,j) for i,j in zip(self.agent_at_position ,self.agent_colors)]
+        agents = [(i,j) for i,j in zip(self.agent_positions ,self.agent_colors)]
 
         return StateMA(maze, boxes, goals, agents)
 
