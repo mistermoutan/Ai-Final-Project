@@ -7,13 +7,14 @@ from state import StateSA,StateMA
 
 
 class SearchClient:
-    def __init__(self, server_messages):
+    def __init__(self, server_messages,):
         #Adapt to data structure and split msg in parts.
         self.domain = None
         self.levelname = None
         self.colors = {}
         self.init = []
         self.goal = []
+        color_count = 0
         try:
             line = server_messages.readline().rstrip()
             case = 0
@@ -42,11 +43,15 @@ class SearchClient:
                         self.levelname = line
                     elif case == 3:
                         temp = line.split(':')
-                        self.colors[temp[0]]= temp[1]
+                        temp2 = temp[1].rstrip().split(',')
+                        for i in temp2:
+                            self.colors[i.strip()]= color_count
+                        color_count+=1
                     elif case == 4:
                         self.init.append(line)
                     elif case == 5:
                         self.goal.append(line)
+                #print(line,file=sys.stderr,flush=True)
                 line = server_messages.readline().rstrip()
 
         except Exception as ex:
@@ -56,7 +61,7 @@ class SearchClient:
         
         cols = max([len(line) for line in self.init])
         maze = [[True for _ in range(cols)] for _ in range(len(self.init))]
-        agent = (0,0)
+        agent = []
         boxes = []
         goals = []
         type_count = 0
@@ -68,7 +73,7 @@ class SearchClient:
                 if char == '+':
                     maze[row][col] = False
                 elif char in "0123456789":
-                    agent = (row, col)
+                    agent.append(((row, col),self.colors[char]))
                     self.agent_count+=1
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
@@ -77,7 +82,7 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    boxes.append((type, (row, col)))
+                    boxes.append((type, (row, col),self.colors[char]))
                 elif char == ' ':
                     # Free cell.
                     pass
@@ -97,7 +102,13 @@ class SearchClient:
                         type_count += 1
                     goals.append((type, (row, col)))
             row += 1
-        self.initial_state = StateSA(maze, boxes, goals, agent)
+        
+        if self.agent_count > 1:
+            #print(agent, file=sys.stderr, flush=True)
+
+            self.initial_state = StateMA(maze,boxes,goals,agent)
+        else:
+            self.initial_state = StateSA(maze, boxes, goals, agent)
         self.sendComment("Initialized SearchClient")
     def search(self, strategy: 'Strategy'):
         pass
