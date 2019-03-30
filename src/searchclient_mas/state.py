@@ -344,14 +344,6 @@ class StateMA:
                 (agent_x, agent_y)
                 )
 
-        # del self.agent_by_cords[(agent_x, agent_y)]
-        # self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
-        # self.agent_positions[agent] = (new_agent_x, new_agent_y)
-        #
-        # del self.box_by_cords[(box_x, box_y)]
-        # self.box_by_cords[agent_x, agent_y] = box_id
-        # self.box_positions[box_id] = (agent_x, agent_y)
-
     # this function us used by get child but is not safe to use in all cases because
     # agent_to and box_to will get over written regardless of what is there before
     def perform_action(self, agent_id, agent_from, agent_to, box_id, box_from, box_to):
@@ -377,6 +369,8 @@ class StateMA:
         # tracks which spaces are occupied
         occupation_dict = {}
         action_list = []
+        # keeps track of moves to detect if agents are swapping places
+        swaps = {}
         # tracks which boxes are used
         box_actions = defaultdict(int)
 
@@ -399,6 +393,8 @@ class StateMA:
 
             frees = res[0]
             occupies = res[1]
+            agent_from = res[2]
+            agent_to = res[3]
             box_id = res[4]
 
             if frees not in occupation_dict:
@@ -419,6 +415,13 @@ class StateMA:
                 # more than one agent are trying to move the same box
                 if box_actions[box_id] > 1:
                     return None
+            else:
+                if agent_to in swaps:
+                    if swaps[agent_to] == agent_from:
+                        return None
+                swaps[agent_from] = agent_to
+
+
 
         # if more than one item occupy the same space the multi action has failed
         for key in occupation_dict.keys():
@@ -457,14 +460,14 @@ class StateMA:
 
 if __name__ == '__main__':
     maze = [
-        [False,False,False,False,False],
-        [False,True,True,True,False],
-        [False,True,True,True,False],
-        [False,True,True,True,False],
-        [False,False,False,False,False],
+        [False,False,False,False,False,False],
+        [False,True,True,True,True,False],
+        [False,True,True,True,True,False],
+        [False,True,True,True,True,False],
+        [False,False,False,False,False,False],
     ]
-    boxes = [('a', (3,2), 0)]
-    agent = [((2,2),0), ((3,3),0)]
+    boxes = []
+    agent = [((2,2),0), ((2,3),0)]
     goals = []
 
     ME = Action(ActionType.Move, Dir.E, None)
@@ -475,6 +478,6 @@ if __name__ == '__main__':
     PNW = Action(ActionType.Push, Dir.N, Dir.W)
 
     initial_state = StateMA(maze, boxes, goals, agent)
-    after_move = initial_state.get_child([PSN, MW])
+    after_move = initial_state.get_child([ME, MW])
     print(str(initial_state))
     print(str(after_move))
