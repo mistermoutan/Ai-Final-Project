@@ -1,202 +1,8 @@
 import random
 from collections import defaultdict
-from action import ALL_ACTIONS, ActionType, Action
+from action import ALL_ACTIONS, ActionType, Action, Dir
 from typing import List, Tuple
 import sys
-
-
-class State:
-    # _RNG = random.Random(1)
-    MAX_ROW = 70
-    MAX_COL = 70
-
-    def __init__(self, copy: 'State' = None, rows=None, cols=None):
-        '''
-        If copy is None: Creates an empty State.
-        If copy is not None: Creates a copy of the copy state.
-
-        The lists walls, boxes, and goals are indexed from top-left of the level, row-major order (row, col).
-               Col 0  Col 1  Col 2  Col 3
-        Row 0: (0,0)  (0,1)  (0,2)  (0,3)  ...
-        Row 1: (1,0)  (1,1)  (1,2)  (1,3)  ...
-        Row 2: (2,0)  (2,1)  (2,2)  (2,3)  ...
-        ...
-
-        For example, self.walls is a list of size [MAX_ROW][MAX_COL] and
-        self.walls[2][7] is True if there is a wall at row 2, column 7 in this state.
-
-        Note: The state should be considered immutable after it has been hashed, e.g. added to a dictionary!
-        '''
-        self._hash = None
-        self.rows = rows
-        self.cols = cols
-        if copy is None:
-            self.agent_row = None
-            self.agent_col = None
-
-            self.walls = [[False for _ in range(self.cols)] for _ in range(self.rows)]
-            self.boxes = [[None for _ in range(self.cols)] for _ in range(self.rows)]
-            self.goals = [[None for _ in range(self.cols)] for _ in range(self.rows)]
-            self.goal_dict = defaultdict(list)
-
-            self.parent = None
-            self.action = None
-
-            self.g = 0
-        else:
-            self.rows = copy.rows
-            self.cols = copy.cols
-
-            self.agent_row = copy.agent_row
-            self.agent_col = copy.agent_col
-
-            self.walls = copy.walls
-            self.boxes = copy.boxes
-            self.goals = copy.goals
-            self.goal_dict = copy.goal_dict
-
-            self.parent = copy.parent
-            self.action = copy.action
-
-            self.g = copy.g
-
-    def get_children(self) -> '[State, ...]':
-        '''
-        Returns a list of child states attained from applying every applicable action in the current state.
-        The order of the actions is random.
-        '''
-        children = []
-        for action in ALL_ACTIONS:
-            # Determine if action is applicable.
-            new_agent_row = self.agent_row + action.agent_dir.d_row
-            new_agent_col = self.agent_col + action.agent_dir.d_col
-
-            if action.action_type is ActionType.Move:
-                if self.is_free(new_agent_row, new_agent_col):
-                    child = State(self)
-                    child.agent_row = new_agent_row
-                    child.agent_col = new_agent_col
-                    child.parent = self
-                    child.action = action
-                    child.g += 1
-                    children.append(child)
-            elif action.action_type is ActionType.Push:
-                if self.box_at(new_agent_row, new_agent_col):
-                    new_box_row = new_agent_row + action.box_dir.d_row
-                    new_box_col = new_agent_col + action.box_dir.d_col
-                    if self.is_free(new_box_row, new_box_col):
-                        child = State(self)
-                        child.agent_row = new_agent_row
-                        child.agent_col = new_agent_col
-                        child.boxes = [b for b in child.boxes]
-                        child.boxes[new_box_row] = [b for b in child.boxes[new_box_row]]
-                        child.boxes[new_agent_row] = [b for b in child.boxes[new_agent_row]]
-                        child.boxes[new_box_row][new_box_col] = self.boxes[new_agent_row][new_agent_col]
-                        child.boxes[new_agent_row][new_agent_col] = None
-                        child.parent = self
-                        child.action = action
-                        child.g += 1
-                        children.append(child)
-            elif action.action_type is ActionType.Pull:
-                if self.is_free(new_agent_row, new_agent_col):
-                    box_row = self.agent_row + action.box_dir.d_row
-                    box_col = self.agent_col + action.box_dir.d_col
-                    if self.box_at(box_row, box_col):
-                        child = State(self)
-                        child.agent_row = new_agent_row
-                        child.agent_col = new_agent_col
-                        child.boxes = [b for b in child.boxes]
-                        child.boxes[self.agent_row] = [b for b in child.boxes[self.agent_row]]
-                        child.boxes[box_row] = [b for b in child.boxes[box_row]]
-                        child.boxes[self.agent_row][self.agent_col] = self.boxes[box_row][box_col]
-                        child.boxes[box_row][box_col] = None
-                        child.parent = self
-                        child.action = action
-                        child.g += 1
-                        children.append(child)
-
-        # State._RNG.shuffle(children)
-        return children
-
-    def is_initial_state(self) -> 'bool':
-        return self.parent is None
-
-    def is_goal_state(self) -> 'bool':
-        for row in range(self.rows):
-            for col in range(self.cols):
-                goal = self.goals[row][col]
-                box = self.boxes[row][col]
-                if goal is not None and (box is None or goal != box.lower()):
-                    return False
-        return True
-
-    def is_free(self, row: 'int', col: 'int') -> 'bool':
-        return not self.walls[row][col] and self.boxes[row][col] is None
-
-    def box_at(self, row: 'int', col: 'int') -> 'bool':
-        return self.boxes[row][col] is not None
-
-    def extract_plan(self) -> '[State, ...]':
-        plan = []
-        state = self
-        while not state.is_initial_state():
-            plan.append(state)
-            state = state.parent
-        plan.reverse()
-        return plan
-
-    def __hash__(self):
-        if self._hash is None:
-            prime = 31
-            _hash = 1
-            _hash = _hash * prime + self.agent_row
-            _hash = _hash * prime + self.agent_col
-            _hash = _hash * prime + hash(tuple(tuple(row) for row in self.boxes))
-            _hash = _hash * prime + hash(tuple(tuple(row) for row in self.goals))
-            _hash = _hash * prime + hash(tuple(tuple(row) for row in self.walls))
-            self._hash = _hash
-        return self._hash
-
-    def __lt__(self, other):
-        return False
-
-    def __eq__(self, other):
-        if self is other: return True
-        if not isinstance(other, State): return False
-        if self.agent_row != other.agent_row: return False
-        if self.agent_col != other.agent_col: return False
-        if self.boxes != other.boxes: return False
-        if self.goals != other.goals: return False
-        if self.walls != other.walls: return False
-        return True
-
-    def __repr__(self):
-        lines = []
-        for row in range(State.MAX_ROW):
-            line = []
-            for col in range(State.MAX_COL):
-                if self.boxes[row][col] is not None:
-                    line.append(self.boxes[row][col])
-                elif self.goals[row][col] is not None:
-                    line.append(self.goals[row][col])
-                elif self.walls[row][col] is not None:
-                    line.append('+')
-                elif self.agent_row == row and self.agent_col == col:
-                    line.append('0')
-                else:
-                    line.append(' ')
-            lines.append(''.join(line))
-        return '\n'.join(lines)
-
-
-repr_dict = {
-    0: 'A',
-    1: 'B',
-    2: 'C',
-    3: 'D',
-
-}
-
 
 class StateSA:
     _RNG = random.Random(1)
@@ -476,13 +282,9 @@ class StateMA:
 
         x1 = x0 + dir[0]
         y1 = y0 + dir[1]
-
-        if self.is_free(x1, y1):
-            del self.agent_by_cords[(x0,y0)]
-            self.agent_by_cords[(x1,y1)] = agent
-            self.agent_positions[agent] = (x1,y1)
-            return True
-        return False
+        # returns a tuple of the format:
+        # freed space, occupied space, agent from, agent to, box_id, box_from, box_to
+        return ((x0, y0),(x1, y1),(x0, y0),(x1, y1), None, None, None)
 
     def push(self, agent, agent_dir, box_dir):
         agent_x, agent_y = self.agent_positions[agent]
@@ -499,27 +301,24 @@ class StateMA:
         new_box_x = new_agent_x + box_dir[0]
         new_box_y = new_agent_y + box_dir[1]
 
-        if not self.is_free(new_box_x, new_box_y):
-            return False
 
-        del self.agent_by_cords[(agent_x, agent_y)]
-        self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
-        self.agent_positions[agent] = (new_agent_x, new_agent_y)
+        # returns a tuple of the format:
+        # freed space, occupied space, agent from, agent to, box_id, box_from, box_to
 
-        del self.box_by_cords[(new_agent_x, new_agent_y)]
-        self.box_by_cords[new_box_x, new_box_y] = box_id
-        self.box_positions[box_id] = (new_box_x, new_box_y)
-
-        return True
+        return ((agent_x, agent_y),
+                (new_box_x, new_box_y),
+                (agent_x, agent_y),
+                (new_agent_x, new_agent_y),
+                box_id,
+                (new_agent_x, new_agent_y),
+                (new_box_x, new_agent_y)
+                )
 
 
     def pull(self, agent, agent_dir, box_dir):
         agent_x, agent_y = self.agent_positions[agent]
         new_agent_x = agent_x + agent_dir[0]
         new_agent_y = agent_y + agent_dir[1]
-
-        if not self.is_free(new_agent_x, new_agent_y):
-            return False
 
         box_x = agent_x + box_dir[0]
         box_y = agent_y + box_dir[1]
@@ -532,31 +331,105 @@ class StateMA:
         if self.box_colors[box_id] != self.agent_colors[agent]:
             return False
 
-        del self.agent_by_cords[(agent_x, agent_y)]
-        self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
-        self.agent_positions[agent] = (new_agent_x, new_agent_y)
 
-        del self.box_by_cords[(box_x, box_y)]
-        self.box_by_cords[agent_x, agent_y] = box_id
-        self.box_positions[box_id] = (agent_x, agent_y)
+        # returns a tuple of the format:
+        # freed space, occupied space, agent from, agent to, box_id, box_from, box_to
 
-        return True
+        return ((box_x, box_y),
+                (new_agent_x, new_agent_y),
+                (agent_x, agent_y),
+                (new_agent_x, new_agent_y),
+                 box_id,
+                (box_x,box_y),
+                (agent_x, agent_y)
+                )
+
+        # del self.agent_by_cords[(agent_x, agent_y)]
+        # self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
+        # self.agent_positions[agent] = (new_agent_x, new_agent_y)
+        #
+        # del self.box_by_cords[(box_x, box_y)]
+        # self.box_by_cords[agent_x, agent_y] = box_id
+        # self.box_positions[box_id] = (agent_x, agent_y)
+
+    # this function us used by get child but is not safe to use in all cases because
+    # agent_to and box_to will get over written regardless of what is there before
+    def perform_action(self, agent_id, agent_from, agent_to, box_id, box_from, box_to):
+        self.agent_positions[agent_id] = agent_to
+        self.agent_by_cords[agent_to] = agent_id
+
+        if self.agent_by_cords[agent_from] == agent_id:
+            del self.agent_by_cords[agent_from]
+
+
+        if box_id is None:
+            return
+        self.box_positions[box_id] = box_to
+        self.box_by_cords[agent_to] = box_id
+
+        if self.box_by_cords[box_from] == box_id:
+            del self.box_by_cords[box_from]
+
+
 
 
     def get_child(self, actions: List[Action]):
-        child = self.copy()
+        # tracks which spaces are occupied
+        occupation_dict = {}
+        action_list = []
+        # tracks which boxes are used
+        box_actions = defaultdict(int)
+
         for i, a in enumerate(actions):
+            res = None
             if a is not None:
                 agent_dir = (a.agent_dir.d_row, a.agent_dir.d_col)
                 if a.action_type is ActionType.Move:
-                    if not child.move(i, agent_dir):
-                        return None
-                if a.action_type is ActionType.Push:
-                    if not child.push(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col)):
-                        return None
-                if a.action_type is ActionType.Pull:
-                    if not child.pull(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col)):
-                        return None
+                    res = self.move(i, agent_dir)
+                elif a.action_type is ActionType.Push:
+                    res = self.push(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col))
+                elif a.action_type is ActionType.Pull:
+                    res = self.pull(i, agent_dir, (a.box_dir.d_row, a.box_dir.d_col))
+
+            action_list.append(res)
+            if res is None:
+                continue
+            if not res:
+                return None
+
+            frees = res[0]
+            occupies = res[1]
+            box_id = res[4]
+
+            if frees not in occupation_dict:
+                # if we are freeing something there must be something there
+                occupation_dict[frees] = 1
+            if occupies not in occupation_dict:
+                x,y = occupies
+                if self.is_free(x, y):
+                    occupation_dict[occupies] = 0
+                else:
+                    occupation_dict[occupies] = 1
+
+            occupation_dict[frees] -= 1
+            occupation_dict[occupies] += 1
+
+            if box_id is not None:
+                box_actions[box_id] += 1
+                # more than one agent are trying to move the same box
+                if box_actions[box_id] > 1:
+                    return None
+
+        # if more than one item occupy the same space the multi action has failed
+        for key in occupation_dict.keys():
+            if occupation_dict[key] > 1:
+                return None
+
+        child = self.copy()
+        # finally resolve the resulting state
+        for agent_id, action in enumerate(action_list):
+            _,_, agent_from, agent_to, box_id, box_from, box_to = action
+            child.perform_action(agent_id, agent_from, agent_to, box_id, box_from, box_to)
 
         return child
 
@@ -578,3 +451,26 @@ class StateMA:
             lines.append("".join(line))
         x = "\n".join(lines)
         return x
+
+
+if __name__ == '__main__':
+    maze = [
+        [False,False,False,False,False],
+        [False,True,True,True,False],
+        [False,True,True,True,False],
+        [False,True,True,True,False],
+        [False,False,False,False,False],
+    ]
+    boxes = []
+    agent = [((2,2),0), ((3,2),0)]
+    goals = []
+
+    ME = Action(ActionType.Move, Dir.E, None)
+    MS = Action(ActionType.Move, Dir.S, None)
+    MW = Action(ActionType.Move, Dir.W, None)
+    MN = Action(ActionType.Move, Dir.N, None)
+
+    initial_state = StateMA(maze,boxes,goals,agent)
+    after_move = initial_state.get_child([MS,ME])
+    print(str(initial_state))
+    print(str(after_move))
