@@ -121,9 +121,14 @@ class MergeState(object):
         return False
 
 
+
+#Merge a plan for agent_id into the plan 'master_plan' for all agents, starting at master_plan_index. 
+#initial_game_state is the state of the level after all the actions vectors before master_plan_index 
+#have been applied 
 def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_game_state):
         
         #Make defensive copies to avoid side effects
+        #Better safe than sorry
         master_plan_copy = [action_vector.copy() for action_vector in master_plan]
         agent_plan_copy = agent_plan.copy()
         
@@ -139,7 +144,7 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         
         #Get the revised plan for the agent, if it exists. If the plans are (naively) mergable, it is at least possible to append the
         #agent plan to the end of the master plan. Thus the sum of the length of the two plans is an upper bound for the 
-        #length of the solution and can be used as a cutoff value
+        #length of the solution and can be used as a cutoff value for the planner
         maximum_length_of_solution = len(master_plan) + len(agent_plan)
         merge_planner = Planner(initial_state, cutoff_solution_length=maximum_length_of_solution)
         

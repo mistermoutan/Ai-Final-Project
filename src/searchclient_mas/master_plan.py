@@ -34,7 +34,6 @@ class MasterPlan(object):
         if not revised_agent_plan:
             return False
         
-
         #Increase the length of the master plan if necessary
         difference_in_length = (len(revised_agent_plan) + first_index_in_plan) - len(self.plan)
         if difference_in_length > 0:
@@ -57,3 +56,6 @@ class MasterPlan(object):
 
         return True
 
+    def get_plan_of_agent(self, agent_id):
+        end_of_agents_plan = self.index_after_last_action[agent_id]
+        return [self.plan[i][agent_id] for i in range(end_of_agents_plan)]
