@@ -1,39 +1,24 @@
-from action import *
 from merger import merge
 from state import StateMA
+import test_utilities as util
+from test_utilities import move,push,pull,north,west,south,east,NOOP
 
-north = Dir.N
-east  = Dir.E
-south = Dir.S
-west  = Dir.W
-
-NOOP = ActionType.Wait
-
-def move(direction):
-    return Action(ActionType.Move, direction, None)
-
-def push(agent_dir, box_dir):
-    return Action(ActionType.Push, agent_dir, box_dir)
-
-def pull(agent_dir, box_dir):
-    return Action(ActionType.Pull, agent_dir, box_dir)
-
-maze = [
+#Make the level
+agt0 = util.agent(0,"red")
+agt1 = util.agent(1,"blue")
+box0  = util.box("A", "blue")
+level = [
         [False,False,False,False,False],
         [False,True,True,True,False],
-        [False,True,True,True,False],
-        [False,True,True,True,False],
+        [False,agt0,True,box0,False],
+        [False,True,agt1,True,False],
         [False,False,False,False,False]
     ]
+initial_state = util.make_state(level)
 
-boxes = [(3,(2,3),0)]
-agent = [((2,1),1), ((3,2),0)]
-goals = []
 
 noop_action_vector = [NOOP,NOOP]
 empty_master_plan = [[NOOP, NOOP]]
-
-initial_state = StateMA(maze,boxes,goals,agent)
 
 def test_can_merge_into_empty_plan():
     agent_plan = [move(east)]

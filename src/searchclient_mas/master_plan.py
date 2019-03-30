@@ -27,12 +27,12 @@ class MasterPlan(object):
     def copy(self):
         return copy.deepcopy(self)
 
-    def try_to_merge_plan_into_master(self, agent_id: int, agent_plan: List[Action]):
+    def merge_plan_into_master(self, agent_id: int, agent_plan: List[Action]):
         first_index_in_plan = self.index_after_last_action[agent_id]
         revised_agent_plan = merge(agent_id, agent_plan, self.plan, first_index_in_plan, self.states[first_index_in_plan])
         
         if not revised_agent_plan:
-            return None
+            return False
         
 
         #Increase the length of the master plan if necessary
@@ -54,4 +54,6 @@ class MasterPlan(object):
 
         #Update the index of where to start the next plan for this agent
         self.index_after_last_action[agent_id] += len(revised_agent_plan)
+
+        return True
 
