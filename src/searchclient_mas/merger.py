@@ -32,7 +32,7 @@ class MergeState(object):
 
     #Get the next uncompleted action vector from the master plan in this merge state
     def get_next_action_vector(self):
-        return self.master_plan[self.master_plan_index]
+        return self.master_plan[self.master_plan_index].copy()
 
     #Produces the next merge state from the current merge state
     #You can choose to take the next action in the agents plan or to wait for one step
@@ -78,9 +78,11 @@ class MergeState(object):
         # If the agent plan cannot fit within the master plan, it might extend beyond the 
         # length of the action plan. In this case we add a NoOp action vector for each move
         # in the action plan that extends beyond the master plan
-        if self.master_plan_index >= len(self.master_plan):
-            action_vector_length = len(self.master_plan[0])
-            self.master_plan.append([None]*action_vector_length)
+        difference_in_length = (self.master_plan_index + 1) - len(self.master_plan)
+        if difference_in_length > 0:
+            action_vector_length = len(self.master_plan[0]) 
+            empty_action_vector = [ActionType.Wait]*action_vector_length
+            self.master_plan.extend([empty_action_vector.copy() for _ in range(difference_in_length)])
 
         #Return the children in which no conflict happened
         children = [self._merge_state_after_next_action(),self._merge_state_after_waiting_one_step()]        
@@ -88,6 +90,10 @@ class MergeState(object):
 
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
+        print("------------------------------")
+        print(self.action_performed)
+        print(self.game_state)
+
         return self.g_value + len(self.agent_plan) - self.agent_plan_index
 
     #The merge state is a goal state if the entire agent_plan has been merged into the master plan
@@ -113,7 +119,7 @@ class MergeState(object):
 
 def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_game_state):
         
-        #Make protective copies to avoid side effects
+        #Make defensive copies to avoid side effects
         master_plan_copy = [action_vector.copy() for action_vector in master_plan]
         agent_plan_copy = agent_plan.copy()
         
@@ -135,38 +141,8 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         ## TODO: Give a cutoff value in cases where the plan can't be found
         ##       expand_n_states(len(master_plan) + len(agent_plan))
 
-        revised_agent_plan = merge_planner.make_plan()
-
-
-        print(revised_agent_plan)
+        return merge_planner.make_plan()
 
 
 
-
-
-maze = [
-        [False,False,False,False,False],
-        [False,True,True,True,False],
-        [False,True,True,True,False],
-        [False,True,True,True,False],
-        [False,False,False,False,False]
-    ]
-
-boxes = [(3,(2,3),0)]
-agent = [((2,1),1), ((3,2),0)]
-goals = []
-
-ME = Action(ActionType.Move, Dir.E, None)
-MS = Action(ActionType.Move, Dir.S, None)
-MW = Action(ActionType.Move, Dir.W, None)
-PN = Action(ActionType.Push, Dir.N, Dir.N)
-PNW = Action(ActionType.Push, Dir.N, Dir.W)
-PWW = Action(ActionType.Push, Dir.W, Dir.W)
-
-initial_state = StateMA(maze,boxes,goals,agent)
-
-master_plan = [[None, ME], [None, PN], [None, PNW], [None, PWW]]
-agent_plan = [ME, ME, MS, MW, MW]
-
-merge(0, agent_plan, master_plan, 0, initial_state)
 

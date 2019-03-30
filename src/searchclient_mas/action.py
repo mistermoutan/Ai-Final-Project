@@ -53,6 +53,11 @@ class Action:
         else:
             self._repr = '[{}({})]'.format(action_type, agent_dir)
     
+    def __eq__(self, other):
+        return self.action_type == other.action_type \
+            and self.agent_dir  == other.agent_dir \
+            and self.box_dir    == other.box_dir
+
     def __repr__(self):
         return self._repr
 
