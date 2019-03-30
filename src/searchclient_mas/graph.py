@@ -7,12 +7,13 @@ from collections import defaultdict
 """
 Converts Level to Graph (only non walls cells are considered)
 
-    Cnstructor:
+    Constructor:
         - Requires an instance of StateMA or StateSA
         - The precompute parameter allows:
 
                 - Precompute distance from all vertices of graph to each goal 
-                - 
+                - Precompute distance from all boxes to each goal
+
 
     Methods
      - BFS_ShortestPath : Returns shortest path between a source vertice and target vertice in a deque with directions on the grid (N,S,W,E) (deques can be indexed as lists)
@@ -38,7 +39,8 @@ class Graph (object) :
                     if shortest_path:
                         self.shortest_path_to_goals[goal_position].append((vertice,shortest_path))
                     else:
-                        self.shortest_path_to_goals[goal_position].append((vertice,None))
+                        # if there is no path
+                        self.shortest_path_to_goals[goal_position].append((vertice,None)) 
         
         # build dict of shortest path from each box to all goals
         elif "boxes_to_goals" in precompute.split():
