@@ -90,11 +90,11 @@ class MergeState(object):
 
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
-        print("------------------------------")
-        print(self.action_performed)
-        print(self.game_state)
 
         return self.g_value + len(self.agent_plan) - self.agent_plan_index
+    
+    def get_g_value(self):
+        return self.g_value
 
     #The merge state is a goal state if the entire agent_plan has been merged into the master plan
     def is_goal_state(self):
@@ -136,11 +136,9 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         #Get the revised plan for the agent, if it exists. If the plans are (naively) mergable, it is at least possible to append the
         #agent plan to the end of the master plan. Thus the sum of the length of the two plans is an upper bound for the 
         #length of the solution and can be used as a cutoff value
-        merge_planner = Planner(initial_state)
+        maximum_length_of_solution = len(master_plan) + len(agent_plan)
+        merge_planner = Planner(initial_state, cutoff_solution_length=maximum_length_of_solution)
         
-        ## TODO: Give a cutoff value in cases where the plan can't be found
-        ##       expand_n_states(len(master_plan) + len(agent_plan))
-
         return merge_planner.make_plan()
 
 
