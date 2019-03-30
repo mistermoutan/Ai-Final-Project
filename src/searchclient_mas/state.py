@@ -218,11 +218,11 @@ class StateSA:
 
         self.box_types = [b[0] for b in boxes]
         self.box_positions = [b[1] for b in boxes]
-        self.box_at_position = {pos: i for i, pos in enumerate(self.box_positions)}
+        self.box_by_cords = {pos: i for i, pos in enumerate(self.box_positions)}
 
         self.goal_types = [b[0] for b in goals]
         self.goal_positions = [b[1] for b in goals]
-        self.goal_at_position = {pos: i for i, pos in enumerate(self.goal_positions)}
+        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.agent_row = agent[0]
         self.agent_col = agent[1]
@@ -243,11 +243,11 @@ class StateSA:
 
         cpy.box_types = self.box_types
         cpy.box_positions = self.box_positions
-        cpy.box_at_position = self.box_at_position
+        cpy.box_by_cords = self.box_by_cords
 
         cpy.goal_types = self.goal_types
         cpy.goal_positions = self.goal_positions
-        cpy.goal_at_position = self.goal_at_position
+        cpy.goal_by_cords = self.goal_by_cords
         cpy.agent_row = self.agent_row
         cpy.agent_col = self.agent_col
 
@@ -267,12 +267,12 @@ class StateSA:
 
         # copy these variables so they are unaffected in previous states
         self.box_positions = [b for b in self.box_positions]
-        self.box_at_position = dict(self.box_at_position)
+        self.box_by_cords = dict(self.box_by_cords)
 
-        box_id = self.box_at_position[old_pos]
+        box_id = self.box_by_cords[old_pos]
         self.box_positions[box_id] = new_pos
-        del self.box_at_position[old_pos]
-        self.box_at_position[new_pos] = box_id
+        del self.box_by_cords[old_pos]
+        self.box_by_cords[new_pos] = box_id
 
     def get_children(self) -> '[StateSA, ...]':
         '''
@@ -343,8 +343,8 @@ class StateSA:
         # print("\n",str(self), file=sys.stderr, flush=True)
         for i in range(len(self.goal_types)):
             p = self.goal_positions[i]
-            if p in self.box_at_position:
-                box_id = self.box_at_position[p]
+            if p in self.box_by_cords:
+                box_id = self.box_by_cords[p]
                 if self.goal_types[i] != self.box_types[box_id]:
                     return False
             else:
@@ -353,10 +353,10 @@ class StateSA:
         return True
 
     def is_free(self, row: 'int', col: 'int') -> 'bool':
-        return self.maze[row][col] and (row, col) not in self.box_at_position
+        return self.maze[row][col] and (row, col) not in self.box_by_cords
 
     def box_at(self, row: 'int', col: 'int') -> 'bool':
-        return (row, col) in self.box_at_position
+        return (row, col) in self.box_by_cords
 
     def extract_plan(self) -> '[StateSA, ...]':
         plan = []
@@ -389,11 +389,11 @@ class StateSA:
         if self.agent_row != other.agent_row: return False
         if self.agent_col != other.agent_col: return False
         for pos in self.box_positions:
-            if pos not in other.box_at_position:
+            if pos not in other.box_by_cords:
                 return False
             else:
-                curr_id = self.box_at_position[pos]
-                other_id = other.box_at_position[pos]
+                curr_id = self.box_by_cords[pos]
+                other_id = other.box_by_cords[pos]
                 if self.box_types[curr_id] != other.box_types[other_id]:
                     return False
         return True
@@ -404,12 +404,12 @@ class StateSA:
             line = []
             for col in range(self.cols):
                 pos = (row, col)
-                if pos in self.box_at_position:
-                    line.append(repr_dict[self.box_types[self.box_at_position[pos]]])
+                if pos in self.box_by_cords:
+                    line.append(repr_dict[self.box_types[self.box_by_cords[pos]]])
                 elif self.agent_row == row and self.agent_col == col:
                     line.append('0')
-                elif pos in self.goal_at_position:
-                    line.append(repr_dict[self.goal_types[self.goal_at_position[pos]]].lower())
+                elif pos in self.goal_by_cords:
+                    line.append(repr_dict[self.goal_types[self.goal_by_cords[pos]]].lower())
                 elif not self.maze[row][col]:
                     line.append('+')
                 else:
@@ -438,15 +438,15 @@ class StateMA:
         self.box_types = [b[0] for b in boxes]
         self.box_positions = [b[1] for b in boxes]
         self.box_colors = [b[2] for b in boxes]
-        self.box_at_position = {pos: i for i, pos in enumerate(self.box_positions)}
+        self.box_by_cords = {pos: i for i, pos in enumerate(self.box_positions)}
 
         self.goal_types = [b[0] for b in goals]
         self.goal_positions = [b[1] for b in goals]
-        self.goal_at_position = {pos: i for i, pos in enumerate(self.goal_positions)}
+        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.agent_positions = [a[0] for a in agents]
         self.agent_colors = [a[1] for a in agents]
-        self.agent_at_position = {pos: i for i, pos in enumerate(self.agent_positions)}
+        self.agent_by_cords = {pos: i for i, pos in enumerate(self.agent_positions)}
 
         self.parent = None
         self.g = 0
@@ -456,11 +456,11 @@ class StateMA:
 
     def is_free(self, row: 'int', col: 'int') -> 'bool':
         return self.maze[row][col] and \
-                (row, col) not in self.box_at_position and \
-                (row, col) not in self.agent_at_position
+                (row, col) not in self.box_by_cords and \
+                (row, col) not in self.agent_by_cords
 
     def box_at(self, row: 'int', col: 'int') -> 'bool':
-        return (row, col) in self.box_at_position
+        return (row, col) in self.box_by_cords
 
     def copy(self):
         # TODO make a shallow copy solution
@@ -478,8 +478,8 @@ class StateMA:
         y1 = y0 + dir[1]
 
         if self.is_free(x1, y1):
-            del self.agent_at_position[(x0,y0)]
-            self.agent_at_position[(x1,y1)] = agent
+            del self.agent_by_cords[(x0,y0)]
+            self.agent_by_cords[(x1,y1)] = agent
             self.agent_positions[agent] = (x1,y1)
             return True
         return False
@@ -491,7 +491,7 @@ class StateMA:
         if not self.box_at(new_agent_x, new_agent_y):
             return False
 
-        box_id = self.box_at_position[(new_agent_x, new_agent_y)]
+        box_id = self.box_by_cords[(new_agent_x, new_agent_y)]
 
         if self.box_colors[box_id] != self.agent_colors[agent]:
             return False
@@ -502,12 +502,12 @@ class StateMA:
         if not self.is_free(new_box_x, new_box_y):
             return False
 
-        del self.agent_at_position[(agent_x, agent_y)]
-        self.agent_at_position[(new_agent_x, new_agent_y)] = agent
+        del self.agent_by_cords[(agent_x, agent_y)]
+        self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
         self.agent_positions[agent] = (new_agent_x, new_agent_y)
 
-        del self.box_at_position[(new_agent_x, new_agent_y)]
-        self.box_at_position[new_box_x, new_box_y] = box_id
+        del self.box_by_cords[(new_agent_x, new_agent_y)]
+        self.box_by_cords[new_box_x, new_box_y] = box_id
         self.box_positions[box_id] = (new_box_x, new_box_y)
 
         return True
@@ -527,17 +527,17 @@ class StateMA:
         if not self.box_at(box_x, box_y):
             return False
 
-        box_id = self.box_at_position[(box_x, box_y)]
+        box_id = self.box_by_cords[(box_x, box_y)]
 
         if self.box_colors[box_id] != self.agent_colors[agent]:
             return False
 
-        del self.agent_at_position[(agent_x, agent_y)]
-        self.agent_at_position[(new_agent_x, new_agent_y)] = agent
+        del self.agent_by_cords[(agent_x, agent_y)]
+        self.agent_by_cords[(new_agent_x, new_agent_y)] = agent
         self.agent_positions[agent] = (new_agent_x, new_agent_y)
 
-        del self.box_at_position[(box_x, box_y)]
-        self.box_at_position[agent_x, agent_y] = box_id
+        del self.box_by_cords[(box_x, box_y)]
+        self.box_by_cords[agent_x, agent_y] = box_id
         self.box_positions[box_id] = (agent_x, agent_y)
 
         return True
@@ -566,8 +566,8 @@ class StateMA:
             line = []
             for col in range(self.cols):
                 pos = (row,col)
-                agent = self.agent_at_position.get(pos, None)
-                box   = self.box_at_position.get(pos, None)
+                agent = self.agent_by_cords.get(pos, None)
+                box   = self.box_by_cords.get(pos, None)
                 wall  = ' ' if self.maze[row][col] else '+'
                 if agent != None:
                     line.append(str(agent))
