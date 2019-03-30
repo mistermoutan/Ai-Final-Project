@@ -365,7 +365,7 @@ class StateMA:
         if box_id is None:
             return
         self.box_positions[box_id] = box_to
-        self.box_by_cords[agent_to] = box_id
+        self.box_by_cords[box_to] = box_id
 
         if self.box_by_cords[box_from] == box_id:
             del self.box_by_cords[box_from]
@@ -471,10 +471,10 @@ if __name__ == '__main__':
     MS = Action(ActionType.Move, Dir.S, None)
     MW = Action(ActionType.Move, Dir.W, None)
     MN = Action(ActionType.Move, Dir.N, None)
-    PN = Action(ActionType.Pull, Dir.N, Dir.N)
+    PSN = Action(ActionType.Pull, Dir.N, Dir.S)
     PNW = Action(ActionType.Push, Dir.N, Dir.W)
 
     initial_state = StateMA(maze, boxes, goals, agent)
-    after_move = initial_state.get_child([PN, MW])
+    after_move = initial_state.get_child([PSN, MW])
     print(str(initial_state))
     print(str(after_move))
