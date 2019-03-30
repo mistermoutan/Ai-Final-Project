@@ -58,3 +58,5 @@ def test_can_merge_when_conflict_can_be_resolved_2():
     agent_plan = [move(east), move(south), move(east)]
     revised_plan = merge(0, agent_plan, master_plan, 0, initial_state)
     assert revised_plan == [move(east), NOOP, move(south), NOOP, move(east)]
+
+#test_can_merge_when_conflict_can_be_resolved()

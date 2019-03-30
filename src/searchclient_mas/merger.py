@@ -75,6 +75,10 @@ class MergeState(object):
         return self.get_next_merge_state(should_wait_for_one_step=True)
 
     def get_children(self):
+        print("------------------------------------")
+        print(self.extract_plan())
+        print(self.game_state)
+        #input(">")
         # If the agent plan cannot fit within the master plan, it might extend beyond the 
         # length of the action plan. In this case we add a NoOp action vector for each move
         # in the action plan that extends beyond the master plan
@@ -90,7 +94,7 @@ class MergeState(object):
 
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
-
+        
         return self.g_value + len(self.agent_plan) - self.agent_plan_index
     
     def get_g_value(self):
