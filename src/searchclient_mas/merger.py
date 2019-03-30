@@ -75,9 +75,9 @@ class MergeState(object):
         return self.get_next_merge_state(should_wait_for_one_step=True)
 
     def get_children(self):
-        print("------------------------------------")
-        print(self.extract_plan())
-        print(self.game_state)
+        #print("------------------------------------")
+        #print(self.extract_plan())
+        #print(self.game_state)
         #input(">")
         # If the agent plan cannot fit within the master plan, it might extend beyond the 
         # length of the action plan. In this case we add a NoOp action vector for each move
