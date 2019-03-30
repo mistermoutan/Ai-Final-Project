@@ -428,7 +428,9 @@ class StateMA:
         child = self.copy()
         # finally resolve the resulting state
         for agent_id, action in enumerate(action_list):
-            _,_, agent_from, agent_to, box_id, box_from, box_to = action
+            if action is None:
+                continue
+            _, _, agent_from, agent_to, box_id, box_from, box_to = action
             child.perform_action(agent_id, agent_from, agent_to, box_id, box_from, box_to)
 
         return child
@@ -445,7 +447,7 @@ class StateMA:
                 if agent != None:
                     line.append(str(agent))
                 elif box != None:
-                    line.append(str(box))
+                    line.append(str(self.box_types[box]))
                 else:
                     line.append(wall)
             lines.append("".join(line))
@@ -461,16 +463,18 @@ if __name__ == '__main__':
         [False,True,True,True,False],
         [False,False,False,False,False],
     ]
-    boxes = []
-    agent = [((2,2),0), ((3,2),0)]
+    boxes = [('a', (3,2), 0)]
+    agent = [((2,2),0), ((3,3),0)]
     goals = []
 
     ME = Action(ActionType.Move, Dir.E, None)
     MS = Action(ActionType.Move, Dir.S, None)
     MW = Action(ActionType.Move, Dir.W, None)
     MN = Action(ActionType.Move, Dir.N, None)
+    PN = Action(ActionType.Pull, Dir.N, Dir.N)
+    PNW = Action(ActionType.Push, Dir.N, Dir.W)
 
-    initial_state = StateMA(maze,boxes,goals,agent)
-    after_move = initial_state.get_child([MS,ME])
+    initial_state = StateMA(maze, boxes, goals, agent)
+    after_move = initial_state.get_child([PN, MW])
     print(str(initial_state))
     print(str(after_move))
