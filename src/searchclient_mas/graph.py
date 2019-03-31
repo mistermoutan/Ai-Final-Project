@@ -30,6 +30,8 @@ class Graph (object) :
 
     def __init__(self,state,precompute = ""):
 
+        self.bfs_trees = {}
+
         row,col = np.asarray(state.maze).shape
         self.vertices = {(i,j) for i in range(row) for j in range(col) if state.maze[i][j] == True}     
 
@@ -144,7 +146,10 @@ class Graph (object) :
         queue.append(source_vertice) 
         explored_set = set()
         parent = {} # vertex:parent 
-        
+
+        #The root of the tree        
+        parent[source_vertice] = None
+
         while len(queue) > 0:
             current_vertice = queue.popleft()
             neighbours = self.get_neighbours(current_vertice)
@@ -155,14 +160,30 @@ class Graph (object) :
                     parent[neighbour] = current_vertice
                     queue.append(neighbour)
 
-            if len(queue) == 0:
-                #print("Tree Complete")
-                return parent
+            
+        self.bfs_trees[source_vertice] = parent
+        
 
-    def bfs_shortestpath_tree(self, source_vertex):  # take into account that we may encounter other desired roots only accounting for one
+
+    def shortest_path_from_bfs_tree(self, parent_map, x):
+        path = []
+        while x:
+            path.append(x)
+            x = parent_map[x]
+        return path
+        
+
+    def shortest_path_between(self,source,target):
+        if not self.bfs_trees[target]:
+            self.bfs_tree(target)
+        tree = self.bfs_trees[target]
+        return self.shortest_path_from_bfs_tree(tree, source)
+
+
+    def bfs_shortestpath_tree(self, parent):  # take into account that we may encounter other desired roots only accounting for one
         """Calculates shortest path for every vertex in tree to source/root"""
 
-        tree = self.bfs_tree(source_vertex) # vertex:parent
+        tree = self.bfs_tree(parent) # vertex:parent
         shortest_path_to_source_vertex = defaultdict(list)
         parents = set(tree.values())
         leaf_nodes = [vertex for vertex in self.vertices if vertex not in parents] #nodes with no children (at bottom of tree)
@@ -175,11 +196,11 @@ class Graph (object) :
 
         while len(explored_leaf_nodes) != len(leaf_nodes):
 
-            while parent != source_vertex:
+            while parent != parent:
                 path.insert(0,parent) 
                 parent = tree[parent] 
 
-            path.insert(0,source_vertex) #still missing the source vertex (it has no parent)
+            path.insert(0,parent) #still missing the source vertex (it has no parent)
             
             for index,vertex in enumerate(path): # keeps overwriting paths if vertexes are the same
 
