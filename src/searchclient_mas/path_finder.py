@@ -31,24 +31,10 @@ def actions_to_push_box_between(graph, agent, box, target):
     #Convert every pair of directions to a push action
     return [push(d1,d2) for (d1,d2) in push_path]
 
-
+#Moving the agent to a target position while pulling a box is equivalent to swapping the location of the agent and 
+#the box and having the agent push the box to the same location.
+#Therefore we use actions_to_push_box_between and convert each push action to the corresponding pull action
 def actions_to_move_to_target_while_pulling_box(graph, agent, box, target):
-    
-    assert are_adjacent(agent,box), "agent and box should be adjacent"
-
-    if agent == target:
-        return []
-
-    path_agent_to_target = graph.BFS_ShortestPath(agent, target)
-
-    #Check that the box is located between the box and the target along the shortest path
-    #from box to target
-    direction_agent_to_box = direction_between_adjacent_positions(agent, box)
-    first_directon_on_path = path_agent_to_target[0]
-    assert not direction_agent_to_box == first_directon_on_path, "box is on path from agent to target. Cannot be pulled"
-
-    pull_path = (direction_between_adjacent_positions(box, agent), first_directon_on_path)
-    pull_path = [pull_path]
-    pull_path.extend(pairwise(path_agent_to_target))
-
-    return [pull(d2,d1) for (d1,d2) in pull_path]
+    box_push_agent_path = actions_to_push_box_between(graph, box, agent, target)
+    convert = lambda push_action: pull(push_action.box_dir, push_action.agent_dir)
+    return [convert(push_action) for push_action in box_push_agent_path]
