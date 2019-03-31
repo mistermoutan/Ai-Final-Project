@@ -17,10 +17,6 @@ def are_adjacent(pos1,pos2):
     delta = abs(x1-x2) + abs(y1-y2)
     return delta == 1
 
-
-
-
-
 delta_to_direction_map = {
     (1,0):  south,
     (-1,0): north,
