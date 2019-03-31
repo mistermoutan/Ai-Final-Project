@@ -1,6 +1,6 @@
 from master_plan import MasterPlan
 import test_utilities as util
-from test_utilities import move,push,pull,north,east,west,south, NOOP
+from action import move,push,pull,north,east,west,south, NOOP
 
 
 agt0 = util.agent(0,"red")

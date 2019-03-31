@@ -51,19 +51,3 @@ def make_state(matrix):
     agents = [(pos,color) for (id,pos,color) in agents]
 
     return StateMA(matrix, boxes, goals, agents)
-
-north = Dir.N
-east  = Dir.E
-south = Dir.S
-west  = Dir.W
-
-NOOP = ActionType.Wait
-
-def move(direction):
-    return Action(ActionType.Move, direction, None)
-
-def push(agent_dir, box_dir):
-    return Action(ActionType.Push, agent_dir, box_dir)
-
-def pull(agent_dir, box_dir):
-    return Action(ActionType.Pull, agent_dir, box_dir)

@@ -23,11 +23,11 @@ Converts Level to Graph (only non walls cells are considered)
 """
 class Graph (object) :
 
-    def __init__(self,state, precompute = None):
+    def __init__(self,maze, precompute = None):
 
-        row,col = np.asarray(state.maze).shape
+        row,col = np.asarray(maze).shape
         self.vertices = {(i,j) for i in range(row) for j in range(col) if maze[i][j] == True}     #vertices of graph representation of level
-
+        """
         # build dict of shortest paths from all vertices of graph to the goal vertices
         if "all_to_goals" in precompute.split():
             self.shortest_path_to_goals = defaultdict(list) #keys: goals ; values: tuple(vertice,shortest past from that vertice to goal)
@@ -55,7 +55,7 @@ class Graph (object) :
                         self.shortest_path_boxes_to_goals[goal_position].append((box_positon,shortest_path))
                     else:
                         self.shortest_path_to_goals[goal_position].append((box_positon,None))
-
+        """
 
     def getNeighbours(self,vertice):
 
@@ -103,6 +103,10 @@ class Graph (object) :
 
         assert source_vertice in self.vertices and target_vertice in self.vertices, "Insert coordinates that are part of the level"
         
+        #Deal with the case when the source and target of the search is the same vertex
+        if source_vertice == target_vertice:
+            return deque()
+
         queue = deque() 
         queue.append(source_vertice) #adds to the right
         explored_set = set()
@@ -114,7 +118,7 @@ class Graph (object) :
 
             if current_vertice == target_vertice:
                 path = self.Backtrack(source_vertice,target_vertice,parent)
-                print(path)
+                #print(path)
                 return path
 
             neighbours = self.getNeighbours(current_vertice)
@@ -133,7 +137,7 @@ class Graph (object) :
 
             
 
-
+"""
 maze = [[True,True,False,True],
         [True,True,True,True],
         [True,False,False,True],
@@ -141,7 +145,7 @@ maze = [[True,True,False,True],
 
 g = Graph(maze)
 g.BFS_ShortestPath((3,2),(3,0))
-
+"""
 
 
 
