@@ -1,8 +1,8 @@
 from merger import merge
 from state import StateMA
 import test_utilities as util
-from test_utilities import move,push,pull,north,west,south,east,NOOP
-import time
+from action import move,push,pull,north,west,south,east,NOOP
+
 
 #Make the level
 agt0 = util.agent(0,"red")

@@ -48,8 +48,7 @@ class Graph (object) :
                 for box_positon in state.box_positions:
                     shortest_path = self.BFS_ShortestPath((box_positon,goal_position))
                         self.shortest_path_boxes_to_goals[goal_position].append((box_positon,shortest_path))
-
-    def getNeighbours(self,vertex):
+        
 
         (x,y) = vertex
         neighbours = {(x,y+1),(x,y-1),(x-1,y),(x+1,y)}
@@ -92,8 +91,12 @@ class Graph (object) :
     def BFS_ShortestPath (self,source_vertice,target_vertice):
         """ Returns Shortest in terms of S,E,W,N directions"""
 
-        assert source_vertice in self.vertices and target_vertice in self.vertices, "Insert coordinates that are part of the state"
+        assert source_vertice in self.vertices and target_vertice in self.vertices "Insert coordinates that are part of the state"
         
+        #Deal with the case when the source and target of the search is the same vertex
+        if source_vertice == target_vertice:
+            return deque()
+
         queue = deque() 
         queue.append(source_vertice) 
         explored_set = set()
@@ -105,7 +108,7 @@ class Graph (object) :
 
             if current_vertice == target_vertice:
                 path = self.Backtrack(source_vertice,target_vertice,parent)
-                print(path)
+                #print(path)
                 return path
 
             neighbours = self.getNeighbours(current_vertice)
@@ -134,7 +137,6 @@ maze = [[True,True,False,True],
 
 g = Graph(maze)
 g.BFS_ShortestPath((3,2),(3,0))
-
 """
 
 
