@@ -421,8 +421,6 @@ class StateMA:
                         return None
                 swaps[agent_from] = agent_to
 
-
-
         # if more than one item occupy the same space the multi action has failed
         for key in occupation_dict.keys():
             if occupation_dict[key] > 1:
@@ -459,25 +457,41 @@ class StateMA:
 
 
 if __name__ == '__main__':
-    maze = [
-        [False,False,False,False,False,False],
-        [False,True,True,True,True,False],
-        [False,True,True,True,True,False],
-        [False,True,True,True,True,False],
-        [False,False,False,False,False,False],
-    ]
-    boxes = []
-    agent = [((2,2),0), ((2,3),0)]
-    goals = []
+    from test_state import *
 
-    ME = Action(ActionType.Move, Dir.E, None)
-    MS = Action(ActionType.Move, Dir.S, None)
-    MW = Action(ActionType.Move, Dir.W, None)
-    MN = Action(ActionType.Move, Dir.N, None)
-    PSN = Action(ActionType.Pull, Dir.N, Dir.S)
-    PNW = Action(ActionType.Push, Dir.N, Dir.W)
+    fail = False
+    if not test_swap():
+        print("Test swap failed!!")
+        fail = True
+    if not test_move():
+        print("Move test failed!!")
+        fail = True
+    if not test_push_pull():
+        print("push test failed!!")
+        fail = True
+    if not fail:
+        print("All tests passed")
 
-    initial_state = StateMA(maze, boxes, goals, agent)
-    after_move = initial_state.get_child([ME, MW])
-    print(str(initial_state))
-    print(str(after_move))
+
+    # maze = [
+    #     [False, False, False,False,False,False],
+    #     [False, True,  True,True,True,False],
+    #     [False, True,  True,True,True,False],
+    #     [False, True,  True,True,True,False],
+    #     [False, False,  False,False,False,False],
+    # ]
+    # boxes = []
+    # agent = [((2,2),0), ((2,3),0)]
+    # goals = []
+    #
+    # ME = Action(ActionType.Move, Dir.E, None)
+    # MS = Action(ActionType.Move, Dir.S, None)
+    # MW = Action(ActionType.Move, Dir.W, None)
+    # MN = Action(ActionType.Move, Dir.N, None)
+    # PSN = Action(ActionType.Pull, Dir.N, Dir.S)
+    # PNW = Action(ActionType.Push, Dir.N, Dir.W)
+    #
+    # initial_state = StateMA(maze, boxes, goals, agent)
+    # after_move = initial_state.get_child([ME, MW])
+    # print(str(initial_state))
+    # print(str(after_move))
