@@ -90,6 +90,7 @@ class Graph (object) :
                     break
             else:
                 parent = None
+                break
 
 
         #if it is not possible to build the tree from source_vertex (it has no neighbours)
@@ -193,6 +194,7 @@ class Graph (object) :
     def locate_separate_rooms(self):
 
         """Creates self.rooms: list containing each separate room as sets"""
+        
         assert self.separate_rooms_exist(), "There are no isolated rooms"
 
         initial_vertex = self.vertices.pop() 
@@ -224,15 +226,58 @@ class Graph (object) :
     def locate_corridors(self, min_lenght):
         """Returns list of all corridors with minimum lenght specified """
 
+
+
         vertical_corridors = []
         horizontal_corridors = []
         explored_set = set()
-        initial_vertex = self.vertices.pop() 
-        self.vertices.add(initial_vertex)
+        vertices_list = list(self.vertices) #will need to iterate
+
+        # choose initial vertex that is relevant 
+        for v in vertices_list:
+            n_neigh_walls = self.number_neighbouring_walls_of_vertex(v)
+            if n_neigh_walls < 2:
+                explored_set.add(v)
+            elif n_neigh_walls == 4:
+                explored_set.add(v)
+            else:
+                vertex = v
+
+        #vertical corridors
+        while len(explored_set) != len(self.vertices):
+
+            vertical_neighbours = self.get_vertical_neighbours(vertex)
+            is_corridor = 0
+            possible_corridor = []
+            possible_corridor.append(vertex)
+
+            if vertical_neighbours: # if there are vertical neighbours
+                for vertical_neighbour in vertical_neighbours:
+                    n_neigh_walls = self.number_neighbouring_walls_of_vertex(vertical_neighbour) #number of neighbouring walls that neighbour has
+                    if n_neigh_walls < 2:
+                        explored_set.add(vertical_neighbour)
+                    else:
+                        explored_set.add(vertical_neighbour)
+                        is_corridor += 1
+                        possible_corridor.append(vertical_neighbour)
+                    
+                if is_corridor == 0:
+                    vertex = self.from_not_in
 
 
-        for n in range(min_lenght):
-            
+
+                    
+
+
+                    
+            else:
+                explored_set.add(vertex)
+                vertex = self.from_not_in
+
+
+            for n in range(min_lenght):
+
+
 
 
     
@@ -274,7 +319,7 @@ class Graph (object) :
             return None
         return vertical_neighbours
 
-    def get_vertical_neighbours(self,vertex):
+    def get_horizontal_neighbours(self,vertex):
         """Returns horizontal neighbours, none if there are no neighbours"""
 
         (x,y) = vertex
@@ -294,6 +339,8 @@ class Graph (object) :
             for neighbour in neighbours:
                 if neighbour in self.walls:
                     n_neighbouring_walls += 1
+
+            assert n_neighbouring_walls >= 0 and n_neighbouring_walls <= 4, "Neighbouring walls under 0 or over 4"
             return n_neighbouring_walls
         else:
             return n_neighbouring_walls
@@ -373,6 +420,22 @@ class Graph (object) :
         tree = self.bfs_trees[vertex]      
 
         return tree 
+
+
+    def corridor_exhaust_neighbours (self,orientation,cutoff,counter,explored_set,possible_corridor,vertical_neighbours):
+
+
+    def 
+        
+        for vertical_neighbour in vertical_neighbours:
+            n_neigh_walls = self.number_neighbouring_walls_of_vertex(vertical_neighbour) #number of neighbouring walls that neighbour has
+        if n_neigh_walls < 2:
+            explored_set.add(vertical_neighbour)
+        else:
+            explored_set.add(vertical_neighbour)
+            is_corridor += 1
+
+            possible_corridor.append(vertical_neighbour)
         
 
 
