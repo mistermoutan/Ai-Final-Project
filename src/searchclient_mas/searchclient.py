@@ -11,9 +11,9 @@ class SearchClient:
         #Adapt to data structure and split msg in parts.
         self.domain = None
         self.levelname = None
-        self.colors = {}
-        self.init = []
-        self.goal = []
+        colors = {}
+        init = []
+        goal = []
         color_count = 0
         try:
             line = server_messages.readline().rstrip()
@@ -45,12 +45,12 @@ class SearchClient:
                         temp = line.split(':')
                         temp2 = temp[1].rstrip().split(',')
                         for i in temp2:
-                            self.colors[i.strip()]= color_count
+                            colors[i.strip()]= color_count
                         color_count+=1
                     elif case == 4:
-                        self.init.append(line)
+                        init.append(line)
                     elif case == 5:
-                        self.goal.append(line)
+                        goal.append(line)
                 #print(line,file=sys.stderr,flush=True)
                 line = server_messages.readline().rstrip()
 
@@ -59,8 +59,8 @@ class SearchClient:
             print(traceback.format_exc(), file=sys.stderr, flush=True)
             sys.exit(1)
         
-        cols = max([len(line) for line in self.init])
-        maze = [[True for _ in range(cols)] for _ in range(len(self.init))]
+        cols = max([len(line) for line in init])
+        maze = [[True for _ in range(cols)] for _ in range(len(init))]
         agent = []
         boxes = []
         goals = []
@@ -68,12 +68,12 @@ class SearchClient:
         seen_types = {}
         self.agent_count = 0
         row = 0
-        for line in self.init:
+        for line in init:
             for col, char in enumerate(line):
                 if char == '+':
                     maze[row][col] = False
                 elif char in "0123456789":
-                    agent.append(((row, col),self.colors[char]))
+                    agent.append(((row, col),colors[char]))
                     self.agent_count+=1
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
@@ -82,7 +82,7 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    boxes.append((type, (row, col),self.colors[char]))
+                    boxes.append((type, (row, col),colors[char]))
                 elif char == ' ':
                     # Free cell.
                     pass
@@ -91,7 +91,7 @@ class SearchClient:
                     sys.exit(1)
             row += 1
         row = 0
-        for line in self.goal:
+        for line in goal:
             for col, char in enumerate(line):
                 if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
@@ -150,6 +150,8 @@ def main():
     sys.stdout.flush()
     server_messages = sys.stdin
     client = SearchClient(server_messages)
+    print(client.initial_state.goal_positions,file= sys.stderr, flush=True)
+    #print(traceback.format_exc(), file=sys.stderr, flush=True)
 
 if __name__ == '__main__':
     # Run client.
