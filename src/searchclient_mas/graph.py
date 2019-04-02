@@ -318,6 +318,7 @@ class Graph (object) :
 
 
 
+"""
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
 box0  = util.box("A", "blue")
@@ -333,7 +334,7 @@ g.separate_rooms_exist()
 g.locate_separate_rooms()
 #g.locate_corridors(3)
 g.number_neighbouring_walls_of_vertex((1,1))
-
+"""
 
 
 
