@@ -3,7 +3,7 @@
 import sys
 import traceback
 from state import StateSA,StateMA
-
+from problemDecomposer import problemDecomposer as pd
 
 
 class SearchClient:
@@ -151,7 +151,9 @@ def main():
     sys.stdout.flush()
     server_messages = sys.stdin
     client = SearchClient(server_messages)
-    print(client.initial_state.goal_positions,file= sys.stderr, flush=True)
+    problem = pd(client)
+    tasks = problem.getTasks()
+    print(tasks,file= sys.stderr, flush=True)
     #print(traceback.format_exc(), file=sys.stderr, flush=True)
 
 if __name__ == '__main__':
