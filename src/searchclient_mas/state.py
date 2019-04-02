@@ -176,6 +176,15 @@ class StateSA:
     def box_hash(self):
         return sum(hash((self.box_types[i], self.box_positions[i])) for i in range(len(self.box_types)))
 
+    def change_goals(self, goals):
+        # accepts goals of the same format as state constructor,
+        # can be changed to just indices of goals or something else.
+        cpy = self.copy()
+        cpy.goal_types = [b[0] for b in goals]
+        cpy.goal_positions = [b[1] for b in goals]
+        cpy.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
+        return cpy
+
     def __hash__(self):
         if self._hash is None:
             prime = 31
