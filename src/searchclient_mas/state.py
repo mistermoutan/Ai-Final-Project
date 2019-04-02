@@ -227,7 +227,7 @@ class StateMA:
     _RNG = random.Random(1)
 
     def __init__(self, maze: List[List[int]] = None, boxes: List[Tuple[int, Tuple[int, int], int]] = None,
-                 goals: List[Tuple[int, Tuple[int, int]]] = None, agents: List[Tuple[int, Tuple[int, int], int]] = None):
+                 goals: List[Tuple[int, Tuple[int, int]]] = None, agents: List[Tuple[Tuple[int, int], int]] = None):
         '''
         :param maze: maze should be a grid containing true or false with false being walls and true being open spaces
         :param boxes: boxes should be a list containing the following tuple: (type (number), position (x,y), color (number))
