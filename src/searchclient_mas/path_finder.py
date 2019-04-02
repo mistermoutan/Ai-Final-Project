@@ -46,7 +46,6 @@ def actions_to_move_to_target_while_pulling_box(graph, agent, box, target):
 def first_off_path_node(graph, path):
     assert len(path) > 0, "paths of length zero have no off path nodes"
     nodes_in_path = set(path)
-    
     #Traverse that path from start to finish and return one of the first neighbours found that are 
     #not on the path themselves
     for node in path:
@@ -54,6 +53,5 @@ def first_off_path_node(graph, path):
         if not neighbours:
             continue
         return neighbours[0]
-
     return None
 
