@@ -3,25 +3,16 @@ from typing import List, Tuple
 
 class problemDecomposer():
     def __init__(self,state:StateMA()):
-        self.Tasks = []
+        self.Tasks  = []
         self.state = state
-
-        pass
     def createSetOfTasks(self):
         self.checkGoals()
         self.getPossibleAgents()
         for i in range(len(self.goal_need_task)):
             if self.goal_need_task[i]:
-                pass
-                #createTask()
-    '''
-    creates a top level task for an agent to transport a box from the initial state to the goal state
-    '''
-    def createTask(self,box,from_cor,to_cor,agent):
-        for i in self.goal_need_task:
-
-        Task: List[Tuple[int, Tuple[int, int], Tuple[int, int],List[int]]] = None
-        self.Tasks.append(Task)
+                Task = (i, self.state.box_position[i],self.state.goal_position[i],self.PossibleAgents[i])
+                self.Tasks.append(Task)
+        return self.Tasks
     '''Checks if all boxes are at their goal state
     returns list of boolean where true represents a need for a task
     '''
@@ -39,7 +30,7 @@ class problemDecomposer():
                 self.goal_need_task[i]=True
     '''Multiple agents for one box possible?'''
     def getPossibleAgents(self):
-        self.PossibleAgents = []
+        self.PossibleAgents = List
         for i in range(len(self.state.box_types)):
             agents = []
             if self.goal_need_task[i]:
