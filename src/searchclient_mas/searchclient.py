@@ -151,7 +151,7 @@ def main():
     sys.stdout.flush()
     server_messages = sys.stdin
     client = SearchClient(server_messages)
-    problem = pd(client)
+    problem = pd(client.initial_state)
     tasks = problem.getTasks()
     print(tasks,file= sys.stderr, flush=True)
     #print(traceback.format_exc(), file=sys.stderr, flush=True)

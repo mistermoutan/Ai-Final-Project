@@ -211,11 +211,11 @@ class StateSA:
             for col in range(self.cols):
                 pos = (row, col)
                 if pos in self.box_by_cords:
-                    line.append(repr_dict[self.box_types[self.box_by_cords[pos]]])
+                    line.append(str(self.box_types[self.box_by_cords[pos]]).upper())
                 elif self.agent_row == row and self.agent_col == col:
                     line.append('0')
                 elif pos in self.goal_by_cords:
-                    line.append(repr_dict[self.goal_types[self.goal_by_cords[pos]]].lower())
+                    line.append(str(self.goal_types[self.goal_by_cords[pos]]).lower())
                 elif not self.maze[row][col]:
                     line.append('+')
                 else:
@@ -227,7 +227,7 @@ class StateMA:
     _RNG = random.Random(1)
 
     def __init__(self, maze: List[List[int]] = None, boxes: List[Tuple[int, Tuple[int, int], int]] = None,
-                 goals: List[Tuple[int, Tuple[int, int]]] = None, agents: List[Tuple[int, Tuple[int, int], int]] = None):
+                 goals: List[Tuple[int, Tuple[int, int]]] = None, agents: List[Tuple[Tuple[int, int], int]] = None):
         '''
         :param maze: maze should be a grid containing true or false with false being walls and true being open spaces
         :param boxes: boxes should be a list containing the following tuple: (type (number), position (x,y), color (number))
@@ -436,6 +436,47 @@ class StateMA:
 
         return child
 
+    def get_StateSA(self, agentID, ignore_immovable=False):
+        pos = self.agent_positions[agentID]
+        color = self.agent_colors[agentID]
+
+        boxes = []
+        goals = []
+        extra_walls = []
+
+        #maze: List[List[int]] = None
+        #boxes: List[Tuple[int, Tuple[int, int]]] = None,
+        #goals: List[Tuple[int, Tuple[int, int]]] = None,
+        #agent: Tuple[int, int] = None
+
+        type_dict = {}
+
+        for i, t in enumerate(self.box_types):
+            if self.box_colors[i] == color:
+                boxes.append((t, self.box_positions[i]))
+                type_dict[t] = True
+            elif not ignore_immovable:
+                extra_walls.append(self.box_positions[i])
+
+        for i, t in enumerate(self.goal_types):
+            if t in type_dict:
+                goals.append((t, self.goal_positions[i]))
+
+        if not ignore_immovable:
+            for pos in self.agent_positions:
+                if self.agent_by_cords[pos] != agentID:
+                    extra_walls.append(pos)
+
+        if len(extra_walls) == 0:
+            return StateSA(self.maze, boxes, goals, self.agent_positions[agentID])
+
+        maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.cols)]
+        for i, j in extra_walls:
+            maze[i][j] = False
+
+        return StateSA(maze, boxes, goals, self.agent_positions[agentID])
+
+
     def __repr__(self):
         lines = []
         for row in range(self.rows):
@@ -444,11 +485,14 @@ class StateMA:
                 pos = (row,col)
                 agent = self.agent_by_cords.get(pos, None)
                 box   = self.box_by_cords.get(pos, None)
+                goal  = self.goal_by_cords.get(pos, None)
                 wall  = ' ' if self.maze[row][col] else '+'
-                if agent != None:
+                if agent is not None:
                     line.append(str(agent))
-                elif box != None:
-                    line.append(str(self.box_types[box]))
+                elif box is not None:
+                    line.append(str(self.box_types[box]).upper())
+                elif goal is not None:
+                    line.append(str(self.goal_types[goal]).lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))
@@ -468,6 +512,9 @@ if __name__ == '__main__':
         fail = True
     if not test_push_pull():
         print("push test failed!!")
+        fail = True
+    if not test_getStateSA():
+        print("failed get StateSA")
         fail = True
     if not fail:
         print("All tests passed")
