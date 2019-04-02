@@ -9,7 +9,7 @@ class Dir:
         self.name = name
         self.d_row = d_row
         self.d_col = d_col
-    
+
     def __repr__(self):
         return self.name
 
@@ -53,6 +53,12 @@ class Action:
         else:
             self._repr = '[{}({})]'.format(action_type, agent_dir)
     
+    def __eq__(self, other):
+        return not other == None and \
+            self.action_type == other.action_type \
+            and self.agent_dir  == other.agent_dir \
+            and self.box_dir    == other.box_dir
+
     def __repr__(self):
         return self._repr
 
@@ -71,3 +77,18 @@ for agent_dir in (Dir.N, Dir.S, Dir.E, Dir.W):
 
 ALL_ACTIONS.append(ActionType.Wait)
 
+north = Dir.N
+east  = Dir.E
+south = Dir.S
+west  = Dir.W
+
+NOOP = ActionType.Wait
+
+def move(direction):
+    return Action(ActionType.Move, direction, None)
+
+def push(agent_dir, box_dir):
+    return Action(ActionType.Push, agent_dir, box_dir)
+
+def pull(agent_dir, box_dir):
+    return Action(ActionType.Pull, agent_dir, box_dir)

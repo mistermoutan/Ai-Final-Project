@@ -1,109 +1,252 @@
-import state
 import numpy as np
-from collections import deque
+import random
+from collections import defaultdict , deque
+import copy
+from action import *
+import test_utilities as util
+
 
 """
 Converts Level to Graph (only non walls cells are considered)
 
+    Constructor:
+
+        - Requires an instance of StateMA or StateSA
+        
+        The precompute parameter allows for:
+
+                - Precompute bfs_trees for goals or boxes. T
+
     Methods
-     - BFS_ShortestPath : Returns shortest path between a source vertice and target vertice in a deque with directions on the grid (N,S,W,E) (deques can be indexed as lists)
-     - getNeighbours: Get neighbouring vertices of a particular vertice
-     - BackTrack: Used to return the shortest path in terms of directions, called once BFS finds a solution
+
+    - bfs_tree : builds bfs_free for a particular vertex as root, this trees have the shortest path (in terms of directions on the grid) from each vertice to root stored. -> {vertex:(parent,[path_from_vertex_to_root])}
+    - shortest_path_between: returns shortest path between source_vertex and target_vertex by using the bfs_tree that has target_vertex as root
+    - bfs_shortestpath_no_tree : returns shortest path between source_vertex and target_vertex without having a bfs_tree pre built or building one and storing it in self.bfs_trees. May come in handy
 
 """
+
 class Graph (object) :
 
-    def __init__(self,maze):
+    def __init__(self,state,precompute = ""):
 
-        row,col = np.asarray(maze).shape
-        self.vertices = [(i,j) for i in range(row) for j in range(col) if maze[i][j] == True]      #vertices of graph representation of level
+        self.bfs_trees = {}  # store bfs trees from specific root vertices
+        row,col = np.asarray(state.maze).shape
+        self.vertices = {(i,j) for i in range(row) for j in range(col) if state.maze[i][j] == True}     
 
-    def getNeighbours(self,vertice):
+        #precompute bfs_trees with goals as root
+        if "goal_trees" in precompute:
+            for goal in state.goal_positions:
+                self.bfs_tree(goal)
 
-        (x,y) = vertice
-        neighbours = [(x,y+1),(x,y-1),(x-1,y),(x+1,y)]
-        neighbours = [n for n in neighbours if n in self.vertices]
+        #precompute bfs_trees with box positions as root
+        elif "box_trees" in precompute:
+            for box in state.box_positions:
+                self.bfs_tree(box)
 
-        return neighbours
-
-    def Backtrack (self, source_vertice, target_vertice, parent_dict):
-        """Used to Return shortest path in terms of directions"""
-
-        path = [target_vertice]
-        parent = parent_dict[target_vertice]
-
-        #get path, composed of vertices
-        while parent != source_vertice:
-            path.insert(0,parent) # appent parent to beggining of path array
-            parent = parent_dict[parent]  # get next parent
-
-        #still missing the source vertice (it has no parent)
-        path.insert(0,source_vertice)
-
-        #turn path into directions:
-        directions = deque()
-        for i in range(len(path) - 1):
-
-            subtract = tuple(np.subtract(path[i+1],path[i]))
-
-            if subtract == (1,0):
-                direction = "S"
-            elif subtract == (-1,0):
-                direction = "N"
-            elif subtract == (0,1):
-                direction = "E"
-            elif subtract == (0,-1):
-                direction = "W"
             
-            directions.append(direction)
-
-        return directions
-
-    def BFS_ShortestPath (self,source_vertice,target_vertice):
-        """ Returns Shortest in terms of  S,E,W,N directions"""
-
-        assert source_vertice in self.vertices and target_vertice in self.vertices, "Insert coordinates that are part of the level"
+    def bfs_tree(self,source_vertex):
+        """
+        Builds complete bfs tree with source_vertex as root, adds it so self.bfs_trees. 
+        Tree is a dictionary structured in the following way: {vertex:(parent,(path to root in terms of directions)}
+        If the source_vertex has no neighbours, returns None.
+        May lead to congestion due to path similarity as it is used to get shortest paths from vertices to the source/root vertex
+        """
+        assert source_vertex in self.vertices, "Root/source is not part of the state"
+        
+        #if tree is already built
+        if source_vertex in self.bfs_trees:
+            return
         
         queue = deque() 
-        queue.append(source_vertice) #adds to the right
+        queue.append(source_vertex) 
         explored_set = set()
-        parent = {} #children/neighbours as keys and their parent vertice as values
-        
+        explored_set.add(source_vertex)
+        parent = {} # {vertex:(parent,(path to root in terms of directions)}
+        parent[source_vertex] = None
 
         while len(queue) > 0:
-            current_vertice = queue.popleft()
+            current_vertex = queue.popleft()
+            neighbours = self.get_neighbours(current_vertex)
+            for neighbour in neighbours:
+                if neighbour not in explored_set:
+                    explored_set.add(neighbour)
+                    queue.append(neighbour)
+                    direction = self.direction_between_two_adjacent_vertices(current_vertex,neighbour)
+                    if parent[current_vertex]: # if the parent is not the root, append the direction to the path that already exists
+                        path_until_now = self.deep_copy(parent[current_vertex][1]) 
+                        path_until_now.insert(0,direction)
+                        parent[neighbour] = (current_vertex,path_until_now)
+                    else:
+                        parent[neighbour] = (current_vertex,[direction])
 
-            if current_vertice == target_vertice:
-                path = self.Backtrack(source_vertice,target_vertice,parent)
+        #if it is not possible to build the tree from source_vertex (it has no neighbours)
+        if len(parent.keys()) == 1:
+            parent = None
+        
+        self.bfs_trees[source_vertex] = parent
+
+
+    def shortest_path_between(self,source_vertex,target_vertex):
+        """
+        Returns shortest path between two vertices using bfs tree, if the tree with target_vertice as root is not built, builds it and adds it to self.bfs_trees
+        If there is no path between the vertices returns None
+        """
+        assert source_vertex in self.vertices and target_vertex in self.vertices, "Insert coordinates that are part of the state or not walls"
+
+        if target_vertex == source_vertex:
+            return deque()
+        if target_vertex not in self.bfs_trees:
+            self.bfs_tree(target_vertex)
+
+        tree = self.bfs_trees[target_vertex]
+
+        if tree:
+            return self.shortest_path_from_bfs_tree(tree,source_vertex)
+        else:
+            return tree
+
+    def shortest_path_from_bfs_tree(self, tree, source):
+        """
+        Returns shortest path from source to root of tree, not to be called directly
+        """
+        return tree[source][1]
+
+
+        
+    def bfs_shortestpath_notree(self,source_vertex,target_vertex):
+        """ 
+        Returns Shortest between two vertices in terms of S,E,W,N directions without having a tree pre built or building one and storing it in self.bfs_trees
+        If there is no path between the two vertices, returns None. May be useful if memory/time problems arise.
+        """
+        assert source_vertex in self.vertices and target_vertex in self.vertices ,  "Insert coordinates that are part of the state or not walls"
+
+        if source_vertex == target_vertex:
+            return deque()
+
+        queue = deque() 
+        queue.append(source_vertex) 
+        explored_set = set()
+        self.parent = {} # vertex:parent 
+        
+        while len(queue) > 0:
+            current_vertex = queue.popleft()
+
+            if current_vertex == target_vertex:
+                path = self.backtrack(source_vertex,target_vertex,self.parent)
                 return path
 
-            neighbours = self.getNeighbours(current_vertice)
+            neighbours = self.get_neighbours(current_vertex)
             
             for neighbour in neighbours:
                 if neighbour not in explored_set:
                     explored_set.add(neighbour)
-                    parent[neighbour] = current_vertice
+                    self.parent[neighbour] = current_vertex
                     queue.append(neighbour)
 
             if len(queue) == 0:
-                print("Failed to find Shortest path, make sure there is a path between the source and target vertice")
-                return
+                return None
 
+
+    def backtrack(self, source_vertex, target_vertex, parent_dict):
+        """Used to Return shortest path between two vertices,  in terms of directions, used in bfs_shortestpath_notree"""
+
+        path = [target_vertex]
+        parent = parent_dict[target_vertex]
+
+        #get path, composed of vertices
+        while parent != source_vertex:
+            path.insert(0,parent) 
+            parent = parent_dict[parent] 
+
+        path.insert(0,source_vertex) #still missing the source vertex (it has no parent)
+        directions = self.path_to_directions(path)
+        return directions
+
+
+
+
+    ##########################################################
+    ###############           UTILS               ############
+    ##########################################################
+
+    def get_neighbours(self,vertex):
+
+        (x,y) = vertex
+        neighbours = {(x,y+1),(x,y-1),(x-1,y),(x+1,y)}
+        neighbours = {n for n in neighbours if n in self.vertices}
+
+        return neighbours
+
+    def path_to_directions(self,path):
+        """ Turns Path composed of vertices to directions"""
+    
+        directions = deque()
+
+        for i in range(len(path) - 1):
+            subtract = tuple(np.subtract(path[i+1],path[i]))
+
+            if subtract == (1,0):
+                direction = Dir.S
+            elif subtract == (-1,0):
+                direction = Dir.N
+            elif subtract == (0,1):
+                direction = Dir.E
+            elif subtract == (0,-1):
+                direction = Dir.W
+            else:
+                raise ValueError("Vertices in path are not adjacent")
+
+            directions.append(direction)
+        
+        return directions
+
+
+    def direction_between_two_adjacent_vertices(self,_from,to):
+
+        subtract = tuple(np.subtract(_from,to))
+
+        if subtract == (1,0):
+            direction = Dir.S
+        elif subtract == (-1,0):
+            direction = Dir.N
+        elif subtract == (0,1):
+            direction = Dir.E
+        elif subtract == (0,-1):
+            direction = Dir.W
+        else:
+            raise ValueError("Vertices are not adjacent")
+
+        return direction
+
+    def deep_copy(self,x):
+        return copy.deepcopy(x)       
+
+
+#def trim_tree()
+    
+#def occupy_vertices_in_tree(self,tree,vertices_to_occupy): #{vertex:parent,path}
+     
+    
 
 
             
-"""
 
-maze = [[True,True,False,True],
-        [True,True,True,True],
-        [True,False,False,True],
-        [True,False,True,True]]
-
-g = Graph(maze)
-g.BFS_ShortestPath((3,2),(3,0))
 
 """
+agt0 = util.agent(0,"red")
+agt1 = util.agent(1,"blue")
+box0  = util.box("A", "blue")
+level = [
+        [True,True,True],
+        [False,True,False],
+        [True,True,True]
+    ]
 
+initial_state = util.make_state(level)
+g = Graph(initial_state)
+g.shortest_path_between((0,0),(2,2))
+
+"""
 
 
 

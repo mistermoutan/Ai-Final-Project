@@ -8,7 +8,7 @@ planner = Planner(s)
 
 where s is the initial state in the planning process. 
 
-The planner needs four functions/methods to work properly.
+The planner needs five functions/methods to work properly.
 These functions can either be implemented as methods of the state 's', 
 or provided as optional arguments to the constructor. They are:
 
@@ -27,6 +27,10 @@ heuristic : state -> int
 This function produces a heuristic value for the provided state.
 Technically, it could map each state to anything that is comparable,
 but integers are fast, so lets stick to that.
+
+get_g_value : state -> int 
+This funciton gives the distance from the initial state of the search to this state
+
 
 The functions provided as arguments take precedence over method implementations in 's'.
 This means that it is possible to implement all methods in 's',
@@ -55,6 +59,9 @@ import heapq
 def default_heuristic(state):
     return state.heuristic()
 
+def default_get_g_value(state):
+    return state.get_g_value()
+
 def default_is_goal_state(state):
     return state.is_goal_state()
 
@@ -65,28 +72,27 @@ def default_get_children(state):
     return state.get_children()
 
 class Planner(object):
-    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None, maximum_length_of_solution = None):
+    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None, g_value = None, cutoff_solution_length = None):
         #Setting the functions used to explore the state space
         #Use implementaitons in state unless new functions are provided 
         self.get_children = get_children if get_children else default_get_children
         self.is_goal_state = is_goal_state if is_goal_state else default_is_goal_state
         self.extract_plan = extract_plan if extract_plan else default_extract_plan
         self.heuristic = heuristic if heuristic else default_heuristic
-        
-        
+        self.g_value = g_value if g_value else default_get_g_value
+                
         #Adding the initial state to the frontier
         self.frontier = []
         heapq.heapify(self.frontier)
         firstEntry = (self.heuristic(initial_state), initial_state)
         heapq.heappush(self.frontier, firstEntry)
 
-
         #Initialize remaining variables
-        self.maximum_length_of_solution = maximum_length_of_solution
         self.expanded_set = set()
         self.plan = None
-        
 
+        #Replace the cutoff with a suitably large number if there is no cutoff
+        self.cutoff_solution_length = cutoff_solution_length if cutoff_solution_length else 2000000000
     
     def expand_one_state(self):
         #TODO: Fix this: it's not very good. What if there is no solution and the state space is exhausted?
@@ -107,8 +113,13 @@ class Planner(object):
         #Get the unexpanded neighbours of the state
         children = self.get_children(state)
         
+        #Filter out expanded states and states that are past the cutoff for solution length
+        children = [s for s in children if s not in self.expanded_set and self.g_value(s) < self.cutoff_solution_length]
+
         #Calculate their heuristic value
-        children = [(self.heuristic(s),s) for s in children if not s in self.expanded_set]
+        children = [(self.heuristic(s),s) for s in children]
+
+        
         
         #Add them to the frontier
         for entry in children:

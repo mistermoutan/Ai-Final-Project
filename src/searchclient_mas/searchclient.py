@@ -110,6 +110,7 @@ class SearchClient:
         else:
             self.initial_state = StateSA(maze, boxes, goals, agent)
         self.sendComment("Initialized SearchClient")
+
     def search(self, strategy: 'Strategy'):
         pass
 
@@ -154,6 +155,5 @@ def main():
     #print(traceback.format_exc(), file=sys.stderr, flush=True)
 
 if __name__ == '__main__':
-    # Run client.
     main()
 
