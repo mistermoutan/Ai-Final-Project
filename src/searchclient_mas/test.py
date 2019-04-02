@@ -1,3 +1,4 @@
+"""
 import test_utilities as tu
 
 agt0 = tu.agent(0,"red")
@@ -12,5 +13,5 @@ action = [tu.move(tu.east), tu.move(tu.west)]
 x = s.get_child(action)
 
 y = 123
-
+"""
 

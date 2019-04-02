@@ -10,6 +10,12 @@ class Dir:
         self.d_row = d_row
         self.d_col = d_col
 
+    def __eq__(self, other):
+        return other != None \
+                and self.name == other.name \
+                and self.d_row == other.d_row \
+                and self.d_col == other.d_col
+
     def __repr__(self):
         return self.name
 
@@ -29,6 +35,9 @@ class ActionType:
         '''
         self.name = name
     
+    def __eq__(self,other):
+        return other != None and self.name == other.name
+
     def __repr__(self):
         return self.name
 

@@ -119,8 +119,6 @@ class Planner(object):
         #Calculate their heuristic value
         children = [(self.heuristic(s),s) for s in children]
 
-        
-        
         #Add them to the frontier
         for entry in children:
             heapq.heappush(self.frontier, entry)
