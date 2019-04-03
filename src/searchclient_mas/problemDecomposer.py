@@ -22,10 +22,10 @@ class problemDecomposer():
                 self.Tasks.extend(Task)
         '''
 
-    '''Checks if all boxes are at their goal state
-    returns list of boolean where true represents a need for a task
-    '''
     def checkGoals(self):
+        '''Checks if all boxes are at their goal state
+        returns list of boolean where true represents a need for a task
+        '''
         pass
 
         '''self.goal_need_task =[]
@@ -43,7 +43,16 @@ class problemDecomposer():
     '''Multiple agents for one box possible?'''
     def searchPossibleAgentsForBox(self,box_idx):
         '''returns a list of lists of agent indexes that are able to move the boxes at pos i in the box list'''
-        return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
+        #r=[idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
+        l = []
+        for c in self.state.box_colors:
+            t=[]
+            for i,x in enumerate(self.state.agent_colors):
+                if x == c:
+                    t.append(i)
+            l.append(t)
+        return l
+
     def searchPossibleBoxesForGoals(self):
         '''returns a list of lists of box-indexes that are able to satisfy the goal at pos i in the goal list'''
         self.pos_boxes=[]
