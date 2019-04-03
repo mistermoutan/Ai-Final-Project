@@ -43,15 +43,10 @@ class problemDecomposer():
     '''Multiple agents for one box possible?'''
     def searchPossibleAgentsForBox(self,box_idx):
         '''returns a list of lists of agent indexes that are able to move the boxes at pos i in the box list'''
-        #r=[idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
-        l = []
+        self.agts_to_box = []
         for c in self.state.box_colors:
-            t=[]
-            for i,x in enumerate(self.state.agent_colors):
-                if x == c:
-                    t.append(i)
-            l.append(t)
-        return l
+            self.agts_to_box.append([i for i,x in enumerate(self.state.agent_colors) if x ==c])
+
 
     def searchPossibleBoxesForGoals(self):
         '''returns a list of lists of box-indexes that are able to satisfy the goal at pos i in the goal list'''
