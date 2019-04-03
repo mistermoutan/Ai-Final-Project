@@ -350,7 +350,7 @@ class StateMA:
                 (new_agent_x, new_agent_y),
                 box_id,
                 (new_agent_x, new_agent_y),
-                (new_box_x, new_agent_y)
+                (new_box_x, new_box_y)
                 )
 
 
@@ -472,7 +472,8 @@ class StateMA:
                 continue
             _, _, agent_from, agent_to, box_id, box_from, box_to = action
             child.perform_action(agent_id, agent_from, agent_to, box_id, box_from, box_to)
-
+        child.parent = self
+        child.parent_action = actions
         return child
 
     def get_StateSA(self, agentID, ignore_immovable=False):
@@ -518,6 +519,9 @@ class StateMA:
 
     def __repr__(self):
         lines = []
+        n_to_ascii = {0:'a',
+                      1:'b',
+                      2:'c'}
         for row in range(self.rows):
             line = []
             for col in range(self.cols):
@@ -529,9 +533,9 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    line.append(str(self.box_types[box]).upper())
+                    line.append(str(n_to_ascii[self.box_types[box]]).upper())
                 elif goal is not None:
-                    line.append(str(self.goal_types[goal]).lower())
+                    line.append(str(n_to_ascii[self.goal_types[goal]]).lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))
