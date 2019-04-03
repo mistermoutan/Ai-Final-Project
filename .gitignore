@@ -108,3 +108,13 @@ venv.bak/
 #Visual studio code files
 **/.vscode
 **/launch.json
+
+## MacOs files
+.DS_Store
+.AppleDouble
+.LSOverride
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
