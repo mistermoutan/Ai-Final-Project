@@ -472,8 +472,8 @@ class StateMA:
                 continue
             _, _, agent_from, agent_to, box_id, box_from, box_to = action
             child.perform_action(agent_id, agent_from, agent_to, box_id, box_from, box_to)
-        child.parent = self
-        child.parent_action = actions
+        #child.parent = self
+        #child.parent_action = actions
         return child
 
     def get_StateSA(self, agentID, ignore_immovable=False):
