@@ -255,9 +255,9 @@ class StateMA:
         self.agent_colors = [a[1] for a in agents]
         self.agent_by_cords = {pos: i for i, pos in enumerate(self.agent_positions)}
 
-        movable_colors = {}
+        movable_colors = set()
         for color in self.agent_colors:
-            movable_colors[color] = True
+            movable_colors.add(color)
 
         curr = 0
         self.box_types = []
@@ -266,7 +266,7 @@ class StateMA:
         self.box_by_cords = {}
         maze_safe = False
         # any boxes that mismatch the color of all agents will be assumed walls
-        # TODO: should this be done elsewhere?
+        # TODO: should this be done elsewhere maybe the level analyzer?
         for i in range(len(boxes)):
             type, pos, color = boxes[i]
             if color in movable_colors:

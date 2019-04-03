@@ -220,9 +220,95 @@ class LevelAnalyser:
         if len(explored_elements) == len(from_container):
             return None
 
+    def get_goal_room_graph(self, goals):
+        rooms = [set((goal,)) for goal in goals]
+        vert_in_room = {goal:i for i,goal in enumerate(goals)}
+        seen = set(goals)
+        seen_edges = set()
+
+        # TODO: move this to appropriate place
+        def get_neighbours(vertex):
+            """Returns neighbours as set"""
+            (x, y) = vertex
+            neighbours = {(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)}
+            return neighbours
+
+        edges = []
+        for i, g in enumerate(goals):
+            # for every goal we will check adjacent squares and if we haven't seen them before they are now a new room
+            # which we grow with dfs
+            neighbors = get_neighbours(g)
+            for n in neighbors:
+                if n in seen:
+                    edge = (i, vert_in_room[n])
+                    if not(edge in seen_edges or (vert_in_room[n],i) in seen_edges):
+                        edges.append(edge)
+                        seen_edges.add(edge)
+                if n in self.vertices and n not in seen:
+                    idx = len(rooms)
+                    room = set((n,))
+                    rooms.append(room)
+                    # TODO: use bfs instead of dfs? (only necessary if we wanna get some min distances between nodes)
+                    stack = [n]
+                    while stack:
+                        curr = stack.pop()
+                        if curr in seen and vert_in_room[curr] != idx:
+                            edge = (vert_in_room[curr], idx)
+                            edges.append(edge)
+                            seen_edges.add(edge)
+                        elif curr not in seen:
+                            if curr not in self.vertices:
+                                continue
+                            seen.add(curr)
+                            room.add(curr)
+                            vert_in_room[curr] = idx
+
+                            stack.extend(get_neighbours(curr))
+        # TODO: use different edge representation?
+        # TODO: get some extra info?
+        return rooms, vert_in_room, edges
 
 
 
+def test_get_goal_room_graph():
+    import test_utilities as tu
+
+    maze = tu.create_maze()
+    goal = tu.goal('a')
+
+    for i in range(len(maze)-2):
+        maze[i][4] = False
+        maze[i][6] = False
+
+    maze[8][4] = goal
+    maze[8][5] = goal
+    maze[8][6] = goal
+    maze[5][5] = goal
+
+    state = tu.make_state(maze)
+    analyzer = LevelAnalyser(state)
+    rooms, room_by_cord, edges = analyzer.get_goal_room_graph(state.goal_positions)
+
+    if len(rooms) != 8:
+        print("number of rooms is wrong")
+        return False
+    if len(edges) != len(rooms)-1:
+        print("number of edges is not correct")
+        return False
+    spaces = 0
+    for r in rooms:
+        for _ in r:
+            spaces += 1
+
+    if spaces != sum([sum(i) for i in state.maze]):
+        print("number of spaces in rooms are not equal to actual number of spaces")
+        return False
+    return True
+
+
+if __name__ == '__main__':
+    if not test_get_goal_room_graph():
+        print("Test failed")
 
 #def locate_high_density_areas:
 
@@ -248,7 +334,8 @@ level = [
     ]
 
 initial_state = util.make_state(level)
+
 L = LevelAnalyser(initial_state)
 L.separate_rooms_exist()
-L.locate_corridors()
+#L.locate_corridors()
 

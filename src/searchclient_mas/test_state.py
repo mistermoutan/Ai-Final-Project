@@ -1,14 +1,5 @@
 import test_utilities as tu
-from test_utilities import north,east,west,south
-
-def create_maze(size = 10):
-
-    level = [[False for _ in range(size)] for _ in range(size)]
-
-    for i in range(1, size-1):
-        for j in range(1,size-1):
-            level[i][j] = True
-    return level
+from test_utilities import north,east,west,south,create_maze
 
 def test_swap():
     maze = create_maze(10)

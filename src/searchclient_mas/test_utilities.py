@@ -7,6 +7,16 @@ from state import StateMA
 #boxes  are represented by "b:type:color"
 #goals  are represtend  by "g:type"
 
+def create_maze(size = 10):
+    # creates a maze of dimensions size x size
+    level = [[False for _ in range(size)] for _ in range(size)]
+
+    for i in range(1, size-1):
+        for j in range(1,size-1):
+            level[i][j] = True
+    return level
+
+
 def agent(id,color):
     return "a:"+str(id)+":"+str(color)
 
