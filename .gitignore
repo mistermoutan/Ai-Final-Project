@@ -103,6 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+#Pycharm stuff
+.idea/
 **/.idea/
 
 #Visual studio code files
@@ -110,6 +112,7 @@ venv.bak/
 **/launch.json
 
 ## MacOs files
+**/.DS_Store
 .DS_Store
 .AppleDouble
 .LSOverride
