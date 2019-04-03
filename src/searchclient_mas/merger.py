@@ -95,7 +95,7 @@ class MergeState(object):
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
         
-        return self.g_value + len(self.agent_plan) - self.agent_plan_index
+        return len(self.agent_plan) - self.agent_plan_index
     
     def get_g_value(self):
         return self.g_value

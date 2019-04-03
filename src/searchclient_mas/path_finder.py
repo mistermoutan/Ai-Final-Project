@@ -2,6 +2,7 @@ from action import Action,move,push,pull,north,south,east,west
 from graph_alternative import Graph
 from typing import Tuple,List
 from utilities import pairwise,next_position_in_direction,are_adjacent,direction_between_adjacent_positions
+import itertools as it
 
 def path_between_positions_as_directions(graph, source, target):
     path = graph.shortest_path_between(source,target)
