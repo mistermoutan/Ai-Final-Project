@@ -70,15 +70,15 @@ class SearchClient:
         goals = []
         type_count = 0
         seen_types = {}
-        self.agent_count = 0
         row = 0
         for line in init:
             for col, char in enumerate(line):
                 if char == '+':
                     maze[row][col] = False
                 elif char in "0123456789":
-                    agent.append(((row, col),colors[char]))
-                    self.agent_count+=1
+                    agent_id = int(char)
+                    agent_spec = ((row, col),colors[char])
+                    agent.insert(agent_id, agent_spec)
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -107,12 +107,9 @@ class SearchClient:
                     goals.append((type, (row, col)))
             row += 1
         
-        if self.agent_count > 1:
-            #print(agent, file=sys.stderr, flush=True)
-
-            self.initial_state = StateMA(maze,boxes,goals,agent)
-        else:
-            self.initial_state = StateSA(maze, boxes, goals, agent)
+        print(agent, file=sys.stderr,flush=True)
+        self.initial_state = StateMA(maze,boxes,goals,agent)
+        
         self.sendComment("Initialized SearchClient")
 
     def solve_the_problem(self):
@@ -133,25 +130,14 @@ class SearchClient:
     
     '''
     def sendJointAction(self,actions):
-        jointAction=""
-        #SingleAgent
-        if self.agent_count==1:
-            jointAction+=str(actions[0])
-        #MultiAgent
-        else:
-            tmp = [str(action) if action else "NoOp" for action in actions]
-            jointAction = ";".join(tmp)
-            #for i in range(self.agent_count):
-            #    if actions[i] in actions:
-            #        jointAction+=str(actions[i])+";"
-            #    else:
-            #        jointAction+="NoOp;"
-        print("err: " + jointAction+"\n", file=sys.stderr)
+        
+        jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
-        #sys.stdout.write(str(actions))
         sys.stdout.flush()
+        
         success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
         return success
+
     def sendComment(self,comment):
         sys.stdout.write("#"+str(comment)+"\n")
         sys.stdout.flush()
