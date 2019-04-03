@@ -17,7 +17,8 @@ Converts Level to Graph
 
     Methods
 
-    - bfs_tree : builds bfs_tree for a particular vertex as root, this trees have the shortest path (in terms of directions on the grid) from each vertice to root stored. -> {vertex:(parent,[path_from_vertex_to_root])}
+    - run_bfs : run_bfs for a particular vertex as root therefore building its bfs tree -> {vertex:parent}
+    - bfs_tree: used to select tree with certain vertex as root. If tree is not buit, builds it. Returns tree
     - shortest_path_between: returns shortest path between source_vertex and target_vertex by using the bfs_tree that has target_vertex as root
     - bfs_shortestpath_no_tree : returns shortest path between source_vertex and target_vertex without having a bfs_tree pre built or storing it in self.bfs_trees. May come in handy
 
@@ -220,6 +221,7 @@ class Graph (object) :
 
 
 
+"""
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
 box0  = util.box("A", "blue")
@@ -228,7 +230,6 @@ level = [
         [False,True,False,True,False],
         [True,True,True,False,True]
     ]
-
 
 
 

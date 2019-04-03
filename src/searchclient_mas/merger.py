@@ -4,7 +4,7 @@ from state import StateMA
 
 class MergeState(object):
 
-    def __init__(self, game_state, agent_id, agent_plan, master_plan, master_plan_index, agent_plan_index=None, g_value = 0):
+    def __init__(self, game_state, agent_id, agent_plan, master_plan, master_plan_index, agent_plan_index=None, g_value=0):
         self.game_state = game_state
         self.agent_id = agent_id
         self.agent_plan = agent_plan

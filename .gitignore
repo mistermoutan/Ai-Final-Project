@@ -103,8 +103,21 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+#Pycharm stuff
+.idea/
 **/.idea/
 
 #Visual studio code files
 **/.vscode
 **/launch.json
+
+## MacOs files
+**/.DS_Store
+.DS_Store
+.AppleDouble
+.LSOverride
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
