@@ -66,6 +66,7 @@ class problemDecomposer():
     def assign_tasks_greedy(self):
         '''- greedely assings tasks to agents with lowest workload that can fullfill the task
            - every box represents a task
+           - returns list of lists of tasks for agents at position i
         '''
         self.agt_tasks = [[] for i in range(len(self.state.agent_colors))]
 
@@ -78,6 +79,10 @@ class problemDecomposer():
                     self.agt_tasks[p_agts[m]].append(i)
                 else:
                     self.agt_tasks[p_agts[-1]].append(i)
+
+        #extension:
+        # - pick agent that has lowest workload and is closest to box
+        # - estimate workload of agents based on distance box to goal
 
     def getTasks(self):
         return self.Tasks
