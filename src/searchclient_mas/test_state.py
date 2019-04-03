@@ -122,6 +122,7 @@ def test_getStateSA():
     agt2 = tu.agent(2,'r')
 
     box1 = tu.box('a', 'r')
+    immovable = tu.box('a', 'notmovable')
 
     goal1 = tu.goal('a')
     goal2 = tu.goal('b')
@@ -132,6 +133,7 @@ def test_getStateSA():
     maze[4][4] = box1
     maze[2][2] = goal1
     maze[3][3] = goal2
+    maze[7][7] = immovable
 
     state = tu.make_state(maze)
 
@@ -159,4 +161,7 @@ def test_getStateSA():
                 if res.maze[x][y]:
                     print("agt:",agt_id," box:", i, " not turned into a wall")
                     return False
+        if state.maze[7][7]:
+            print("bad color box did not get turned into a wall")
+            return False
     return True

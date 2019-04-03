@@ -250,18 +250,43 @@ class StateMA:
         self.cols = len(maze[0])
         self.maze = maze
 
-        self.box_types = [b[0] for b in boxes]
-        self.box_positions = [b[1] for b in boxes]
-        self.box_colors = [b[2] for b in boxes]
-        self.box_by_cords = {pos: i for i, pos in enumerate(self.box_positions)}
-
-        self.goal_types = [b[0] for b in goals]
-        self.goal_positions = [b[1] for b in goals]
-        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.agent_positions = [a[0] for a in agents]
         self.agent_colors = [a[1] for a in agents]
         self.agent_by_cords = {pos: i for i, pos in enumerate(self.agent_positions)}
+
+        movable_colors = {}
+        for color in self.agent_colors:
+            movable_colors[color] = True
+
+        curr = 0
+        self.box_types = []
+        self.box_positions = []
+        self.box_colors = []
+        self.box_by_cords = {}
+        maze_safe = False
+        # any boxes that mismatch the color of all agents will be assumed walls
+        # TODO: should this be done elsewhere?
+        for i in range(len(boxes)):
+            type, pos, color = boxes[i]
+            if color in movable_colors:
+                self.box_by_cords[pos] = curr
+                self.box_positions.append(pos)
+                self.box_colors.append(color)
+                self.box_types.append(type)
+                curr += 1
+            else:
+                x, y = pos
+                # since we are editing them aze we need to make sure it doesnt get broken in the caller's maze
+                # TODO: make slightly more efficient by nto copying whole maze but only necessary parts?
+                if not maze_safe:
+                    self.maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.rows)]
+                    maze_safe = True
+                self.maze[x][y] = False
+
+        self.goal_types = [b[0] for b in goals]
+        self.goal_positions = [b[1] for b in goals]
+        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None
         self.g = 0
