@@ -39,6 +39,8 @@ class StateSA:
 
         self._hash = None
 
+        self.action_performed = None
+
     def copy(self):
         # shallow copy for more efficient get children, especially if agent is only being moved
         cpy = StateSA()
@@ -104,6 +106,7 @@ class StateSA:
                     child.g += 1
                     child._hash -= hash((self.agent_row, self.agent_col))
                     child._hash += hash((new_agent_row, new_agent_col))
+                    child.action_performed = action
                     # child._hash = None
                     children.append(child)
             elif action.action_type is ActionType.Push:
@@ -119,6 +122,7 @@ class StateSA:
                         child.action = action
                         child.g += 1
                         child._hash = None
+                        child.action_performed = action
                         # print(str(child), file=sys.stderr, flush=True)
                         children.append(child)
             elif action.action_type is ActionType.Pull:
@@ -134,6 +138,7 @@ class StateSA:
                         child.action = action
                         child.g += 1
                         child._hash = None
+                        child.action_performed = action
                         # print(str(child), file=sys.stderr, flush=True)
                         children.append(child)
 
@@ -168,7 +173,7 @@ class StateSA:
         plan = []
         state = self
         while not state.is_initial_state():
-            plan.append(state)
+            plan.append(state.action_performed)
             state = state.parent
         plan.reverse()
         return plan

@@ -58,9 +58,9 @@ class Action:
         self.agent_dir = agent_dir
         self.box_dir = box_dir
         if box_dir is not None:
-            self._repr = '[{}({},{})]'.format(action_type, agent_dir, box_dir)
+            self._repr = '{}({},{})'.format(action_type, agent_dir, box_dir)
         else:
-            self._repr = '[{}({})]'.format(action_type, agent_dir)
+            self._repr = '{}({})'.format(action_type, agent_dir)
     
     def __eq__(self, other):
         return not other == None and \
@@ -84,7 +84,7 @@ for agent_dir in (Dir.N, Dir.S, Dir.E, Dir.W):
             # If not same directions.
             ALL_ACTIONS.append(Action(ActionType.Pull, agent_dir, box_dir))
 
-ALL_ACTIONS.append(ActionType.Wait)
+#ALL_ACTIONS.append(ActionType.Wait)
 
 north = Dir.N
 east  = Dir.E
