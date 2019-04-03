@@ -41,12 +41,15 @@ class problemDecomposer():
                 self.goal_need_task[i]=True
     '''
     '''Multiple agents for one box possible?'''
-    def searchPossibleAgentsForBox(self,box_idx):
+    def searchPossibleAgentsForBoxIndex(self,box_idx):
         '''returns a list of lists of agent indexes that are able to move the boxes at pos i in the box list'''
-        self.agts_to_box = []
-        for c in self.state.box_colors:
-            self.agts_to_box.append([i for i,x in enumerate(self.state.agent_colors) if x ==c])
+        return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
 
+    def searchAgentsForAllBoxes(self):
+        '''links all boxes in list of boxes to agents that can move the box'''
+        self.agts_for_boxes = []
+        for c in self.state.box_colors:
+            self.agts_for_boxes.append([i for i,x in enumerate(self.state.agent_colors) if x ==c])
 
     def searchPossibleBoxesForGoals(self):
         '''returns a list of lists of box-indexes that are able to satisfy the goal at pos i in the goal list'''
@@ -59,6 +62,22 @@ class problemDecomposer():
         self.pos_goals=[]
         for i in range(len(self.state.box_types)):
             self.pos_goals.append([idx for idx in range(len(self.state.goal_types)) if self.state.goal_types[idx] ==self.state.box_types[i]])
+
+    def assign_tasks_greedy(self):
+        '''- greedely assings tasks to agents with lowest workload that can fullfill the task
+           - every box represents a task
+        '''
+        self.agt_tasks = [[] for i in range(len(self.state.agent_colors))]
+
+        for i,b in enumerate(self.state.box_colors):
+            p_agts = self.searchPossibleAgentsForBoxIndex(i)
+            if p_agts:
+                ls = [len(self.agt_tasks[p]) for p in p_agts]
+                if ls:
+                    m = ls.index(min(ls))
+                    self.agt_tasks[p_agts[m]].append(i)
+                else:
+                    self.agt_tasks[p_agts[-1]].append(i)
 
     def getTasks(self):
         return self.Tasks
