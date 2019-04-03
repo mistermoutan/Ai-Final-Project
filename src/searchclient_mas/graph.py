@@ -25,18 +25,11 @@ Converts Level to Graph
 
 class Graph (object) :
 
-    def __init__(self,state,precompute = ""):
+    def __init__(self,maze,precompute = ""):
 
         self.bfs_trees = {}  # store bfs trees from specific root vertices
         row,col = np.asarray(state.maze).shape
-        self.vertices = set()
-        self.walls = set()
-        for i in range(row):
-             for j in range(col):
-                if state.maze[i][j] == True:
-                    self.vertices.add((i,j))
-                else:
-                    self.walls.add((i,j))
+        self.vertices = {(i,j) for i in range(row) for j in range(col) if maze[i][j]}
       
         #precompute bfs_trees with goals as root
         if "goal_trees" in precompute:
@@ -49,12 +42,11 @@ class Graph (object) :
                 self.bfs_tree(box)
 
             
-    def bfs_tree(self,source_vertex,cutoff_vertex=None,cutoff_branch = None): #add self.bfs_trees_cut?
+    def run_bfs(self,source_vertex,cutoff_vertex=None,cutoff_branch = None): #add self.bfs_trees_cut?
         """
         Builds complete bfs tree with source_vertex as root, adds it so self.bfs_trees. 
-        Tree is a dictionary structured in the following way: {vertex:(parent,(path to root in terms of directions)}
-        A cutoff_vertex may be passed in order to stop building the tree once that vertex is reached. That vertex is still stored
-        If the source_vertex has no neighbours (tree can't be built) returns None.
+        Tree is in the foar of a dictionary structured in the following way: {vertex:(parent)}
+        A cutoff_vertex may be passed in order to stop building the tree once that vertex is reached.
         May lead to congestion due to path similarity as it is used to get shortest paths from vertices to the source/root vertex
         """
         assert source_vertex in self.vertices, "Root/source is not part of the state"
@@ -62,102 +54,88 @@ class Graph (object) :
         if source_vertex in self.bfs_trees:
             return
         
-        queue = deque() 
-        queue.append(source_vertex) 
-        explored_set = set()
-        explored_set.add(source_vertex)
+        queue = deque([source_vertex]) 
+        explored_set = set([source_vertex])
         parent = {} # {vertex:(parent,(path to root in terms of directions)}
-        parent[source_vertex] = None
 
-        while len(queue) > 0:
+        while queue:
             current_vertex = queue.popleft()
-            neighbours = self.get_neighbours(current_vertex)
-            if neighbours:
-                for neighbour in neighbours:
-                    if neighbour not in explored_set:
-                        explored_set.add(neighbour)
-                        queue.append(neighbour)
-                        direction = self.direction_between_two_adjacent_vertices(current_vertex,neighbour)
-                        if parent[current_vertex]: # if the parent is not the root, append the direction to the path that already exists
-                            path_until_now = self.deep_copy(parent[current_vertex][1]) 
-                            path_until_now.insert(0,direction)
-                            parent[neighbour] = (current_vertex,path_until_now)
-                        else: # for the children of the root
-                            parent[neighbour] = (current_vertex,[direction])
-                        if cutoff_vertex == neighbour: # exit inner loop (stop building tree)
-                            break
-                if cutoff_vertex == neighbour: #exit outter loop
-                    break
-            else:
-                parent = None
+            if current_vertex == cutoff_vertex:
                 break
-
-
-        #if it is not possible to build the tree from source_vertex (it has no neighbours)
-        #if len(parent.keys()) == 1:
-        #    parent = None
+            #filter out explored neighbours
+            unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]  
+            #mark them as explored
+            explored_set.update(unexplored_neighbours)
+            #add them to queue
+            queue.extend(unexplored_neighbours)
+            #Add a new entry to the dictionary for each neighbour, potining to the current 
+            #node as their parent
+            node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
+            parent.update(node_parent_pairs)
         
         self.bfs_trees[source_vertex] = parent
 
-
+    def bfs_tree(self,source_vertex):
+        """Checks if tree with source_vertex as root is in self.bfs_trees, if not builds the tree, returns tree"""
+        assert source_vertex in self.vertices
+        #if tree is not built, build it and store it
+        if source_vertex not in self.bfs_trees:
+            self.run_bfs(source_vertex)    
+        return  self.bfs_trees[source_vertex]      
+ 
     def shortest_path_between(self,source_vertex,target_vertex):
         """
         Returns shortest path between two vertices using bfs tree, if the tree with target_vertice as root is not built, builds it and adds it to self.bfs_trees
         If there is no path between the vertices returns None
         """
-        assert source_vertex in self.vertices and target_vertex in self.vertices, "Insert coordinates that are part of the state or not walls"
-
+        assert target_vertex in self.vertices #source_vertex is already checked in self.bfs_tree
         if target_vertex == source_vertex:
             return deque()
-        if target_vertex not in self.bfs_trees:
-            self.bfs_tree(target_vertex)
+        tree = self.bfs_tree(source_vertex)
+        path = self.reconstruct_path_from_root_in_bfs_tree_to_target(tree,target_vertex)
+        return path
 
-        tree = self.bfs_trees[target_vertex]
-
-        if tree:
-            return self.shortest_path_from_bfs_tree(tree,source_vertex)
-        else:
-            return tree
-
-    def shortest_path_from_bfs_tree(self, tree, source):
-        """
-        Returns shortest path from source to root of tree, not to be called directly
-        """
-        return tree[source][1]
+    def reconstruct_path_from_root_in_bfs_tree_to_target(self, tree, target_vertex):
+        """Not to be called directly"""
+        path = deque()
+        current_vertex = target
+        while current_vertex:
+            path.appendleft(current_vertex)
+            current_vertex = tree.get(current_vertex,None) #get parent of current_vertex, none if it's not in keys (the source_vertex)
+        return path
 
 
     def bfs_shortestpath_notree(self,source_vertex,target_vertex):
         """ 
-        Returns Shortest between two vertices in terms of S,E,W,N directions without having a tree pre built or building one and storing it in self.bfs_trees
+        Returns Shortest path between two vertices without having a tree pre built or building one and storing it in self.bfs_trees
         If there is no path between the two vertices, returns None. May be useful if memory/time problems arise.
         """
-        assert source_vertex in self.vertices and target_vertex in self.vertices ,  "Insert coordinates that are part of the state or not walls"
-
+        assert source_vertex in self.vertices and target_vertex in self.vertices,  "Insert coordinates that are part of the state or not walls"
         if source_vertex == target_vertex:
             return deque()
 
-        queue = deque() 
-        queue.append(source_vertex) 
-        explored_set = set()
-        self.parent = {} # vertex:parent 
-        
-        while len(queue) > 0:
-            current_vertex = queue.popleft()
+        queue = deque([source_vertex]) 
+        explored_set = set(source_vertex)
+        parent = {} # vertex:parent 
 
+        while queue:
+            current_vertex = queue.popleft()
             if current_vertex == target_vertex:
-                path = self.backtrack(source_vertex,target_vertex,self.parent)
+                path = self.backtrack(source_vertex,target_vertex,parent)
                 return path
 
-            neighbours = self.get_neighbours(current_vertex)
-            
-            for neighbour in neighbours:
-                if neighbour not in explored_set:
-                    explored_set.add(neighbour)
-                    self.parent[neighbour] = current_vertex
-                    queue.append(neighbour)
+        #filter out explored neighbours
+        unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]  
+        #mark them as explored
+        explored_set.update(unexplored_neighbours)
+        #add them to queue
+        queue.extend(unexplored_neighbours)
+        #Add a new entry to the dictionary for each neighbour, potining to the current 
+        #node as their parent
+        node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
+        parent.update(node_parent_pairs)
 
-            if len(queue) == 0:
-                return None
+        return None #if no path is found
 
 
     def backtrack(self, source_vertex, target_vertex, parent_dict):
@@ -165,72 +143,26 @@ class Graph (object) :
 
         path = [target_vertex]
         parent = parent_dict[target_vertex]
-
         #get path, composed of vertices
         while parent != source_vertex:
             path.insert(0,parent) 
             parent = parent_dict[parent] 
-
         path.insert(0,source_vertex) #still missing the source vertex (it has no parent)
-        directions = self.path_to_directions(path)
-        return directions
+        return path
 
 
     ##########################################################
     ###############           UTILS               ############
     ##########################################################
 
-
     def get_neighbours(self,vertex,in_vertices = True):
-        """Returns neighbours, returns none if there are no neighbours"""
+        """Returns neighbours as set"""
 
         (x,y) = vertex
         neighbours = {(x,y+1),(x,y-1),(x-1,y),(x+1,y)}
-
         if in_vertices:
             neighbours = {n for n in neighbours if n in self.vertices}
-        if len(neighbours) == 0:
-            return None
         return neighbours
-
-    def get_vertical_neighbours(self,vertex):
-        """Returns vertical neighbours, none if there are no neighbours"""
-
-        (x,y) = vertex
-        vertical_neighbours = {(x,y+1),(x,y-1)}
-        vertical_neighbours = {n for n in vertical_neighbours if n in self.vertices}
-        if len(neighbours) == 0:
-            return None
-        return vertical_neighbours
-
-    def get_horizontal_neighbours(self,vertex):
-        """Returns horizontal neighbours, none if there are no neighbours"""
-
-        (x,y) = vertex
-        horizontal_neighbours = {(x,y+1),(x,y-1)}
-        horizontal_neighbours = {n for n in horizontal_neighbours if n in self.vertices}
-        if len(neighbours) == 0:
-            return None
-        return horizontal_neighbours
-
-    def number_neighbouring_walls_of_vertex(self,vertex):
-        """Returns amount of neighbours of partical vertex that are walls (min:0 ; max:4) """
-
-        #self.number_neighbouring_walls_of_vertex = {}
-        neighbours = self.get_neighbours(vertex, in_vertices = None)
-        n_neighbouring_walls = 0
-        if neighbours:
-            for neighbour in neighbours:
-                if neighbour in self.walls:
-                    n_neighbouring_walls += 1
-
-            assert n_neighbouring_walls >= 0 and n_neighbouring_walls <= 4, "Neighbouring walls under 0 or over 4"
-            return n_neighbouring_walls
-        else:
-            return n_neighbouring_walls
-    
-        #self.number_neighbouring_walls_of_vertex[vertex] = n_neighbouring_walls
-
 
     def path_to_directions(self,path):
         """ Turns Path composed of vertices to directions"""
@@ -272,38 +204,8 @@ class Graph (object) :
 
     def deep_copy(self,x):
         return copy.deepcopy(x)  
+     
 
-    def sum_len_elements_of_list (self,list_):
-        lenght = 0
-        for element in list_:
-            lenght += len(element)
-        return lenght      
-
-    def from_not_in (self, from_container, not_in_containers):
-        """Get an element in from_container that isn't in any of the not_in_containers,
-        Returns None if not possibe to do so"""
-
-        explored_elements = set()
-        for element in from_container:
-            for not_in_container in not_in_containers:
-                if element in not_in_container:
-                    explored_elements.add(element)
-                    break
-            if element not in explored_elements:
-                return element
-        
-        if len(explored_elements) == len(from_container):
-            return None
-        else:
-            print("I fucked up somewhere")
-
-    def tree_of_vertex(self,vertex):
-        """Checks if vertex is in self.bfs_trees, if not builds the tree, returns pointer to tree"""
-        if vertex not in self.bfs_trees:
-            self.bfs_tree(vertex)    
-        tree = self.bfs_trees[vertex]      
-
-        return tree 
 
 #def trim_tree()
     
@@ -327,12 +229,6 @@ level = [
         [True,True,True,False,True]
     ]
 
-initial_state = util.make_state(level)
-g = Graph(initial_state)
-g.separate_rooms_exist()
-g.locate_separate_rooms()
-#g.locate_corridors(3)
-g.number_neighbouring_walls_of_vertex((1,1))
 
 
 
