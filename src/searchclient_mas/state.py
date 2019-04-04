@@ -324,7 +324,7 @@ class StateMA:
 
         self.goal_types = [g[0] for g in goals]
         self.goal_positions = [g[1] for g in goals]
-        self.goal_agent = [g[2] for g in goals]
+        #self.goal_agent = [g[2] for g in goals]
         self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None

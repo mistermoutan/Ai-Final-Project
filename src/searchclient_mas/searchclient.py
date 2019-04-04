@@ -2,7 +2,7 @@
 #import re
 import sys
 import traceback
-from state import StateSA,StateMA
+from state import StateSA,StateMA,StateBuilder
 from problemDecomposer import problemDecomposer as pd
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
@@ -62,12 +62,9 @@ class SearchClient:
             print('Error parsing level: {}.'.format(repr(ex)), file=sys.stderr, flush=True)
             print(traceback.format_exc(), file=sys.stderr, flush=True)
             sys.exit(1)
-        
+        builder = StateBuilder()
         cols = max([len(line) for line in init])
         maze = [[True for _ in range(cols)] for _ in range(len(init))]
-        agent = []
-        boxes = []
-        goals = []
         type_count = 0
         seen_types = {}
         row = 0
@@ -77,8 +74,7 @@ class SearchClient:
                     maze[row][col] = False
                 elif char in "0123456789":
                     agent_id = int(char)
-                    agent_spec = ((row, col),colors[char])
-                    agent.insert(agent_id, agent_spec)
+                    builder.add_agent(agent_id,(row,col),colors[char])
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -86,7 +82,7 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    boxes.append((type, (row, col),colors[char]))
+                    builder.add_box(type,(row,col),colors[char])
                 elif char == ' ':
                     # Free cell.
                     pass
@@ -104,11 +100,11 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    goals.append((type, (row, col)))
+                    builder.add_goal(type,(row,col))
             row += 1
         
-        self.initial_state = StateMA(maze,boxes,goals,agent)
-        
+        builder.set_maze(maze)
+        self.initial_state = builder.build_StateMA()
         self.sendComment("Initialized SearchClient")
 
     def solve_the_problem(self):
@@ -116,19 +112,22 @@ class SearchClient:
         master_plan = coordinator.solve()
         for action_vector in master_plan:
             self.sendJointAction(action_vector)
-        
-    '''
-    send joints action
-    format of actions : {agent:action}
-    agent - int
-    action - string acording to assignment sheet e.g "Push(move-dir-agent, move-dir-box)"
-    output to server <action0>; <action1>; ...; <action9>
-    example:
-        success = client.sendJointAction({0:"Move(E)",1:"Move(E)"})
-    return array of bools for every action in the actions dict. bool describing the success of the action
     
-    '''
+    
+    
+    
     def sendJointAction(self,actions):
+        '''
+        send joints action
+        format of actions : {agent:action}
+        agent - int
+        action - string acording to assignment sheet e.g "Push(move-dir-agent, move-dir-box)"
+        output to server <action0>; <action1>; ...; <action9>
+        example:
+            success = client.sendJointAction({0:"Move(E)",1:"Move(E)"})
+        return array of bools for every action in the actions dict. bool describing the success of the action
+        
+        '''
         
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
@@ -169,9 +168,9 @@ def main():
         client = SearchClient(server_messages)
     
     #This will probably be moved at some point
-    problem = pd(client.initial_state)
-    tasks = problem.getTasks()
-    print(tasks,file= sys.stderr, flush=True)
+    #problem = pd(client.initial_state)
+    #tasks = problem.getTasks()
+    #print(tasks,file= sys.stderr, flush=True)
     
     #Follow this to get where the planning happens
     client.solve_the_problem()
