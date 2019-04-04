@@ -21,12 +21,15 @@ class problemDecomposer():
                 Task = (i, self.state.box_positions[i],self.state.goal_positions[i],self.PossibleAgents[i])
                 self.Tasks.extend(Task)
         '''
-
-    def checkGoals(self):
-        '''Checks if all boxes are at their goal state
-        returns list of boolean where true represents a need for a task
-        '''
-        pass
+        
+    '''Checks if all boxes are at their goal state
+    returns list of boolean where true represents a need for a task
+    '''
+    def getGoalOrientedProblems(self):
+        
+        g = []
+        for i in range(len(self.state.goal_types)):
+            g.append((i,self.searchPossibleBoxesForGoal(i)))
 
         '''self.goal_need_task =[]
         #iterate over all goals:
@@ -40,28 +43,21 @@ class problemDecomposer():
             else:
                 self.goal_need_task[i]=True
     '''
+    def searchPossibleAgentsForBox(self,box_idx):
+        '''returns a list of agent indexes that are able to move the box at pos box_idx in the box list'''
+        return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_color[idx]]
+    def searchPossibleBoxesForGoal(self,goal_idx):
+        '''returns a list of box-indexes that are able to satisfy the goal at pos goad_idx in the goal list'''
+        return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
+    def searchPossibleGoalsForBox(self,box_idx):
+        '''returns a list of goal-indexes that are able to store the box at index box_idx'''
+        return [idx for idx in range(len(self.state.goal_types)) if self.state.goal_types[idx] ==self.state.box_types[box_idx]]
     '''Multiple agents for one box possible?'''
     def searchPossibleAgentsForBoxIndex(self,box_idx):
         '''returns a list of lists of agent indexes that are able to move the boxes at pos i in the box list'''
         return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
 
-    def searchAgentsForAllBoxes(self):
-        '''links all boxes in list of boxes to agents that can move the box'''
-        self.agts_for_boxes = []
-        for c in self.state.box_colors:
-            self.agts_for_boxes.append([i for i,x in enumerate(self.state.agent_colors) if x ==c])
 
-    def searchPossibleBoxesForGoals(self):
-        '''returns a list of lists of box-indexes that are able to satisfy the goal at pos i in the goal list'''
-        self.pos_boxes=[]
-        for i in range(len(self.state.goal_types)):
-            self.pos_boxes.append([idx for idx in range(len(self.state.box_types)) if self.state.goal_types[i] ==self.state.box_types[idx]])
-
-    def searchPossibleGoalsForBoxes(self):
-        '''returns a list of lists of goal-indexes that are able to store the box at pos i in the goal list'''
-        self.pos_goals=[]
-        for i in range(len(self.state.box_types)):
-            self.pos_goals.append([idx for idx in range(len(self.state.goal_types)) if self.state.goal_types[idx] ==self.state.box_types[i]])
 
     def assign_tasks_greedy(self):
         '''- greedely assings tasks to agents with lowest workload that can fullfill the task

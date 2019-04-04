@@ -5,6 +5,7 @@ import copy
 from merger import merge
 from state import StateMA
 from typing import List
+import sys      
 
 
 class MasterPlan(object):
@@ -27,13 +28,24 @@ class MasterPlan(object):
     def copy(self):
         return copy.deepcopy(self)
 
+    def pretty_print_master_plan(self):
+        agents = range(self.number_of_agents)
+        plans = [[] for i in agents]
+        for action_vector in self.plan:
+            for agent,action in enumerate(action_vector):
+                plans[agent].append(action)
+        
+        print("MASTER PLAN", file=sys.stderr)
+        for plan in plans:
+            print(plan, file=sys.stderr)
+
     def merge_plan_into_master(self, agent_id: int, agent_plan: List[Action]):
         first_index_in_plan = self.index_after_last_action[agent_id]
         revised_agent_plan = merge(agent_id, agent_plan, self.plan, first_index_in_plan, self.states[first_index_in_plan])
         
         if not revised_agent_plan:
             return False
-        
+                
         #Increase the length of the master plan if necessary
         difference_in_length = (len(revised_agent_plan) + first_index_in_plan) - len(self.plan)
         if difference_in_length > 0:

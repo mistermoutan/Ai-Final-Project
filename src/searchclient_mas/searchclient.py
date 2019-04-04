@@ -107,7 +107,6 @@ class SearchClient:
                     goals.append((type, (row, col)))
             row += 1
         
-        print(agent, file=sys.stderr,flush=True)
         self.initial_state = StateMA(maze,boxes,goals,agent)
         
         self.sendComment("Initialized SearchClient")
@@ -134,6 +133,7 @@ class SearchClient:
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
+
         
         success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
         return success
@@ -146,10 +146,22 @@ def main():
     sys.stdout.write("GroupName\n")
     sys.stdout.flush()
     
+
+    #If you supply a hard coded file name, it will run that hard coded level instead of 
+    #reading from the server. I can't find out how to pass command line arguments when 
+    #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D 
+    hard_coded_file_name = None
+    #hard_coded_file_name = "src/levels/chokepoint.lvl"
+    
+
     #If a filename is passed as argument, we read directly from file instead of 
     #using the server. Allows us to run debugger at the same time
     if len(sys.argv) >= 2:
         server_messages = open(sys.argv[1])
+        client = SearchClient(server_messages)
+        server_messages.close()
+    elif hard_coded_file_name:
+        server_messages = open(hard_coded_file_name)
         client = SearchClient(server_messages)
         server_messages.close()
     else:
