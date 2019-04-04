@@ -4,7 +4,7 @@ from state import StateMA
 
 class MergeState(object):
 
-    def __init__(self, game_state, agent_id, agent_plan, master_plan, master_plan_index, agent_plan_index=None, g_value = 0):
+    def __init__(self, game_state, agent_id, agent_plan, master_plan, master_plan_index, agent_plan_index=None, g_value=0):
         self.game_state = game_state
         self.agent_id = agent_id
         self.agent_plan = agent_plan
@@ -95,7 +95,7 @@ class MergeState(object):
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
         
-        return self.g_value + len(self.agent_plan) - self.agent_plan_index
+        return len(self.agent_plan) - self.agent_plan_index
     
     def get_g_value(self):
         return self.g_value

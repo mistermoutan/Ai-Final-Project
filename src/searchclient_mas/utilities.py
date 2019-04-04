@@ -6,7 +6,7 @@ def pairwise(list):
     return [(list[i], list[i+1]) for i in range(len(list) - 1)]
 
 #Given a position and a direction, returns the neighbour of that position in that direction
-def neighbour_in_direction(position,direction):
+def next_position_in_direction(position,direction):
     x,y = position
     return (x + direction.d_row, y + direction.d_col)
 

@@ -10,6 +10,12 @@ class Dir:
         self.d_row = d_row
         self.d_col = d_col
 
+    def __eq__(self, other):
+        return other != None \
+                and self.name == other.name \
+                and self.d_row == other.d_row \
+                and self.d_col == other.d_col
+
     def __repr__(self):
         return self.name
 
@@ -29,6 +35,9 @@ class ActionType:
         '''
         self.name = name
     
+    def __eq__(self,other):
+        return other != None and self.name == other.name
+
     def __repr__(self):
         return self.name
 
@@ -49,9 +58,9 @@ class Action:
         self.agent_dir = agent_dir
         self.box_dir = box_dir
         if box_dir is not None:
-            self._repr = '[{}({},{})]'.format(action_type, agent_dir, box_dir)
+            self._repr = '{}({},{})'.format(action_type, agent_dir, box_dir)
         else:
-            self._repr = '[{}({})]'.format(action_type, agent_dir)
+            self._repr = '{}({})'.format(action_type, agent_dir)
     
     def __eq__(self, other):
         return not other == None and \
@@ -75,7 +84,7 @@ for agent_dir in (Dir.N, Dir.S, Dir.E, Dir.W):
             # If not same directions.
             ALL_ACTIONS.append(Action(ActionType.Pull, agent_dir, box_dir))
 
-ALL_ACTIONS.append(ActionType.Wait)
+#ALL_ACTIONS.append(ActionType.Wait)
 
 north = Dir.N
 east  = Dir.E

@@ -39,6 +39,8 @@ class StateSA:
 
         self._hash = None
 
+        self.action_performed = None
+
     def copy(self):
         # shallow copy for more efficient get children, especially if agent is only being moved
         cpy = StateSA()
@@ -104,6 +106,7 @@ class StateSA:
                     child.g += 1
                     child._hash -= hash((self.agent_row, self.agent_col))
                     child._hash += hash((new_agent_row, new_agent_col))
+                    child.action_performed = action
                     # child._hash = None
                     children.append(child)
             elif action.action_type is ActionType.Push:
@@ -119,6 +122,7 @@ class StateSA:
                         child.action = action
                         child.g += 1
                         child._hash = None
+                        child.action_performed = action
                         # print(str(child), file=sys.stderr, flush=True)
                         children.append(child)
             elif action.action_type is ActionType.Pull:
@@ -134,6 +138,7 @@ class StateSA:
                         child.action = action
                         child.g += 1
                         child._hash = None
+                        child.action_performed = action
                         # print(str(child), file=sys.stderr, flush=True)
                         children.append(child)
 
@@ -168,13 +173,22 @@ class StateSA:
         plan = []
         state = self
         while not state.is_initial_state():
-            plan.append(state)
+            plan.append(state.action_performed)
             state = state.parent
         plan.reverse()
         return plan
 
     def box_hash(self):
         return sum(hash((self.box_types[i], self.box_positions[i])) for i in range(len(self.box_types)))
+
+    def change_goals(self, goals):
+        # accepts goals of the same format as state constructor,
+        # can be changed to just indices of goals or something else.
+        cpy = self.copy()
+        cpy.goal_types = [b[0] for b in goals]
+        cpy.goal_positions = [b[1] for b in goals]
+        cpy.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
+        return cpy
 
     def __hash__(self):
         if self._hash is None:
@@ -211,11 +225,11 @@ class StateSA:
             for col in range(self.cols):
                 pos = (row, col)
                 if pos in self.box_by_cords:
-                    line.append(repr_dict[self.box_types[self.box_by_cords[pos]]])
+                    line.append(str(self.box_types[self.box_by_cords[pos]]).upper())
                 elif self.agent_row == row and self.agent_col == col:
                     line.append('0')
                 elif pos in self.goal_by_cords:
-                    line.append(repr_dict[self.goal_types[self.goal_by_cords[pos]]].lower())
+                    line.append(str(self.goal_types[self.goal_by_cords[pos]]).lower())
                 elif not self.maze[row][col]:
                     line.append('+')
                 else:
@@ -241,18 +255,43 @@ class StateMA:
         self.cols = len(maze[0])
         self.maze = maze
 
-        self.box_types = [b[0] for b in boxes]
-        self.box_positions = [b[1] for b in boxes]
-        self.box_colors = [b[2] for b in boxes]
-        self.box_by_cords = {pos: i for i, pos in enumerate(self.box_positions)}
-
-        self.goal_types = [b[0] for b in goals]
-        self.goal_positions = [b[1] for b in goals]
-        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.agent_positions = [a[0] for a in agents]
         self.agent_colors = [a[1] for a in agents]
         self.agent_by_cords = {pos: i for i, pos in enumerate(self.agent_positions)}
+
+        movable_colors = set()
+        for color in self.agent_colors:
+            movable_colors.add(color)
+
+        curr = 0
+        self.box_types = []
+        self.box_positions = []
+        self.box_colors = []
+        self.box_by_cords = {}
+        maze_safe = False
+        # any boxes that mismatch the color of all agents will be assumed walls
+        # TODO: should this be done elsewhere maybe the level analyzer?
+        for i in range(len(boxes)):
+            type, pos, color = boxes[i]
+            if color in movable_colors:
+                self.box_by_cords[pos] = curr
+                self.box_positions.append(pos)
+                self.box_colors.append(color)
+                self.box_types.append(type)
+                curr += 1
+            else:
+                x, y = pos
+                # since we are editing them aze we need to make sure it doesnt get broken in the caller's maze
+                # TODO: make slightly more efficient by nto copying whole maze but only necessary parts?
+                if not maze_safe:
+                    self.maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.rows)]
+                    maze_safe = True
+                self.maze[x][y] = False
+
+        self.goal_types = [b[0] for b in goals]
+        self.goal_positions = [b[1] for b in goals]
+        self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None
         self.g = 0
@@ -311,7 +350,7 @@ class StateMA:
                 (new_agent_x, new_agent_y),
                 box_id,
                 (new_agent_x, new_agent_y),
-                (new_box_x, new_agent_y)
+                (new_box_x, new_box_y)
                 )
 
 
@@ -433,22 +472,68 @@ class StateMA:
                 continue
             _, _, agent_from, agent_to, box_id, box_from, box_to = action
             child.perform_action(agent_id, agent_from, agent_to, box_id, box_from, box_to)
-
+        #child.parent = self
+        #child.parent_action = actions
         return child
+
+    def get_StateSA(self, agentID, ignore_immovable=False):
+        pos = self.agent_positions[agentID]
+        color = self.agent_colors[agentID]
+
+        boxes = []
+        goals = []
+        extra_walls = []
+
+        #maze: List[List[int]] = None
+        #boxes: List[Tuple[int, Tuple[int, int]]] = None,
+        #goals: List[Tuple[int, Tuple[int, int]]] = None,
+        #agent: Tuple[int, int] = None
+
+        type_dict = {}
+
+        for i, t in enumerate(self.box_types):
+            if self.box_colors[i] == color:
+                boxes.append((t, self.box_positions[i]))
+                type_dict[t] = True
+            elif not ignore_immovable:
+                extra_walls.append(self.box_positions[i])
+
+        for i, t in enumerate(self.goal_types):
+            if t in type_dict:
+                goals.append((t, self.goal_positions[i]))
+
+        if not ignore_immovable:
+            for pos in self.agent_positions:
+                if self.agent_by_cords[pos] != agentID:
+                    extra_walls.append(pos)
+
+        if len(extra_walls) == 0:
+            return StateSA(self.maze, boxes, goals, self.agent_positions[agentID])
+
+        maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.cols)]
+        for i, j in extra_walls:
+            maze[i][j] = False
+
+        return StateSA(maze, boxes, goals, self.agent_positions[agentID])
+
 
     def __repr__(self):
         lines = []
+        chars = "abcdefghijklmnopqrstuvwxyz"
         for row in range(self.rows):
             line = []
             for col in range(self.cols):
                 pos = (row,col)
                 agent = self.agent_by_cords.get(pos, None)
                 box   = self.box_by_cords.get(pos, None)
+                goal  = self.goal_by_cords.get(pos, None)
                 wall  = ' ' if self.maze[row][col] else '+'
-                if agent != None:
+                if agent is not None:
                     line.append(str(agent))
-                elif box != None:
-                    line.append(str(self.box_types[box]))
+                elif box is not None:
+                    line.append(chars[self.box_types[box]].upper())
+                elif goal is not None:
+                    line.append(chars[self.goal_types[goal]].lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))
@@ -468,6 +553,9 @@ if __name__ == '__main__':
         fail = True
     if not test_push_pull():
         print("push test failed!!")
+        fail = True
+    if not test_getStateSA():
+        print("failed get StateSA")
         fail = True
     if not fail:
         print("All tests passed")

@@ -4,10 +4,14 @@ import sys
 import traceback
 from state import StateSA,StateMA
 from problemDecomposer import problemDecomposer as pd
+from coordinator import Coordinator
+from action import north,south,west,east,move,push,pull
 
 
 class SearchClient:
     def __init__(self, server_messages,):
+        if not server_messages:
+            return
         #Adapt to data structure and split msg in parts.
         self.domain = None
         self.levelname = None
@@ -66,15 +70,15 @@ class SearchClient:
         goals = []
         type_count = 0
         seen_types = {}
-        self.agent_count = 0
         row = 0
         for line in init:
             for col, char in enumerate(line):
                 if char == '+':
                     maze[row][col] = False
                 elif char in "0123456789":
-                    agent.append(((row, col),colors[char]))
-                    self.agent_count+=1
+                    agent_id = int(char)
+                    agent_spec = ((row, col),colors[char])
+                    agent.insert(agent_id, agent_spec)
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -103,17 +107,17 @@ class SearchClient:
                     goals.append((type, (row, col)))
             row += 1
         
-        if self.agent_count > 1:
-            #print(agent, file=sys.stderr, flush=True)
-
-            self.initial_state = StateMA(maze,boxes,goals,agent)
-        else:
-            self.initial_state = StateSA(maze, boxes, goals, agent)
+        print(agent, file=sys.stderr,flush=True)
+        self.initial_state = StateMA(maze,boxes,goals,agent)
+        
         self.sendComment("Initialized SearchClient")
 
-    def search(self, strategy: 'Strategy'):
-        pass
-
+    def solve_the_problem(self):
+        coordinator = Coordinator(self.initial_state)
+        master_plan = coordinator.solve()
+        for action_vector in master_plan:
+            self.sendJointAction(action_vector)
+        
     '''
     send joints action
     format of actions : {agent:action}
@@ -126,35 +130,39 @@ class SearchClient:
     
     '''
     def sendJointAction(self,actions):
-        jointAction=""
-        #SingleAgent
-        if self.agent_count==1:
-            jointAction+=str(actions[0])+";"
-        #MultiAgent
-        else:
-            for i in range(self.agent_count):
-                if i in actions:
-                    jointAction+=actions[i]+";"
-                else:
-                    jointAction+="NoOp;"
+        
+        jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
+        
         success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
         return success
+
     def sendComment(self,comment):
         sys.stdout.write("#"+str(comment)+"\n")
         sys.stdout.flush()
     
 def main():
-    #implement parse aguments if different planing algorithms are planned
-    sys.stdout.write("ExampleClient\n")
+    sys.stdout.write("GroupName\n")
     sys.stdout.flush()
-    server_messages = sys.stdin
-    client = SearchClient(server_messages)
+    
+    #If a filename is passed as argument, we read directly from file instead of 
+    #using the server. Allows us to run debugger at the same time
+    if len(sys.argv) >= 2:
+        server_messages = open(sys.argv[1])
+        client = SearchClient(server_messages)
+        server_messages.close()
+    else:
+        server_messages = sys.stdin
+        client = SearchClient(server_messages)
+    
+    #This will probably be moved at some point
     problem = pd(client.initial_state)
     tasks = problem.getTasks()
     print(tasks,file= sys.stderr, flush=True)
-    #print(traceback.format_exc(), file=sys.stderr, flush=True)
+    
+    #Follow this to get where the planning happens
+    client.solve_the_problem()
 
 if __name__ == '__main__':
     main()
