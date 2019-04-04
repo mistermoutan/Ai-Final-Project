@@ -1,6 +1,6 @@
 from action import *
 import copy
-from state import StateMA
+from state import StateMA, StateBuilder
 
 
 #agents are represented by "a:id:color"
@@ -28,9 +28,7 @@ def goal(type):
 
 def make_state(matrix):
     matrix = copy.deepcopy(matrix)
-    boxes  = []
-    goals  = []
-    agents = []
+    builder = StateBuilder()
     
 
     for i,row in enumerate(matrix):
@@ -42,22 +40,18 @@ def make_state(matrix):
             e = s.split(":")
             #Agent
             if e[0] == "a": 
-                agents.append((e[1],(i,j),e[2]))
+                builder.add_agent(e[1],(i,j),e[2])
             #Box
             elif e[0] == "b":
-                boxes.append((e[1], (i,j), e[2]))
+                builder.add_box(e[1], (i,j), e[2])
             #AGoal
             elif e[0] == "g":
-                goals.append((e[1], (i,j)))
+                builder.add_goal(e[1], (i,j))
             else: 
                 raise AssertionError("Cannot recognize " + e[0] + " as an agent, box or goal")
             
             #There is no wall at (i,j)
             matrix[i][j] = True
-    
-    #Sort the agents by identity. This happens automatically
-    #id is first element in tuple
-    agents.sort()
-    agents = [(pos,color) for (id,pos,color) in agents]
+    builder.set_maze(matrix)
 
-    return StateMA(matrix, boxes, goals, agents)
+    return builder.build_StateMA()

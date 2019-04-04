@@ -4,6 +4,7 @@ from action import ALL_ACTIONS, ActionType, Action, Dir
 from typing import List, Tuple
 import sys
 
+
 class StateSA:
     _RNG = random.Random(1)
 
@@ -237,6 +238,39 @@ class StateSA:
             lines.append(''.join(line))
         return '\n'.join(lines)
 
+
+class StateBuilder:
+    def __init__(self):
+        self.goals = []
+        self.agents = []
+        self.boxes = []
+        self.maze = []
+
+    def set_maze(self, maze):
+        self.maze = maze
+
+    def add_agent(self, agent_id, position, color):
+        self.agents.append((agent_id, position, color))
+
+    def add_box(self, box_type, position, color):
+        self.boxes.append((box_type,position,color))
+
+    def add_goal(self, goal_type, position, agent_goal=False):
+        self.goals.append((goal_type, position, agent_goal))
+
+    def build_StateMA(self):
+        assert len(self.maze) > 0, "no maze provided, cant build state"
+
+        agents = [None]*len(self.agents)
+        for id, pos, c in self.agents:
+            agents[int(id)] = (pos, c)
+
+        return StateMA(self.maze, self.boxes, self.goals, agents)
+
+
+
+
+
 class StateMA:
     _RNG = random.Random(1)
 
@@ -288,8 +322,9 @@ class StateMA:
                     maze_safe = True
                 self.maze[x][y] = False
 
-        self.goal_types = [b[0] for b in goals]
-        self.goal_positions = [b[1] for b in goals]
+        self.goal_types = [g[0] for g in goals]
+        self.goal_positions = [g[1] for g in goals]
+        self.goal_agent = [g[2] for g in goals]
         self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None
