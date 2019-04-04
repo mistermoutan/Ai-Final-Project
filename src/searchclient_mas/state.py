@@ -255,7 +255,6 @@ class StateMA:
         self.cols = len(maze[0])
         self.maze = maze
 
-
         self.agent_positions = [a[0] for a in agents]
         self.agent_colors = [a[1] for a in agents]
         self.agent_by_cords = {pos: i for i, pos in enumerate(self.agent_positions)}
@@ -444,9 +443,8 @@ class StateMA:
                 if self.is_free(x, y):
                     occupation_dict[occupies] = 0
                 else:
-                    occupation_dict[occupies] = 1
+                    return None
 
-            occupation_dict[frees] -= 1
             occupation_dict[occupies] += 1
 
             if box_id is not None:
@@ -454,11 +452,11 @@ class StateMA:
                 # more than one agent are trying to move the same box
                 if box_actions[box_id] > 1:
                     return None
-            else:
-                if agent_to in swaps:
-                    if swaps[agent_to] == agent_from:
-                        return None
-                swaps[agent_from] = agent_to
+            # else:
+            #     if agent_to in swaps:
+            #         if swaps[agent_to] == agent_from:
+            #             return None
+            #     swaps[agent_from] = agent_to
 
         # if more than one item occupy the same space the multi action has failed
         for key in occupation_dict.keys():

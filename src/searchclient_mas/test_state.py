@@ -37,14 +37,22 @@ def test_move():
     # +        +
     # ++++++++++
     res = state.get_child([tu.move(south), tu.move(east), None])
+    if res is not None:
+        print("2 agents were allowed to occupy the same space")
+        return False
+    res = state.get_child([tu.move(south), None, None])
+    res = res.get_child([None, tu.move(east), None])
+
     if not (res.agent_by_cords[(4, 5)] == 2 and res.agent_by_cords[(5,5)] == 1 and res.agent_by_cords[(6,5)] == 0):
         print("Failed move test 1")
         return False
 
-    res = res.get_child([tu.move(south), tu.move(south), tu.move(south)])
+    res = res.get_child([tu.move(south), None,None])
+    res = res.get_child([None, tu.move(south), None])
+    res = res.get_child([None, None, tu.move(south)])
 
     if not (res.agent_by_cords[(5, 5)] == 2 and res.agent_by_cords[(6,5)] == 1 and res.agent_by_cords[(7,5)] == 0):
-        print("Failed move test 1")
+        print("Failed move test 2")
         return False
 
     res = res.get_child([tu.move(south), tu.move(north), tu.move(south)])
