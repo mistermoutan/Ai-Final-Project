@@ -248,15 +248,23 @@ class StateBuilder:
 
     def set_maze(self, maze):
         self.maze = maze
+    
+    def add_wall(self, position):
+        r,c = position
+        self.maze[r][c] = False
+        return self
 
     def add_agent(self, agent_id, position, color):
         self.agents.append((agent_id, position, color))
+        return self
 
     def add_box(self, box_type, position, color):
         self.boxes.append((box_type,position,color))
+        return self
 
     def add_goal(self, goal_type, position, agent_goal=False):
         self.goals.append((goal_type, position, agent_goal))
+        return self
 
     def build_StateMA(self):
         assert len(self.maze) > 0, "no maze provided, cant build state"
