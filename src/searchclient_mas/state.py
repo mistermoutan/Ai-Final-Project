@@ -519,9 +519,7 @@ class StateMA:
 
     def __repr__(self):
         lines = []
-        n_to_ascii = {0:'a',
-                      1:'b',
-                      2:'c'}
+        chars = "abcdefghijklmnopqrstuvwxyz"
         for row in range(self.rows):
             line = []
             for col in range(self.cols):
@@ -533,9 +531,9 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    line.append(str(n_to_ascii[self.box_types[box]]).upper())
+                    line.append(chars[self.box_types[box]].upper())
                 elif goal is not None:
-                    line.append(str(n_to_ascii[self.goal_types[goal]]).lower())
+                    line.append(chars[self.goal_types[goal]].lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))
