@@ -146,11 +146,8 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         #Get the revised plan for the agent, if it exists. If the plans are (naively) mergable, it is at least possible to append the
         #agent plan to the end of the master plan. Thus the sum of the length of the two plans is an upper bound for the 
         #length of the solution and can be used as a cutoff value for the planner
-<<<<<<< HEAD
-        maximum_length_of_solution = len(master_plan) + len(agent_plan)
-=======
+
         maximum_length_of_solution = 2*(len(master_plan) + len(agent_plan))
->>>>>>> 94fbcf542a7467d6eb5e0c21851a6df8634bf2d0
         merge_planner = Planner(initial_state, cutoff_solution_length=maximum_length_of_solution)
         
         return merge_planner.make_plan()
