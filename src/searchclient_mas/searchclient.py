@@ -150,8 +150,8 @@ def main():
     #If you supply a hard coded file name, it will run that hard coded level instead of
     #reading from the server. I can't find out how to pass command line arguments when
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
-    #hard_coded_file_name = None
-    hard_coded_file_name = "src/levels/chokepoint.lvl"
+    hard_coded_file_name = None
+    #hard_coded_file_name = "src/levels/chokepoint.lvl"
 
 
     #If a filename is passed as argument, we read directly from file instead of
