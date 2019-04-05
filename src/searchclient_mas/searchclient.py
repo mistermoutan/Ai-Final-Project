@@ -6,6 +6,7 @@ from state import StateSA,StateMA,StateBuilder
 from problemDecomposer import problemDecomposer as pd
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
+import os  
 
 
 class SearchClient:
@@ -72,6 +73,7 @@ class SearchClient:
             for col, char in enumerate(line):
                 if char == '+':
                     maze[row][col] = False
+                    
                 elif char in "0123456789":
                     agent_id = int(char)
                     builder.add_agent(agent_id,(row,col),colors[char])
@@ -107,11 +109,15 @@ class SearchClient:
         self.initial_state = builder.build_StateMA()
         self.sendComment("Initialized SearchClient")
 
-    def solve_the_problem(self):
-        coordinator = Coordinator(self.initial_state)
-        master_plan = coordinator.solve()
-        for action_vector in master_plan:
-            self.sendJointAction(action_vector)
+    def solve_the_problem(self,solver=None):
+        if solver:
+            self.sendComment("Choosed "+solver+" to solve level")
+
+        else:
+            coordinator = Coordinator(self.initial_state)
+            master_plan = coordinator.solve()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
     
     
     
@@ -151,21 +157,45 @@ def main():
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D 
     hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-    
+
 
     #If a filename is passed as argument, we read directly from file instead of 
     #using the server. Allows us to run debugger at the same time
     if len(sys.argv) >= 2:
-        server_messages = open(sys.argv[1])
-        client = SearchClient(server_messages)
-        server_messages.close()
+        arg1 = sys.argv[1]
+        if  os.path.isfile(arg1):
+            server_messages = open(sys.argv[1])
+            client = SearchClient(server_messages)
+            server_messages.close()
+        elif arg1=='-htn':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem()
+        else:
+            raise ValueError("argument is not a solver")
+
+        '''
+        elif arg1=='-xxx':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem()
+        '''
+        
+
+
     elif hard_coded_file_name:
         server_messages = open(hard_coded_file_name)
         client = SearchClient(server_messages)
         server_messages.close()
+        #Follow this to get where the planning happens
+        client.solve_the_problem()
+
     else:
         server_messages = sys.stdin
         client = SearchClient(server_messages)
+        #Follow this to get where the planning happens
+        client.solve_the_problem()
+
     
     #This will probably be moved at some point
     #problem = pd(client.initial_state)
@@ -173,7 +203,7 @@ def main():
     #print(tasks,file= sys.stderr, flush=True)
     
     #Follow this to get where the planning happens
-    client.solve_the_problem()
+    #client.solve_the_problem()
 
 if __name__ == '__main__':
     main()
