@@ -2,7 +2,7 @@
 #import re
 import sys
 import traceback
-from state import StateSA,StateMA
+from state import StateSA,StateMA,StateBuilder
 from problemDecomposer import problemDecomposer as pd
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
