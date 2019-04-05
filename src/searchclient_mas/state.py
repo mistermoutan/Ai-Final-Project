@@ -248,7 +248,7 @@ class StateBuilder:
 
     def set_maze(self, maze):
         self.maze = maze
-    
+
     def add_wall(self, position):
         r,c = position
         self.maze[r][c] = False
