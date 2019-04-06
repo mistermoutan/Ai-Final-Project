@@ -1,0 +1,45 @@
+#domain
+hospital
+#levelname
+SAbAnAnA
+#colors
+red: 0, B, N, N, C, O, R, D, L, E, S, S, D, R, I, L, L, N, E, T, T, O, M, I, L, K, M, I, L, K, M, I, L, K, M, I, L, K, M, I, L, K, M, I, L, K, M, I, L, K, A, A, A, M, I, L, K, M, I, L, K, M, I, L, K, M, I, L, K, N, E, T, T, O
+#initial
++++++++++++++++++++
++0  +       B N N +
++                 +
++   CORDLESS      +
++   DRILL      ++++
++                ++
++    NETTO    +   +
++                 +
++     MILK        +
++      MILK       +
++ MILK MILK MILK  +
++    MILK MILK    +
++    A A A   MILK +
++       MILK      +
++   MILK          +
++         MILK    +
++        NETTO    +
++++++++++++++++++++
+#goal
++++++++++++++++++++
++   +  MILK  A A A+
++                 +
++                 +
++D          C  ++++
++ R          O   ++
++  I          +  L+
++   L          R E+
++    L          DS+
++                S+
++                 +
++                 +
++   B N N         +
++M                +
++I                +
++L                +
++K                +
++++++++++++++++++++
+#end

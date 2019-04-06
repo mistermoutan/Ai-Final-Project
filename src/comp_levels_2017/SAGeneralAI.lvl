@@ -1,0 +1,19 @@
+#domain
+hospital
+#levelname
+SAGeneralAI
+#colors
+red: P, H, O, J, K, L, 0, G, A, I, W, B, C, D, E, F
+#initial
+++++++++++++++++++++++++++
++       PHOJKL          0+
+++++++++++++++        GAI+
++       WBCDEF           +
+++++++++++++++++++++++++++
+#goal
+++++++++++++++++++++++++++
++WBCDEF                  +
+++++++++++++++           +
++PHOJKL                  +
+++++++++++++++++++++++++++
+#end

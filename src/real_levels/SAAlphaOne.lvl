@@ -1,0 +1,35 @@
+#domain
+hospital
+#levelname
+SAAlphaOne
+#colors
+red: A, E, B, C, D, 0
+#initial
++++++
+++ ++
++   +
+++ ++
+++A++
+++ ++
+++ ++
+++ ++
+++ ++
++E B+
++C D+
+++0++
++++++
+#goal
++++++
+++E++
++DCB+
+++A++
+++ ++
+++ ++
+++ ++
+++ ++
+++ ++
++   +
++   +
+++ ++
++++++
+#end

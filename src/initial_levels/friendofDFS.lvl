@@ -1,0 +1,23 @@
+#domain
+hospital
+#levelname
+friendofDFS
+#colors
+red: A, A, A, A, A, A, 0, A, A, A, A, A, A
+#initial
+ +++++
+++AAA++
++ A A +
++A 0 A+
++ A A +
+++AAA++
+ +++++
+#goal
+ +++++
+++   ++
++  A  +
++ A A +
++  A  +
+++   ++
+ +++++
+#end

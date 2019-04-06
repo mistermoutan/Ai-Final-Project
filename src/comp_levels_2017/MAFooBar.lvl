@@ -1,0 +1,25 @@
+#domain
+hospital
+#levelname
+MAFooBar
+#colors
+red: 0,A
+#initial
++++++++++++
++0A51342  +
+++++++++ ++
+       + +
+       + +
+       + +
+       + +
+       +++
+#goal
++++++++++++
++        A+
+++++++++ ++
+       + +
+       + +
+       + +
+       + +
+       +++
+#end
