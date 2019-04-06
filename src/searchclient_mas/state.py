@@ -275,10 +275,6 @@ class StateBuilder:
 
         return StateMA(self.maze, self.boxes, self.goals, agents)
 
-
-
-
-
 class StateMA:
     _RNG = random.Random(1)
 
@@ -572,9 +568,15 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    line.append(chars[self.box_types[box]].upper())
+                    if self.box_types[box] is int:
+                        line.append(chars[self.box_types[box]].upper())
+                    else:
+                        line.append(self.box_types[box].lower())
                 elif goal is not None:
-                    line.append(chars[self.goal_types[goal]].lower())
+                    if self.goal_types[goal] is int:
+                        line.append(chars[self.goal_types[goal]].lower())
+                    else:
+                        line.append(self.goal_types[goal].lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))
