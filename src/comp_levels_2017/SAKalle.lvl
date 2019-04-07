@@ -1,0 +1,31 @@
+#domain
+hospital
+#levelname
+SAKalle
+#colors
+red: K, A, L, L, E, E, I, 0, S, I, S, P, Q, P, P, P, P
+#initial
+++++++++++++++
++       KALLE+
++          ++++++++
++          +   E  +
++  I       ++++++ +
++0 SISP   Q     + +
++     P    ++++++ +
++   P P           +
++     P           +
++                 +
++++++++++++++++++++
+#goal
+++++++++++++++
++            +
++PP        ++++++++
++P P       +Q     +
++P         ++++++ +
++          KALLE+ +
++          ++++++ +
++                 +
++                 +
++                 +
++++++++++++++++++++
+#end

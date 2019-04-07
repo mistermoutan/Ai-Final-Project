@@ -275,10 +275,6 @@ class StateBuilder:
 
         return StateMA(self.maze, self.boxes, self.goals, agents)
 
-
-
-
-
 class StateMA:
     _RNG = random.Random(1)
 
@@ -332,7 +328,7 @@ class StateMA:
 
         self.goal_types = [g[0] for g in goals]
         self.goal_positions = [g[1] for g in goals]
-        #self.goal_agent = [g[2] for g in goals]
+        # self.goal_agent = [g[2] for g in goals]
         self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None
@@ -619,9 +615,15 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    line.append(chars[self.box_types[box]].upper())
+                    if self.box_types[box] is int:
+                        line.append(chars[self.box_types[box]].upper())
+                    else:
+                        line.append(self.box_types[box].lower())
                 elif goal is not None:
-                    line.append(chars[self.goal_types[goal]].lower())
+                    if self.goal_types[goal] is int:
+                        line.append(chars[self.goal_types[goal]].lower())
+                    else:
+                        line.append(self.goal_types[goal].lower())
                 else:
                     line.append(wall)
             lines.append("".join(line))

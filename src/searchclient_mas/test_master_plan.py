@@ -35,7 +35,7 @@ def test_merge_illegal_plan_into_master_returns_false():
 def test_two_independent_plans_remains_the_same_after_merged_into_master():
     p = MasterPlan(3, initial_state)
     plan_0 = [move(east), move(south), move(west)]
-    plan_1 = [move(north), NOOP, move(west)]
+    plan_1 = [move(north), NOOP, NOOP, move(west)]
     result_1 = p.merge_plan_into_master(0, plan_0)
     result_2 = p.merge_plan_into_master(1, plan_1)
     assert result_1 and result_2 and \
@@ -53,7 +53,7 @@ def test_two_dependent_plans_merged_into_master_the_last_one_changes():
     result_2 = p.merge_plan_into_master(1, plan_1)
     assert result_1 and result_2 and \
         p.get_plan_of_agent(0) == plan_0 and \
-        p.get_plan_of_agent(1) == [move(north), NOOP, move(west)] and \
+        p.get_plan_of_agent(1) == [move(north), NOOP, NOOP, move(west)] and \
         p.get_plan_of_agent(2) == []
 
 def test_returned_plans_are_defensive_copies():
