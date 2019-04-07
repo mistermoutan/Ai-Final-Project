@@ -43,7 +43,7 @@ class Coordinator:
         number_of_agents = len(self.state.agent_positions)
         agents = range(number_of_agents)
 
-        greedy_decomposition = True
+        greedy_decomposition = False
 
         if greedy_decomposition:
             print("box_types:{}".format(self.state.box_types),file= sys.stderr,flush=True)
