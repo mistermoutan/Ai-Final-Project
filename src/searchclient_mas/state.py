@@ -322,7 +322,7 @@ class StateMA:
                 # since we are editing them aze we need to make sure it doesnt get broken in the caller's maze
                 # TODO: make slightly more efficient by nto copying whole maze but only necessary parts?
                 if not maze_safe:
-                    self.maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.rows)]
+                    self.maze = [[self.maze[j][i] for i in range(self.cols)] for j in range(self.rows)]
                     maze_safe = True
                 self.maze[x][y] = False
 
@@ -571,7 +571,7 @@ class StateMA:
                     if self.box_types[box] is int:
                         line.append(chars[self.box_types[box]].upper())
                     else:
-                        line.append(self.box_types[box].lower())
+                        line.append(self.box_types[box].upper())
                 elif goal is not None:
                     if self.goal_types[goal] is int:
                         line.append(chars[self.goal_types[goal]].lower())
