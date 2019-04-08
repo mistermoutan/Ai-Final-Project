@@ -259,7 +259,8 @@ class GoalAnalyzer:
         incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions)}
 
 
-        #TODO: add clears as a parto f the plan
+        # TODO: add clears as a part of the plan
+        # TODO: create some sort of goal partial orders
         is_tree = False
         while incomplete_goals:
 
