@@ -154,7 +154,7 @@ def main():
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
     hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-
+    #hard_coded_file_name = "../levels/chokepoint.lvl"
 
     #If a filename is passed as argument, we read directly from file instead of
     #using the server. Allows us to run debugger at the same time

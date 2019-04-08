@@ -1,0 +1,23 @@
+#domain
+hospital
+#levelname
+SimpleMultiColor
+#colors
+blue: 0, 1, A, B, C
+#initial
+++++++
++0 A +
++    +
++  B +
++1   +
++  C +
+++++++
+#goal
+++++++
++   A+
++    +
++   B+
++    +
++   C+
+++++++
+#end

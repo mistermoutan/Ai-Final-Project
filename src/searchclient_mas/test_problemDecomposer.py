@@ -13,14 +13,19 @@ b2 = tu.box('b','g')
 b3 = tu.box('c','b')
 
 g0 = tu.goal('a')
-g1 = tu.goal('b')
+g1 = tu.goal('a')
+g2 = tu.goal('b')
+g3 = tu.goal('c')
+g4 = tu.goal('c')
+
+
 
 #hardcode possible initial state
 matrix = [
     [False,False,False,False,False,False,False,False,False,False],
-    [False,a1,True,True,True,True,a0,False,g0,False],
+    [False,a1,True,g2,True,True,a0,False,g0,False],
     [False,True,False,False,False,False,False,False,b0,False],
-    [False,True,True,True,True,b1,True,True,True,False],
+    [False,True,True,g3,True,b1,True,True,g4,False],
     [False,b2,False,False,False,False,False,False,True,False],
     [False,g1,False,a2,True,True,b3,True,False,a3],
     [False,False,False,False,False,False,False,False,False,False]
@@ -115,13 +120,25 @@ def test_searchPossibleBoxesForGoals():
     pd.searchPossibleBoxesForGoals()
     assert pd.pos_boxes == [[0, 1], [2]]
 
-def test_searchPossibleGoalsForBoxes():
-    pd.searchPossibleGoalsForBoxes()
-    assert pd.pos_goals == [[0], [0], [1], [], []]
-'''
-#def test_assign_tasks_greedy():
-#    pd.assign_tasks_greedy()
-#    assert pd.agt_tasks == [[0, 4], [1], [2], [3]]
+def test_searchPossibleGoalsForBox():
+    assert pd.searchPossibleGoalsForBox()
+    #assert pd.pos_goals == [[0], [0], [1], [], []]
 
+def test_assign_tasks_greedy():
+    pd.assign_tasks_greedy()
+    #assert pd.agt_tasks == [[0, 4], [1], [2], [3]]
+
+print("box_colors:   "+ str(st.box_colors))
+print("box_type:     "+ str(st.box_types))
+print("agent_colors: "+ str(st.agent_colors))
+print("goal_type:    "+ str(st.goal_types))
+
+#Tests
+#test_searchPossibleAgentsForBoxIndex()
+#test_searchAgentsForAllBoxes()
+#test_searchPossibleBoxesForGoals()
+#test_searchPossibleGoalsForBox()
+test_assign_tasks_greedy()
 
 test_createCompoundTasks()
+'''
