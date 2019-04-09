@@ -42,6 +42,23 @@ class Graph (object) :
             for box in state.box_positions:
                 self.bfs_tree(box)
 
+        elif "all_shortest_paths" in precompute:
+            """dict source_vertex:target_vertex:path"""
+            self.shortest_paths = defaultdict(dict)
+            vertices = self.deep_copy(self.vertices)
+            while vertices:
+                vertex = vertices.pop()
+                path_to_other_vertices = {v:self.shortest_path_between(vertex,v) for v in vertices if v not in self.shortest_paths[vertex]}
+                self.shortest_paths[vertex] = path_to_other_vertices
+                #use the computed paths for the equivalent entries as well
+                for v in path_to_other_vertices:
+                    self.shortest_paths[v][vertex] = path_to_other_vertices[v]
+                
+                
+                
+
+
+
             
     def run_bfs(self,source_vertex,cutoff_vertex=None): #add self.bfs_trees_cut?
         """
@@ -54,14 +71,11 @@ class Graph (object) :
         #if tree is already built
         if source_vertex in self.bfs_trees:
             return
-
         queue = deque([source_vertex]) 
         explored_set = set([source_vertex])
-        explored_set.update(illegal_vertices)
         parent = {} # {vertex:(parent,(path to root in terms of directions)}
 
         while queue:
-
             current_vertex = queue.popleft()
             if current_vertex == cutoff_vertex:
                 break
@@ -75,7 +89,6 @@ class Graph (object) :
             #node as their parent
             node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
             parent.update(node_parent_pairs)
-            counter += 1
         
         self.bfs_trees[source_vertex] = parent
 
@@ -102,10 +115,12 @@ class Graph (object) :
     def reconstruct_path_from_root_in_bfs_tree_to_target(self, tree, target_vertex):
         """Not to be called directly"""
         path = deque()
-        current_vertex = target
+        current_vertex = target_vertex
         while current_vertex:
             path.appendleft(current_vertex)
             current_vertex = tree.get(current_vertex,None) #get parent of current_vertex, none if it's not in keys (the source_vertex)
+        if path == deque([target_vertex]): # no shortest path
+            return None
         return path
 
 
@@ -240,5 +255,6 @@ level = [
         [False,False,False,False,False,False]
         ]
 
-g = Graph(level)
+g = Graph(level,precompute="all_shortest_paths")
+print(g.shortest_paths[(1,1)])
 #print(g.bfs_shortestpath_notree((3,1),(1,1),illegal_vertices={(2,2)}))
