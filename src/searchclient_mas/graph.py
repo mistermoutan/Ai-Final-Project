@@ -43,19 +43,17 @@ class Graph (object) :
                 self.bfs_tree(box)
 
         elif "all_shortest_paths" in precompute:
-            """dict source_vertex:target_vertex:path"""
+            """dict {source_vertex:{target_vertex:path}}"""
             self.shortest_paths = defaultdict(dict)
             vertices = self.deep_copy(self.vertices)
             while vertices:
                 vertex = vertices.pop()
                 path_to_other_vertices = {v:self.shortest_path_between(vertex,v) for v in vertices if v not in self.shortest_paths[vertex]}
-                self.shortest_paths[vertex] = path_to_other_vertices
-                #use the computed paths for the equivalent entries as well
+                self.shortest_paths[vertex].update(path_to_other_vertices)
+                #use the computed paths for the equivalent "opposite" entries as well
                 for v in path_to_other_vertices:
                     self.shortest_paths[v][vertex] = path_to_other_vertices[v]
-                
-                
-                
+
 
 
 
@@ -250,11 +248,12 @@ box0  = util.box("A", "blue")
 level = [
         [False,False,False,False,False,False],
         [False,True,True,True,True,False],
-        [False,False,True,True,True,False],
+        [False,False,False,False,True,False],
         [False,True,True,True,False,True],
-        [False,False,False,False,False,False]
+        [False,False,False,False,False,True]
         ]
 
 g = Graph(level,precompute="all_shortest_paths")
 print(g.shortest_paths[(1,1)])
+#print(g.shortest_paths)
 #print(g.bfs_shortestpath_notree((3,1),(1,1),illegal_vertices={(2,2)}))
