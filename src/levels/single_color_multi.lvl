@@ -1,0 +1,35 @@
+#domain
+hospital
+#levelname
+OnlySomeConflicts
+#colors
+blue: 0, C
+#initial
+++++++++++++++
++       0    +
++            +
++            +
++            +
++            +
++            +
++            +
++            +
++            +
++  C         +
++      C    C+
+++++++++++++++
+#goal
+++++++++++++++
++            +
++            +
++            +
++            +
++            +
++            +
++            +
++      C     +
++            +
++            +
++  C     C   +
+++++++++++++++
+#end

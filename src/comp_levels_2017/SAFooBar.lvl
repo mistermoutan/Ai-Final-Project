@@ -1,0 +1,19 @@
+#domain
+hospital
+#levelname
+SAFooBar
+#colors
+red: 0, K, J, I, H, G, F, E, D, C, B, A
+#initial
+++++++++++++++
+++ + + + + + +
++0KJIHGFEDCBA+
+++ + + + + +++
+++++++++++++++
+#goal
+++++++++++++++
+++A+C+E+G+I+K+
++            +
+++B+D+F+H+J+++
+++++++++++++++
+#end

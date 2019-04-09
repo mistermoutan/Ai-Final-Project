@@ -1,5 +1,5 @@
 from graph_alternative import Graph
-from path_finder import *
+from path_finder import actions_to_move_between,actions_to_push_box_between,actions_to_move_to_target_while_pulling_box,first_off_path_node
 from action import move,push,pull,north,south,east,west
 import pytest
 
@@ -113,21 +113,21 @@ def test_actions_to_move_and_pull_box_raises_error_if_agent_not_next_to_box():
         agent =  (1,1)
         box   =  (1,3)
         target = (4,2)
-        path = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
+        actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
 
 def test_actions_to_move_and_pull_box_raises_error_if_agent_and_box_on_same_location():
     with pytest.raises(Exception):
         agent =  (1,1)
         box   =  (1,1)
         target = (4,2)
-        path = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
+        actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
 
 def test_actions_to_move_and_pull_box_raises_error_if_box_is_on_shortest_path_from_agent_to_target():
     with pytest.raises(Exception):
         agent =  (1,1)
         box   =  (2,1)
         target = (4,2)
-        path = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
+        actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
 
 def test_actions_to_move_and_pull_box_is_empty_if_agent_already_on_target():
     agent  = (1,1)
@@ -141,28 +141,32 @@ def test_actions_to_move_and_pull_box_one_step_straight_path():
     box    = (1,1)
     target = (3,1)
     path  = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
-    assert path == [pull(south,south)]
+    assert path == [pull(south,north)]
+
 
 def test_actions_to_move_and_pull_box_one_step_around_corner():
     agent  = (3,1)
     box    = (2,1)
     target = (3,2)
     path  = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
-    assert path == [pull(east,south)]
+    assert path == [pull(east,north)]
+
 
 def test_actions_to_move_and_pull_box_distant_positions_1():
     agent  = (2,1)
     box    = (1,1)
     target = (5,1)
     path = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
-    assert path == [pull(south,south), pull(east,south),pull(south,east), pull(south,south), pull(west,south)]
+    assert path == [pull(south,north), pull(east,north),pull(south,west), pull(south,north), pull(west,north)]
+
 
 def test_actions_to_move_and_pull_box_distant_positions_2():
     agent  = (2,1)
     box    = (1,1)
     target = (1,3)
     path = actions_to_move_to_target_while_pulling_box(graph, agent, box, target)
-    assert path == [pull(south,south), pull(east,south), pull(east,east), pull(north,east), pull(north,north)]
+    assert path == [pull(south,north), pull(east,north), pull(east,west), pull(north,west), pull(north,south)]
+
 
 #Test function to find off path node
 def test_find_first_off_path_node_empty_oath_throws_error():

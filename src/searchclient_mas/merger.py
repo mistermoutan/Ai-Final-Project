@@ -1,6 +1,7 @@
 from action import *
 from planner import Planner
 from state import StateMA
+import sys
 
 class MergeState(object):
 
@@ -75,9 +76,10 @@ class MergeState(object):
         return self.get_next_merge_state(should_wait_for_one_step=True)
 
     def get_children(self):
-        #print("------------------------------------")
-        #print(self.extract_plan())
-        #print(self.game_state)
+        #if self.agent_id == 1:
+        #print("------------------------------------", file=sys.stderr)
+        #print(self.extract_plan(), file=sys.stderr)
+        #print(self.game_state, file=sys.stderr)
         #input(">")
         # If the agent plan cannot fit within the master plan, it might extend beyond the 
         # length of the action plan. In this case we add a NoOp action vector for each move
@@ -94,8 +96,7 @@ class MergeState(object):
 
     #The heuristic is the number of actions left in the action plan of the agent. 
     def heuristic(self):
-        
-        return self.g_value + len(self.agent_plan) - self.agent_plan_index
+        return  len(self.agent_plan) - self.agent_plan_index
     
     def get_g_value(self):
         return self.g_value
@@ -145,7 +146,8 @@ def merge(agent_id : int, agent_plan, master_plan, master_plan_index, initial_ga
         #Get the revised plan for the agent, if it exists. If the plans are (naively) mergable, it is at least possible to append the
         #agent plan to the end of the master plan. Thus the sum of the length of the two plans is an upper bound for the 
         #length of the solution and can be used as a cutoff value for the planner
-        maximum_length_of_solution = len(master_plan) + len(agent_plan)
+
+        maximum_length_of_solution = 2*(len(master_plan) + len(agent_plan))
         merge_planner = Planner(initial_state, cutoff_solution_length=maximum_length_of_solution)
         
         return merge_planner.make_plan()

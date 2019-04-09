@@ -291,7 +291,7 @@ class LevelAnalyser:
         neighbours = [n for n in self.get_neighbours(vertex)]
         if len(neighbours) == 1: #3 walls around him
             return self.corridor_vertex_condition(neighbours[0]) or False 
-
+            
         elif self.corridor_vertex_condition(vertex):
             return True
         else: 
@@ -514,56 +514,10 @@ level = [                                        #6            #8
     ]
 
 initial_state = util.make_state(level)
+
 L = LevelAnalyser(initial_state)
-L.locate_corridors()
-L.locate_open_areas()
-#print(L.corridor_vertex_condition((2,4)))
-
-
-
-
-"""
-def corridor_vertex_condition(self,vertex):
-        eighbours are quicly acesssible among them without having to go through vertex
-        neighbours = list(self.get_neighbours(vertex))
-        none_counts = []
-        if neighbours:
-            for n in neighbours:
-                no_n = neighbours[:] 
-                no_n.remove(n)
-                neighbours_shortest_paths = [self.bfs_shortestpath_notree(n,neighbour,illegal_vertices= {vertex},cutoff_branch=20) for neighbour in no_n] 
-                none_count = neighbours_shortest_paths.count(None)
-                none_counts.append(none_count)
-            #print(none_counts)
-            if len(neighbours) >= 3:
-                if none_counts.count(3) == 1:
-                    return False
-                else:
-                    return True
-            else:
-                if none_count > 0: #so neighbours no longer have a path between them if vertex is illegal
-                    return True
-                else: #if it is accessible but takes more than 3 steps (path includes initial and final vertex)
-                    for path in neighbours_shortest_paths:
-                        if len(path) > 5:
-                            return True
-        else:
-            return False
-
-    def is_corridor_candidate(self,vertex):
-        neighbours = [n for n in self.get_neighbours(vertex)]
-        if len(neighbours) == 1: #3 walls around him
-            if self.corridor_vertex_condition(neighbours[0]): #check the condition for his neighbour
-                return True
-            else:
-                return False             
-        elif self.corridor_vertex_condition(vertex):
-            return True
-        else: 
-            return False
-
-
-"""
+L.separate_rooms_exist()
+#L.locate_corridors()
 
 """
    def is_corridor_candidate_old(self,vertex):

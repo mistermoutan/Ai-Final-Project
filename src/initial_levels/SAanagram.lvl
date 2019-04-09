@@ -1,0 +1,19 @@
+#domain
+hospital
+#levelname
+SAanagram
+#colors
+red: E, L, E, V, E, N, P, L, U, S, T, W, O, 0
+#initial
++++++++++++++++++
++ELEVEN PLUS TWO+
++       0       + 
++               +
++++++++++++++++++
+#goal
++++++++++++++++++
++               +
++               + 
++TWELVE PLUS ONE+
++++++++++++++++++
+#end

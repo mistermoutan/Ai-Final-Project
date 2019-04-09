@@ -55,6 +55,7 @@ make_plan - This method starts searching and stops when a plan is found or the s
 It returns None if it couldn't find a plan, or the plan itself otherwise
 """
 import heapq
+import sys
 
 def default_heuristic(state):
     return state.heuristic()
@@ -104,6 +105,9 @@ class Planner(object):
         
         #Find the plan if state is goal
         if self.is_goal_state(state):
+            #if hasattr(state, 'game_state'):
+            #    print("--------------------------FOUND THE GOAL-----------------",file=sys.stderr)
+            #    print(state.game_state,file=sys.stderr)
             self.plan = self.extract_plan(state)
             return
 

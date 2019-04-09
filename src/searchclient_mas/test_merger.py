@@ -53,20 +53,21 @@ def test_can_merge_when_conflict_can_be_resolved_1():
     master_plan = [noop_action_vector, noop_action_vector, [NOOP, move(north)],[NOOP, move(north)]]
     agent_plan = [move(east), move(south)]
     revised_plan = merge(0, agent_plan, master_plan, 0, initial_state)
-    assert revised_plan == [NOOP, NOOP, NOOP, move(east), move(south)]
+    assert revised_plan == [NOOP, NOOP, NOOP, NOOP, move(east), move(south)]
 
 def test_can_merge_when_conflict_can_be_resolved_2():
     master_plan = [noop_action_vector, noop_action_vector, [NOOP, move(east)], noop_action_vector, [NOOP,push(north,north)]]
     agent_plan = [move(east), move(south), move(east)]
     revised_plan = merge(0, agent_plan, master_plan, 0, initial_state)
-    assert revised_plan == [move(east), NOOP, move(south), NOOP, move(east)]
+    assert revised_plan == [move(east), NOOP, NOOP, move(south), NOOP, move(east)]
 
 def test_can_merge_when_conflict_can_be_resolved_3():
     master_plan = [noop_action_vector, noop_action_vector, [move(east), NOOP], [move(north), NOOP], noop_action_vector, [move(east), NOOP]]
     agent_plan = [move(west), move(north), move(north), move(east)]
     revised_plan = merge(1, agent_plan, master_plan, 0, initial_state)
-    assert revised_plan == [move(west), NOOP, move(north), move(north), NOOP, move(east)] or \
-           revised_plan == [move(west), NOOP, move(north), NOOP, move(north), move(east)]
+    assert revised_plan == [move(west), NOOP, NOOP, move(north), move(north), NOOP, move(east)]
+    # or \
+           #revised_plan == [move(west), NOOP, move(north), NOOP, move(north), move(east)]
 
 """
 This is slow. Takes about 20 seconds. Don't think it'll be fast enough
