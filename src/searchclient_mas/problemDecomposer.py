@@ -1,7 +1,7 @@
 from state import StateMA,StateBuilder
 from typing import List, Tuple
 import sys
-from coordinator import Coordinator
+#from coordinator import Coordinator
 '''
 idea
     - get list of tasks/problems
@@ -154,7 +154,7 @@ class problemDecomposer():
 
         for i,bxs in enumerate(self.agt_boxes):
             for b in bxs:
-                for goal in self.searchPossibleGoalsForBox(b):
+                for goal in self.searchPossibleGoalsForBoxIndex(b):
                     if goal not in seen:
                         self.agt_goals[i].append(goal)
                         seen.append(goal)
