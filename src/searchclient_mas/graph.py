@@ -57,6 +57,7 @@ class Graph (object) :
 
 
 
+
             
     def run_bfs(self,source_vertex,cutoff_vertex=None): #add self.bfs_trees_cut?
         """
@@ -87,7 +88,7 @@ class Graph (object) :
             #node as their parent
             node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
             parent.update(node_parent_pairs)
-        
+            
         self.bfs_trees[source_vertex] = parent
 
     def bfs_tree(self,source_vertex):
@@ -245,15 +246,15 @@ class Graph (object) :
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
 box0  = util.box("A", "blue")
-level = [
-        [False,False,False,False,False,False],
-        [False,True,True,True,True,False],
-        [False,False,False,False,True,False],
-        [False,True,True,True,False,True],
-        [False,False,False,False,False,True]
-        ]
+level = [[ None for i in range(50)] for j in range (50)]
+for i in range (50):
+    for j in range(50):
+        if i == 0 or j == 0 or j == 49 or i == 49:
+            level[i][j] = False
+        else:
+            level[i][j] = True
 
 g = Graph(level,precompute="all_shortest_paths")
-print(g.shortest_paths[(1,1)])
+#print(g.shortest_paths[(1,1)])
 #print(g.shortest_paths)
 #print(g.bfs_shortestpath_notree((3,1),(1,1),illegal_vertices={(2,2)}))
