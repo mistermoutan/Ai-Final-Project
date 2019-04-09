@@ -202,9 +202,10 @@ class GoalAnalyzer:
             stack = [i]
             while stack:
                 curr = stack.pop()
+                seen.add(curr)
                 neighbours = self.connections[curr]
                 for n in neighbours:
-                    if n not in seen:
+                    if n not in seen and n not in removed:
                         seen.add(n)
                         stack.append(n)
                         if n in viable and n != i:
@@ -273,7 +274,7 @@ class GoalAnalyzer:
                 cycle_found = cycle or cycle_found
                 if cutsafe:
                     loss = self.compute_loss(i, removed)
-                    if loss == 0:
+                    if loss == 0 and not cycle:
                         easy_removals.append(i)
                     if loss < lowest:
                         best = i
@@ -296,7 +297,7 @@ class GoalAnalyzer:
 def try_get_goal_room_graph():
     import test_utilities as tu
 
-    maze = tu.create_maze()
+    maze = tu.create_maze(16)
     goal = tu.goal('a')
 
     for i in range(len(maze)-2):
@@ -310,6 +311,13 @@ def try_get_goal_room_graph():
     maze[5][5] = tu.goal('b')
     maze[4][5] = tu.goal('a')
     maze[3][6] = tu.goal('f')
+    maze[9][5] = tu.goal('g')
+    maze[10][5] = tu.goal('h')
+    maze[11][5] = tu.goal('h')
+    maze[12][5] = tu.goal('h')
+    maze[13][5] = tu.goal('h')
+    maze[14][5] = tu.goal('h')
+    maze[14][6] = tu.goal('h')
 
     # [row][col]
     maze[2][5] = tu.box('a', 'lul')
