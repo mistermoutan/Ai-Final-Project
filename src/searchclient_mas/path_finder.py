@@ -35,7 +35,7 @@ def actions_to_push_box_between(graph, agent, box, target):
     agent_to_box_dir = direction_between_adjacent_positions(agent,box)
     push_path = [(agent_to_box_dir,first_direction_of_box)]
     #Add every pair of consecutive directions from the shortest path to the push path
-    push_path.extend( pairwise(path_box_to_target) )
+    push_path.extend(pairwise(path_box_to_target) )
     #Convert every pair of directions to a push action
     return [push(d1,d2) for (d1,d2) in push_path]
 

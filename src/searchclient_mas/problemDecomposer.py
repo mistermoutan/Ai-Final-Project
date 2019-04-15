@@ -1,7 +1,9 @@
 from state import StateMA,StateBuilder
 from typing import List, Tuple
 import sys
-from coordinator import Coordinator
+from graph_alternative import Graph
+from path_finder import actions_to_move_between,actions_to_push_box_between,actions_to_move_to_target_while_pulling_box,first_off_path_node
+from action import move,push,pull,north,south,east,west
 '''
 idea
     - get list of tasks/problems
@@ -12,33 +14,63 @@ idea
     - decompose tasks to actions
     - send actions
 '''
+'''
 
-class HTN():
-    def __init__(self,state):
-        self.decomposer = problemDecomposer(state)
-        self.Tasks = self.decomposer.getGoalOrientedProblems()
+refine until it is primitive
+'''
+class Task():
+    
+    def __init__(self):
+        self.dispatcher = {\
+        'TransportBox': {'func':[self.MoveAgent(), self.MoveAgentWithBox()],'precond':[],'effec':[],'isPrimitive':False},\
+        'MoveAgent':  {'func':[actions_to_move_between],'precond':[],'effec':[self.agentAdjToBox],'isPrimitive':True},\
+        'MoveAgentWithBox':  {'func':[actions_to_push_box_between],'precond':[self.agentAdjToBox],'effec':[],'isPrimitive':True},\
+        }
+        self.isPrimitive=False
+        self.weight=0
+        #start refinement loop
+        self.primActions = []
 
-    def selectAgent(self):
-        #reduce list of agent to the most promissing one
+    #
+    def refine(self):
         pass
-    def selectBox(self):
-        #reduce the list of possible boxes to achive the goal to the most promissing one
+    #refinement functions
+    def TransportBox(self):
+        pass
+    def MoveAgent(self):
+        pass
+    def MoveAgentWithBox(self):
         pass
 
-    def planTask(self):
+    
+    #checking preconditions
+
+    #effects
+    def agentAdjToBox(self):
+        return True        
+
+
+
+
+
+        
+class CompoundTask():
+    def __init__(self,isPrimitive,name,goadId,boxes=[],agents=[],precond=None):
+        self.isPrimitive = isPrimitive
+        self.name = name
+        self.goadId = goadId
+        self.boxes = boxes
+        self.agents = agents
+        self.precond = precond
+        self.subtask = subtask()
+    def WeightAgent(self):
         pass
-    def solve(self):
-        '''
-        master_plan = MasterPlan(number_of_agents, self.state)
-
-        for agent,plan in enumerate(single_agent_plans):
-            master_plan.merge_plan_into_master(agent,plan)
-
-        return master_plan.plan
-        '''
-
+    def WeightBoxes(self):
         pass
-
+    def getSubtasks(self):
+        return self.subtask
+    def getAllPrimitiveActions(self):
+        pass
 
 class subtask():
     def __init__(self):
@@ -46,16 +78,28 @@ class subtask():
         self.task = None
         self.fromPos = None
         self.toPos = None
-    def MoveAgent(self,fromPos,toPos):
-        self.task=0
+        self.primitiveTasks=None
+        self.isPrimitive=False
+        self.actions = []
+        self.haspParent=False
+    def ClearPath(self):
+        pass
+    def MoveAgent(self,fromPos=(0,0),toPos=(0,0),graph=None):
+        self.task = 1
         self.fromPos=fromPos
         self.toPos = toPos
-    def MoveAgentWithBox(self,fromPos,toPos):
-        self.task=1
+        self.isPrimitive=True
+        #self.actions = actions_to_move_between(graph,fromPos,toPos)
+    def MoveAgentWithBox(self,fromPos=(0,0),toPos=(0,0)):
+        self.task = 2
         self.fromPos=fromPos
         self.toPos = toPos
+        self.isPrimitive=True
+        #decide between between push or pull
+        self.actions = None #actions_to_push_box_between(graph,)
     def addChildTask(self):
         self.child=subtask()
+        self.child.haspParent=True
     def getChildTask(self):
         return self.child
 '''
@@ -74,7 +118,6 @@ class problemDecomposer():
         (False,'TransportTo',goal_index,[1,2,...(box_index)],precond[x1[],x2[]],subtask:[x1][x2]]
         if subtask empty => isPrimitive = True
         '''
-
         g = []
         for i in range(len(self.state.goal_types)):
             boxes = self.searchPossibleBoxesForGoalIndex(i)
@@ -82,8 +125,8 @@ class problemDecomposer():
             agents= self.searchPossibleAgentsForBox(boxes[0])
             #TODO implement precondition data structure
             precond=[]
-            subtasks = subtask()
-            g.append((False,'TransportTo', i,boxes,agents,precond,subtasks))
+            g.append(CompoundTask(False,'TransportTo',i,boxes,agents,precond))
+            #g.append((False,'TransportTo', i,boxes,agents,precond,subtasks))
         self.Plan=g
         return g
 
@@ -96,7 +139,7 @@ class problemDecomposer():
                 #TODO: pick agent with by weight
                 agent = task[4]
                 #if not at box
-                task[6].MoveAgent()
+                #task[6].MoveAgent().MoveAgentWithBox().MoveAgent
 
 
 
@@ -154,7 +197,7 @@ class problemDecomposer():
 
         for i,bxs in enumerate(self.agt_boxes):
             for b in bxs:
-                for goal in self.searchPossibleGoalsForBox(b):
+                for goal in self.searchPossibleGoalsForBoxIndex(b):
                     if goal not in seen:
                         self.agt_goals[i].append(goal)
                         seen.append(goal)
