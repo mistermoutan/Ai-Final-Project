@@ -56,7 +56,7 @@ class Graph (object) :
                 #use the computed paths for the equivalent "opposite" entries as well
                 for v in path_to_other_vertices:
                     self.shortest_paths[v][vertex] = path_to_other_vertices[v]
-                print("Done with ", vertex)
+                #print("Done with ", vertex)
  
 
 
@@ -219,7 +219,7 @@ class Graph (object) :
             for v in shortest_paths_to_vertex:  #use the computed paths for the equivalent "opposite" entries as well #TODO: revert path as we're using the same
                 self.shortest_paths[v][vertex] = shortest_paths_to_vertex[v]
 
-            print("Done with ", vertex)
+            #print("Done with ", vertex)
         print(c1,c2)
 
 

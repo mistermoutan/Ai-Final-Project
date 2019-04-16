@@ -4,6 +4,8 @@ import sys
 from graph import Graph
 from path_finder import actions_to_move_between,actions_to_push_box_between,actions_to_move_to_target_while_pulling_box,first_off_path_node
 from action import move,push,pull,north,south,east,west
+from master_plan import MasterPlan
+
 '''
 idea
     - get list of tasks/problems
@@ -23,6 +25,8 @@ class HTN():
         self.state = state
         self.Tasks = []
         self.pd = problemDecomposer(state)
+        self.graph_of_level = Graph(state.maze)
+
 
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
@@ -42,10 +46,6 @@ class HTN():
         return self.Tasks
     def getTasksByAgent(self):
         agentTask={}
-        #TODO outsource the next three lines
-        self.createTasks()
-        self.refineTasks()
-        self.sortTasks()
 
         for t in self.Tasks:
             if t.agent not in agentTask:
@@ -58,6 +58,25 @@ class HTN():
         pass
     def mergePlanInMasterPlan(self):
         pass
+    
+    def solve(self):
+        number_of_agents = len(self.state.agent_positions)
+        self.createTasks
+        self.refineTasks()
+        self.sortTasks()
+        single_agent_tasks = self.getTasksByAgent()
+        #run all low level functions to create primitive tasks
+        #for t in single_agent_tasks:
+            #print(t,file=sys.stderr,flush=True)
+
+        #create single agent plans
+
+        #create masterplan
+        master_plan = MasterPlan(number_of_agents, self.state)
+        #merge singleAgentPlans into MasterPlan
+
+        return master_plan.plan
+
 
 class Task():
     def __init__(self,headTask,goal,posBoxes=[],posAgents=[]):
