@@ -1,7 +1,7 @@
-from problemDecomposer import problemDecomposer,subtask
+from problemDecomposer import problemDecomposer,subtask,Task,HTN
 import test_utilities as tu
 import unittest
-from graph_alternative import Graph
+from graph import Graph
 # format agents, boxes, goals
 a0 = tu.agent(0,'r')
 a1 = tu.agent(1,'r')
@@ -31,6 +31,38 @@ st = tu.make_state(matrix)
 pd = problemDecomposer(st)
 graph = Graph(st.maze)
 
+#test for class HTN
+def test_checkTasksLength():
+    htn = HTN(st)
+    assert len(htn.Tasks)==0
+    htn.createTasks()
+    assert len(htn.Tasks)==2
+def test_taskRefinement():
+    htn = HTN(st)
+    htn.createTasks()
+    for t in htn.Tasks:
+        assert not t.allPrimitive()
+    htn.refineTasks()
+    for t in htn.Tasks:
+        assert t.allPrimitive()
+def test_getTasksByAgent():
+    htn=HTN(st)
+    assert isinstance(htn.getTasksByAgent(), dict)
+
+#test for class Tasks
+
+def test_refinementSchemaConsistent():
+    task = Task('FullfillBoxGoal',0,[0,1],[0,1])
+    #check if all steps are defined as actions
+    assert all([k in task.refScheme for key,val in task.refScheme.items() for k in val['steps'] if val['isPrimitive']==False])
+    #check names
+    assert all([val['name'] in task.refScheme for key,val in task.refScheme.items()])
+    
+def test_CheckForDublicatesInSchema():
+    #key duplicates
+    task = Task('FullfillBoxGoal',0,[0,1],[0,1])
+    assert len(task.refScheme) == len(set(task.refScheme.keys()))
+    #TODO check also if scheme entries are the same but have different names
 
 #Test function for subtasks
 
@@ -88,10 +120,6 @@ def test_decomposeToPrimitiveTask():
 def test_createSetOfTasks():
     assert True
 def test_getGoalOrientedProblems():
-    assert True
-def test_sortbyWeight():
-    x = {1: 2, 3: 4, 4: 3, 2: 1, 0: 0}
-    test = pd.sortbyWeight(x)
     assert True
 def test_searchPossibleAgentsForBox():
     assert True

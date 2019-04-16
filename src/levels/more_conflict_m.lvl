@@ -1,0 +1,39 @@
+#domain
+hospital
+#levelname
+OnlySomeConflicts
+#colors
+red: 0, A
+green: 1, B
+blue: 2,C,F,5
+purple: 3, D
+orange: 4, E
+#initial
+++++++++++++++
++       0 2  +
++A           +
++            +
++   3        +
++            +
++            +
++ 1          +
++       B    +
++          4 +
++   5       E+
++D   F    C  +
+++++++++++++++
+#goal
+++++++++++++++
++    D      F+
++B           +
++            +
++           E+
++A           +
++            +
++            +
++            +
++            +
++            +
++        C   +
+++++++++++++++
+#end
