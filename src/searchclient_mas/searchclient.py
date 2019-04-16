@@ -3,7 +3,7 @@
 import sys
 import traceback
 from state import StateSA,StateMA,StateBuilder
-from problemDecomposer import problemDecomposer as pd
+from problemDecomposer import problemDecomposer,Task,HTN
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
 import os  
@@ -194,13 +194,6 @@ def main():
         client.solve_the_problem()
 
     
-    #This will probably be moved at some point
-    problem = pd(client.initial_state)
-    tasks = problem.getTasks()
-    print(tasks,file= sys.stderr, flush=True)
-
-    #Follow this to get where the planning happens
-    #client.solve_the_problem()
 
 if __name__ == '__main__':
     main()
