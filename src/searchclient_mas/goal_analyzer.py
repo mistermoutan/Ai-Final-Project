@@ -202,9 +202,10 @@ class GoalAnalyzer:
             stack = [i]
             while stack:
                 curr = stack.pop()
+                seen.add(curr)
                 neighbours = self.connections[curr]
                 for n in neighbours:
-                    if n not in seen:
+                    if n not in seen and n not in removed:
                         seen.add(n)
                         stack.append(n)
                         if n in viable and n != i:
@@ -238,14 +239,14 @@ class GoalAnalyzer:
         # TODO: find space left  and use as metric as well
 
 
-        for i in self.state.goal_types:
-            type_required[i] += 1
-
-        for i in self.state.box_types:
-            type_available[i] += 1
-
-        for i in type_required:
-            assert type_available[i] <= type_required[i], "Not enough boxes to fulfill every goal"
+        # for i in self.state.goal_types:
+        #     type_required[i] += 1
+        #
+        # for i in self.state.box_types:
+        #     type_available[i] += 1
+        #
+        # for i in type_required:
+        #     assert type_available[i] <= type_required[i], "Not enough boxes to fulfill every goal"
 
         #room_box_map = defaultdict(list)
 
@@ -255,6 +256,7 @@ class GoalAnalyzer:
 
         removed = set()
         plan = []
+        cycle_cuts = []
 
         incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions)}
 
@@ -266,6 +268,7 @@ class GoalAnalyzer:
 
             best = -1
             lowest = 99999999999
+            in_cycle = False
             easy_removals = []
             cycle_found = False
             for i in incomplete_goals:
@@ -273,21 +276,25 @@ class GoalAnalyzer:
                 cycle_found = cycle or cycle_found
                 if cutsafe:
                     loss = self.compute_loss(i, removed)
-                    if loss == 0:
+                    if loss == 0 and not cycle:
                         easy_removals.append(i)
                     if loss < lowest:
                         best = i
                         lowest = loss
+                        in_cycle = cycle
 
             if len(easy_removals) > 0:
                 for i in easy_removals:
                     plan.append(i)
                     incomplete_goals.remove(i)
                     removed.add(i)
+                    cycle_cuts.append(False)
             else:
                 plan.append(best)
+                cycle_cuts.append(in_cycle)
                 incomplete_goals.remove(best)
                 removed.add(best)
+
 
         return plan
 
@@ -296,8 +303,7 @@ class GoalAnalyzer:
 def try_get_goal_room_graph():
     import test_utilities as tu
 
-    maze = tu.create_maze()
-    goal = tu.goal('a')
+    maze = tu.create_maze(16)
 
     for i in range(len(maze)-2):
         maze[i][4] = False
@@ -310,6 +316,13 @@ def try_get_goal_room_graph():
     maze[5][5] = tu.goal('b')
     maze[4][5] = tu.goal('a')
     maze[3][6] = tu.goal('f')
+    maze[9][5] = tu.goal('g')
+    maze[10][5] = tu.goal('h')
+    maze[11][5] = tu.goal('h')
+    maze[12][5] = tu.goal('h')
+    maze[13][5] = tu.goal('h')
+    maze[14][5] = tu.goal('h')
+    maze[14][6] = tu.goal('h')
 
     # [row][col]
     maze[2][5] = tu.box('a', 'lul')
@@ -328,8 +341,9 @@ def try_get_goal_room_graph():
     print(state, "\n")
     analyzer.print_rooms()
     analyzer.compute_goal_order_plan()
-    print(analyzer.compute_goal_eccentricity())
-    print(analyzer.compute_goal_order_plan())
+    plan, cycle_cuts = analyzer.compute_goal_order_plan()
+    print(plan)
+    print(cycle_cuts)
     if len(analyzer.rooms) != 8:
         print("number of rooms is wrong")
         return False

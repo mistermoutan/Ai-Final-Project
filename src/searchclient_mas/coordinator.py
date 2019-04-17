@@ -2,7 +2,7 @@ from state import StateMA,StateSA
 from action import north,south,west,east,move,push,pull
 from master_plan import MasterPlan
 from planner import Planner
-from graph_alternative import Graph
+from graph import Graph
 from problemDecomposer import HTN, subtask, problemDecomposer
 import sys
 import copy

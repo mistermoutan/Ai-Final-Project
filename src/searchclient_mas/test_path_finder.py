@@ -1,4 +1,4 @@
-from graph_alternative import Graph
+from graph import Graph
 from path_finder import actions_to_move_between,actions_to_push_box_between,actions_to_move_to_target_while_pulling_box,first_off_path_node
 from action import move,push,pull,north,south,east,west
 import pytest

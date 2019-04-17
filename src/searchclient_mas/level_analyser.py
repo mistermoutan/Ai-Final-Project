@@ -11,7 +11,7 @@ from collections import Counter
 
 class LevelAnalyser:
 
-    def __init__(self,state):
+    def __init__(self,state: StateMa):
         self.bfs_trees = {}
         self.explored = {}
         self.vertices = set()
@@ -74,12 +74,8 @@ class LevelAnalyser:
             goals_in_room = {goal_pos for goal_pos in self.goal_positions if goal_pos in self.rooms[room_index]}
             self.goals_in_rooms[room_index] = goals_in_room or None
 
-        
-
-        
-
-
-    def connected_component
+    
+    def is_connected_component(self,room)
 
     def connected_component_is_broken:
 
@@ -502,7 +498,7 @@ class LevelAnalyser:
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
 box0  = util.box("A", "blue")
-level = [                                        #6            #8
+maze = [                                        #6            #8
         [False,False, False,False, False,False, False, False, False, False,False],
         [False,True, True, False, False, False,   False,  False, False, False,False],#1
         [False,True, True, False, False, False,    False,  False, False, False,False],
@@ -513,9 +509,14 @@ level = [                                        #6            #8
                              #3                
     ]
 
-initial_state = util.make_state(level)
+builder = StateBuilder()
+builder.set_maze(maze)
+#builder.add_agent(id,pos,color)
+builder.add_box(type,pos,color)
+builder.add_goal(type,pos,agent_goal=False)
+state = builder.build_StateMA()
 
-L = LevelAnalyser(initial_state)
+L = LevelAnalyser(state)
 L.separate_rooms_exist()
 #L.locate_corridors()
 
