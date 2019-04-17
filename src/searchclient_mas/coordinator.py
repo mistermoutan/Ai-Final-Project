@@ -24,6 +24,34 @@ class Coordinator:
         distances = [self.distance_to(box, goal) for goal in goals]
         return min(distances)
 
+    def distances_to_position_in_list(self, pos1, poslist):
+        return [self.distance_to(pos1, pos2) for pos2 in poslist]
+
+    def ind_n_dis_goals_to_closest_box(self, state, boxes, goals):
+        '''
+        for every goal return the index of closest box that can satisfy that goal
+        and is not assigned to another goal already, and the distance to it
+        (we have to calculate the distance anyway so we might aswell keep it)
+        '''
+        closest_boxes = []
+        distances = []
+
+        for i, goal in enumerate(goals):
+            d = []
+            for j, box in enumerate(boxes):
+                if j not in closest_boxes:
+                    if state.goal_types[i] == state.box_types[j]:
+                        d.append(self.distance_to(box, goal)-1) # -1 to
+                    else:
+                        d.append(2500)
+                else:
+                    d.append(2500)
+
+            min_index = d.index(min(d))
+            closest_boxes.append(min_index)
+            distances.append(d[min_index])
+
+        return closest_boxes, distances
 
     #Simple heuristic which minimizes the value (agent_to_box + box_to_goal) distance
     def heuristic(self, state):
@@ -36,50 +64,46 @@ class Coordinator:
         agent_to_box_goal_goal_distances = [agent_to_box_distances[i] + box_to_goals_distances[i] for i in range(len(agent_to_box_distances))]
         return min(agent_to_box_goal_goal_distances)
 
-    def heuristic_2(self, state):
-
-        # Work in Progress!!
-
+    def heuristic_adv(self, state, alpha = 1):
+        '''
+        Idea is to combine different heurisitcs here and wheight them differently, squre them, etc.
+        Work in progress
+        '''
         agent = (state.agent_row, state.agent_col)
         boxes = state.box_positions
         goals = state.goal_positions
 
-        alpha = 10 #penalizing factor for distance goals_to_box
+        alpha = 1 #penalizing factor for distance goals_to_box
+        square_goals2box = True #all goals will be solved almost in "parrallel"
+        square_agt2boxes = False # boxes will be pushed to their goals "sequentially"
 
-        seen = []
-        goals_to_box = []
-        agent_to_box = []
+        #closest box for every goal and the distance to it
+        closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
 
-        # distance from every goal to closest box that can satisfy that goal and is not assigned to other goal alread
-        for i, goal in enumerate(goals):
-            distances = []
-            for j, box in enumerate(boxes):
-                if j not in seen:
-                    if state.goal_types[i] == state.box_types[j]:
-                        distances.append(self.distance_to(box, goal))
-                    else:
-                        distances.append(1000)
-
-            min_index = distances.index(min(distances))
-            seen.append(min_index)
-            goals_to_box.append(distances[min_index]-1)
-
-             # distance from agent to closest box that is not at its goal
-            if distances[min_index]-1 != 0:
-                agent_to_box.append(self.distance_to(agent, boxes[min_index])-1)
+        #distances form agent to all boxes that are not in goal state
+        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes if dist_goals_to_box[i] != 0])
+        dist_agent_to_boxes = [d-2 for d in dist_agent_to_boxes]#currently error of 2 #TODO resolve this
 
         # not enough boxes for goals
-        assert 999 not in goals_to_box
+        assert 2500 not in dist_goals_to_box
 
-        #avoid error in goal state
-        if agent_to_box == []:
-            agent_to_box = [0]
+        #avoid error in goal state - every goal is satisfied
+        if dist_agent_to_boxes == []:
+            dist_agent_to_boxes = [0]
 
-        return alpha * sum(goals_to_box) + min(agent_to_box)
+        if square_goals2box:
+            dist_goals_to_box = [d*d for d in dist_goals_to_box]
+
+        if square_agt2boxes:
+            dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
+
+        h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
+
+        return h
 
 
     def make_single_agent_plan(self, initial_state):
-        return Planner(initial_state, heuristic=self.heuristic, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
+        return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
 
     def solve(self):
 
