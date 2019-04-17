@@ -49,22 +49,20 @@ def test_distances_to_position_in_list():
     closest_boxes = [1, 0, 2, 3, 4]
     boxes = st_SA.box_positions
     agent = (st_SA.agent_row, st_SA.agent_col)
-    assd = [boxes[i] for i in closest_boxes]
-    print(assd)
-    print(coordinator.distances_to_position_in_list(agent, assd))
+    #print(coordinator.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes]))
 
 def test_heuristic():
-    print(coordinator.heuristic(st_SA))
+    #print(coordinator.heuristic(st_SA))
     #assert coordinator.heuristic(st_SA) == 7
 
 def test_ind_n_dis_goals_to_closest_box():
     boxes = st_SA.box_positions
     goals = st_SA.goal_positions
 
-    print(coordinator.ind_n_dis_goals_to_closest_box(st_SA, boxes, goals))
+    #print(coordinator.ind_n_dis_goals_to_closest_box(st_SA, boxes, goals))
 
-def test_heuristic_2():
-    print(coordinator.heuristic_2(st_SA))
+def test_heuristic_adv():
+    #print(coordinator.heuristic_adv(st_SA))
 
 #test_distance_to()
 #test_min_distance_to_position_in_list()
@@ -72,7 +70,7 @@ def test_heuristic_2():
 #test_ind_n_dis_goals_to_closest_box()
 
 #test_heuristic()
-test_heuristic_2()
+#test_heuristic_adv()
 
 
 #60
