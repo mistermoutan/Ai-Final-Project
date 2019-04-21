@@ -54,7 +54,7 @@ def test_getTasksByAgent():
 def test_refinementSchemaConsistent():
     task = Task('FullfillBoxGoal',0,[0,1],[0,1])
     #check if all steps are defined as actions
-    assert all([k in task.refScheme for key,val in task.refScheme.items() for k in val['steps'] if val['isPrimitive']==False])
+    assert all([k in task.refScheme for key,val in task.refScheme.items() for k in val['steps'] if val['isPrimitive']==False and isinstance(k, str)])
     #check names
     assert all([val['name'] in task.refScheme for key,val in task.refScheme.items()])
     

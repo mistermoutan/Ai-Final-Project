@@ -5,6 +5,8 @@ from graph import Graph
 from path_finder import actions_to_move_between,actions_to_push_box_between,actions_to_move_to_target_while_pulling_box,first_off_path_node
 from action import move,push,pull,north,south,east,west
 from master_plan import MasterPlan
+from planner import Planner
+
 
 '''
 idea
@@ -26,20 +28,22 @@ class HTN():
         self.Tasks = []
         self.pd = problemDecomposer(state)
         self.graph_of_level = Graph(state.maze)
-
-
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
+            print(i,file=sys.stderr,flush=True)
             #TODO if goal type is box goal 
             boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
             #TODO check if goal can be achieved by agents of different color...
-            agents= self.pd.searchPossibleAgentsForBox(boxes[0])
+            agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,boxes,agents))
     def refineTasks(self):
+        i = 0
         for t in self.Tasks:
             while not t.allPrimitive():
                 t.refine()
+                print('while loop '+str(i),file=sys.stderr,flush=True)
+                i+=1
     def sortTasks(self):
         self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True) 
     def getTasks(self):
@@ -49,66 +53,94 @@ class HTN():
 
         for t in self.Tasks:
             if t.agent not in agentTask:
-                agentTask[t.agent]=[t]
+                agentTask[t.agent]=[(t.goal,t.box)]
             else:
-                agentTask[t.agent].append(t)
-
-        return agentTask
+                agentTask[t.agent].append((t.goal,t.box))
+        #Workaround because the agent order matters
+        return {key: agentTask[key]for key in sorted(agentTask.keys())}
+        
     def createPlanByAgent(self):
         pass
     def mergePlanInMasterPlan(self):
         pass
+    def distance_to(self, x, y):
+        return len(self.graph_of_level.shortest_path_between(x,y))
+
+    def min_distance_to_position_in_list(self, box, goals):
+        distances = [self.distance_to(box, goal) for goal in goals]
+        return min(distances)
+    #Simple heuristic which minimizes the value (agent_to_box + box_to_goal) distance
+    def heuristic(self, state):
+        agent = (state.agent_row, state.agent_col)
+        boxes = state.box_positions
+        goals = state.goal_positions
+
+        agent_to_box_distances = [self.distance_to(agent, box) for box in boxes]
+        box_to_goals_distances = [self.min_distance_to_position_in_list(box, goals) for box in boxes]
+        agent_to_box_goal_goal_distances = [agent_to_box_distances[i] + box_to_goals_distances[i] for i in range(len(agent_to_box_distances))]
+        return min(agent_to_box_goal_goal_distances)
+
+
+    def make_single_agent_plan(self, initial_state):
+        return Planner(initial_state, heuristic=self.heuristic, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     
     def solve(self):
         number_of_agents = len(self.state.agent_positions)
-        self.createTasks
+        self.createTasks()
         self.refineTasks()
         self.sortTasks()
         single_agent_tasks = self.getTasksByAgent()
+        print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
         #run all low level functions to create primitive tasks
-        #for t in single_agent_tasks:
-            #print(t,file=sys.stderr,flush=True)
+        single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
 
         #create single agent plans
+        single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
 
         #create masterplan
         master_plan = MasterPlan(number_of_agents, self.state)
         #merge singleAgentPlans into MasterPlan
+        for agent,plan in enumerate(single_agent_plans):
+            master_plan.merge_plan_into_master(agent,plan)
 
         return master_plan.plan
 
 
 class Task():
+    #TODO Choose between agents based on current Workload and Distance
+    #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
+    #TODO Choose between boxes 
     def __init__(self,headTask,goal,posBoxes=[],posAgents=[]):
         #refinement schema for all actions
         #TODO make sure that headTask is in refScheme -> exception handling
         #schema = {'name':'','precond':[],'steps':[],'isPrimitive':False}
         #TODO case if precondition are met already-> do anyway?
+        self.goal=goal
         self.posAgents=posAgents
         self.agent=None
         self.posBoxes = posBoxes
         self.box = None
         self.refScheme = {\
-            'FullfillBoxGoal': {'name':'FullfillBoxGoal','precond':[self.agentAvl,self.boxAvl,self.inSameRoom],'steps':['SelectBox','SelectAgent','MoveAgentToBox', 'MoveAgentWithBox'],'isPrimitive':False},\
-            'MoveAgentToBox':{'name':'MoveAgentToBox','precond':[self.agentAvl],'steps':[],'isPrimitive':True},\
-            'MoveAgentWithBox':  {'name':'MoveAgentWithBox','precond':[self.agentAdjToBox],'steps':[],'isPrimitive':True},\
-            'SelectBox':{'name':'SelectBox','precond':[],'steps':[self.weightBoxes,self.selectBox],'isPrimitive':True},\
+            'FullfillBoxGoal': {'name':'FullfillBoxGoal','precond':[self.agentAvl,self.boxAvl],'steps':['SelectBox','SelectAgent',],'isPrimitive':False},\
+            #'MoveAgentToBox':{'name':'MoveAgentToBox','precond':[self.agentAvl],'steps':[],'isPrimitive':True},\
+            #'MoveAgentWithBox':  {'name':'MoveAgentWithBox','precond':[self.agentAdjToBox],'steps':[],'isPrimitive':True},\
+            'SelectBox':{'name':'SelectBox','precond':[self.inSameRoom],'steps':[self.reducePosBoxes(),self.weightBoxes(),self.selectBox()],'isPrimitive':True},\
             'WeightBoxes':{'name':'WeightBoxes','precond':[],'steps':[],'isPrimitive':True},\
-            'SelectAgent':{'name':'SelectAgent','precond':[],'steps':[self.weightAgents,self.selectAgent],'isPrimitive':True},\
-            'WeightAgents':{'name':'WeightAgents','precond':[],'steps':[],'isPrimitive':True},\
+            'SelectAgent':{'name':'SelectAgent','precond':[],'steps':[self.reducePosAgents(),'WeightAgents',self.selectAgent()],'isPrimitive':False},\
+            'WeightAgents':{'name':'WeightAgents','precond':[],'steps':[self.getAgentWorkload,self.getAgentDistance(),self.weightAgents],'isPrimitive':True},\
             'MoveAgent':{'name':'MoveAgent','precond':[self.agentAvl],'steps':[],'isPrimitive':True}
         }
-        self.Tasks = [self.refScheme[headTask]]
+        self.steps = [self.refScheme[headTask]]
         self.weight=0
         #start refinement loop
         self.tasks = []
 
     #
     def refine(self):
-        self.Tasks = [self.refScheme[y] for x in self.Tasks for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False else [x])]
+        self.steps = [self.refScheme[y] for x in self.steps for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False  else [x]) if isinstance(y,str)]
         return self
     def allPrimitive(self):
-        return all([i['isPrimitive'] for i in self.Tasks])
+        return all([i['isPrimitive'] for i in self.steps])
     #effects and preconditions
     def agentAvl(self):
         return True
@@ -118,23 +150,41 @@ class Task():
         return True
     def inSameRoom(self):
         return True
+    def isSameColor(self):
+        return True
     #mapping to real actions if all actions are Primitive
     def generateActions(self):
         if self.allPrimitive():
             pass
             #find actions 
     def selectAgent(self):
-        self.agents=self.posAgents[0]
+        self.agent=self.posAgents[0]
+        print('selected Agent:'+str(self.agent))
     def weightAgents(self):
+        #height weight means workload high and far away
         #TODO implement
         #use a heuristic to calc a weight
         pass
     def selectBox(self):
         self.box=self.posBoxes[0]
     def weightBoxes(self):
+        #hight weight means far away
         #TODO implement
         #use a heuristic to get a weight
         pass
+    def getAgentWorkload(self):
+        #Workload amount of goals or amount of steps of already assigned tasks
+        pass
+    def getAgentDistance(self):
+        for a in self.posAgents:
+            print(a,file=sys.stderr,flush=True)
+    def reducePosAgents(self):
+        #check if agent can reach goal ->same room
+        pass
+    def reducePosBoxes(self):
+        #check if box can reach goal -> same room
+        pass
+
 
 
 

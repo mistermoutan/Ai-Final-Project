@@ -122,8 +122,8 @@ class SearchClient:
         elif solver=='htn':
             htn = HTN(self.initial_state)
             master_plan = htn.solve()
-            #for action_vector in master_plan:
-            #    self.sendJointAction(action_vector)
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
 
     '''
     send joints action
