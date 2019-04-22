@@ -1,4 +1,2 @@
-from problemDecomposer import problemDecomposer,Task,HTN
-
-task = Task('FullfillBoxGoal',0,[0,1],[0,1])
-print(task.posAgents[0])
+maze = [[False, False, False, False, False, False, False, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, False, False, False, False, False, False, False]]
+#print(maze)

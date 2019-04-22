@@ -3,7 +3,7 @@ from action import north,south,west,east,move,push,pull
 from master_plan import MasterPlan
 from planner import Planner
 from graph import Graph
-from problemDecomposer import HTN, subtask, problemDecomposer
+from problemDecomposer import problemDecomposer
 import sys
 import copy
 
@@ -113,11 +113,13 @@ class Coordinator:
         greedy_decomposition = False
 
         if greedy_decomposition:
-            print("box_types:{}".format(self.state.box_types),file= sys.stderr,flush=True)
+            pass
+            #print("box_types:{}".format(self.state.box_types),file= sys.stderr,flush=True)
             pd = problemDecomposer(self.state)
             agt_tasks = pd.assign_tasks_greedy()
             single_agent_states = [self.state.get_greedy_StateSA(i,agt_tasks[i], True) for i in agents]
-
+            #print("single_agent_states",file=sys.stderr,flush=True)
+            #print(single_agent_states,file=sys.stderr,flush=True)
         else:
             single_agent_states = [self.state.get_StateSA(i, True) for i in agents]
 

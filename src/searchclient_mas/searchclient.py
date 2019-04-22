@@ -113,11 +113,17 @@ class SearchClient:
 
         self.sendComment("Initialized SearchClient")
 
-    def solve_the_problem(self):
-        coordinator = Coordinator(self.initial_state)
-        master_plan = coordinator.solve()
-        for action_vector in master_plan:
-            self.sendJointAction(action_vector)
+    def solve_the_problem(self,solver='init'):
+        if solver=='init':
+            coordinator = Coordinator(self.initial_state)
+            master_plan = coordinator.solve()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
+        elif solver=='htn':
+            htn = HTN(self.initial_state)
+            master_plan = htn.solve()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
 
     '''
     send joints action
@@ -131,7 +137,7 @@ class SearchClient:
 
     '''
     def sendJointAction(self,actions):
-
+        #print(actions,file=sys.stderr,flush=True)
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
@@ -167,7 +173,7 @@ def main():
         elif arg1=='-htn':
             server_messages = sys.stdin
             client = SearchClient(server_messages)
-            client.solve_the_problem()
+            client.solve_the_problem('htn')
         else:
             raise ValueError("argument is not a solver")
 
