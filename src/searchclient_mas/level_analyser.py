@@ -19,7 +19,8 @@ class LevelAnalyser:
         self.walls = set()
         self.goal_positions = {goal_pos for goal_pos in state.goal_positions}
         self.box_positions = {box_pos for box_pos in state.box_positions} 
-        self.rooms = None
+        self.agent_positions = [agent_pos for agent_pos in state.agent_positions] #agents are identified by the order their positions appear in the array
+        self.rooms = None #list
         self.goals_in_rooms = None
         self.corridors = None
         self.open_areas = None
@@ -34,14 +35,10 @@ class LevelAnalyser:
  
     def separate_rooms_exist(self):
         """True if there are separate rooms (isolated parts of the level), False otherwise"""
-
-        initial_vertex = self.vertices.pop() 
-        self.vertices.add(initial_vertex) 
-        tree = self.bfs_tree(initial_vertex) 
-        return len(self.vertices) != len(tree.keys())
+        return self.is_connected_component(self.vertices)
 
     def locate_separate_rooms(self):
-        """Creates self.rooms: list containing each separate room as sets"""
+        """Creates self.rooms: list containing each separate room as sets, this sets are all the vertices that correspond to a room"""
 
         #assert self.separate_rooms_exist(), "There are no isolated rooms"
         if self.rooms: #rooms already built
@@ -56,7 +53,7 @@ class LevelAnalyser:
         initial_room = {(i,j) for i,j in tree.keys()}
         rooms.append(initial_room)
 
-        #so while we haven't accounted for all vertices to be in their room
+        #while we haven't accounted for all vertices to be in their room
         while self.sum_len_elements_of_list(rooms) != len(self.vertices): 
             vertex_not_in_initial_room = self.from_not_in(vertices_list,rooms)
             tree = self.bfs_tree(vertex_not_in_initial_room) 
@@ -67,32 +64,54 @@ class LevelAnalyser:
 
         self.rooms = rooms
 
-    def goals_distribution_per_room(self):
-
-        """get dict of goal positions in each room"""
+    def get_agent_distribution_per_room(self):
+        """More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
+        Builds self.agents_per_room dictionary -> room: agents in room
+        """"
 
         self.locate_separate_rooms()
-        self.goals_in_room = {}
-        number_of_rooms = len(self.rooms)
-        for room_index in range(number_of_rooms):
+        self.agents_per_room = {} # room: agents in room
+        accounted_for_agents = set()
+
+        for room_index , room in enumerate(self.rooms):
+            if len(accounted_for_agents) != len(self.agent_positions): # if there are stills agents that are not assigned to a room
+                agents_in_room = set()
+                unnacounted_for_agents = {agent for agent in range(len(self.agent_positions)) if agent not in accounted_for_agents}
+                for agent in unnacounted_for_agents: #agent identifier
+                    if self.agent_positions[agent] in room:
+                        agents_in_room.add(agent)
+                        accounted_for_agents.add(agent)
+                self.agents_per_room[room_index] = agents_in_room or None
+
+        assert len(self.agent_positions) == len(accounted_for_agents), "Not all agents were accounted for"
+        
+        if None  in self.agents_per_room.values():
+            print("There are rooms with no agents")
+
+        #agent:room alternative
+        #for agent in range(len(self.agent_positions)): # agent identifier
+        #    for room_index in range(len(self.rooms)):
+        #        if self.agent_positions[agent] in self.rooms[room_index]:
+        #            self.agents_per_room[agent] = room_index
+        #            break
+        #    assert self.agents_per_room[agent], "Agent was not assigned a room"
+
+    def get_goals_distribution_per_room(self):
+        """get dict of goal positions in each room; room:goal_positions"""
+
+        self.locate_separate_rooms()
+        self.goals_per_room = {}
+        for room_index in range(len(self.rooms)):
             goals_in_room = {goal_pos for goal_pos in self.goal_positions if goal_pos in self.rooms[room_index]}
             self.goals_in_rooms[room_index] = goals_in_room or None
 
-    
-    def is_connected_component(self,room):
-        pass
+    def get_box_distribution_per_room(self):
 
-    def connected_component_is_broken(self):
-        pass
-
-
-    def connected_component_is_broken(self,room):
-
-    def locate_safe_storage(self):
-        
         self.locate_separate_rooms()
-
-
+        self.boxes_per_room = {}
+        for room_index in range(len(self.rooms)):
+            boxes_in_room = {box_pos for box_pos in self.box_positions if box_pos in self.rooms[room_index]}
+            self.goals_in_rooms[room_index] = goals_in_room or None        
  
     def locate_corridors(self):
         """Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  """
@@ -138,6 +157,31 @@ class LevelAnalyser:
 
         print("open areas",self.open_areas)
 
+    def locate_safe_storage(self):
+        "Adds walls to open areas of room that do not break connected component and are easily accesible, they are then turned to safe storage"
+
+        self.locate_corridors()
+        self.locate_open_areas()
+        self.get_goals_distribution_per_room()
+        walls = self.deep_copy(self.walls)
+
+        for room_index, room in enumerate(self.rooms):
+
+            
+
+
+
+        
+        
+
+        
+
+
+        
+
+
+        
+
     
 
 
@@ -181,7 +225,7 @@ class LevelAnalyser:
         queue = deque([source_vertex]) 
         explored_set = set([source_vertex])
         parent = {} # {vertex:(parent,(path to root in terms of directions)}
-        parent[source_vertex] = None #this is different from the graph class! Facilitates some of this methods
+        parent[source_vertex] = None #this is different from the graph class! Facilitates some of this methods, for keys and values of dict comparison
 
         while queue:
             current_vertex = queue.popleft()
@@ -294,6 +338,13 @@ class LevelAnalyser:
             return True
         else: 
             return False
+
+    def is_connected_component(self,container_of_vertices: set):
+        "True if the container is a connected component"
+        vertex = container_of_vertices.pop()
+        container_of_vertices.add(vertex)
+        tree = self.bfs_tree(vertex)
+        return len(container_of_vertices) != len(tree.keys())
         
     def union_of_sets(self,list_of_sets):
         assert list_of_sets
@@ -477,8 +528,9 @@ class LevelAnalyser:
     def are_walls (self,vertices):
         are_walls = {v for v in vertices if self.is_wall(v)}
         return are_walls
-
- 
+    
+    def deep_copy(self,x):
+        return copy.deepcopy(x)  
 
 #def locate_high_density_areas:
 
@@ -489,6 +541,8 @@ class LevelAnalyser:
 #class Goal_Rooms_Tree:
 
 #or just block and see if connection from room to otther rooms is not blocked
+
+# in choke points : see if they connect different rooms
 
 
 
