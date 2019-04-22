@@ -6,6 +6,7 @@ from path_finder import actions_to_move_between,actions_to_push_box_between,acti
 from action import move,push,pull,north,south,east,west
 from master_plan import MasterPlan
 from planner import Planner
+from level_analyser import LevelAnalyser
 #from coordinator import Coordinator
 
 '''
@@ -22,6 +23,8 @@ idea
 refine until it is primitive
 '''
 class HTN():
+    #TODO implement decisions for seperate rooms
+    
     def __init__(self,state):
         self.state = state
         self.Tasks = []
@@ -32,6 +35,9 @@ class HTN():
         self.boxes_used =[]
         self.aproximated_agent_pos=self.state.agent_positions
         self.aproximate=True
+        #self.level_analyser = LevelAnalyser(self.state)
+        #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
+        #print(self.graph_of_level.)
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
             #TODO if goal type is box goal 
@@ -248,7 +254,7 @@ class Task():
                         y()
             
         self.steps = temp_steps
-        print(self.steps,file=sys.stderr,flush=True)
+        #print(self.steps,file=sys.stderr,flush=True)
         return self
     def allPrimitive(self):
         #return all([i == True or i['isPrimitive'] for i in self.steps])
@@ -265,12 +271,8 @@ class Task():
         return True
     #mapping to real actions if all actions are Primitive
     def selectAgent(self):
-        #self.agent=self.posAgents[0]
-       # print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
-        #self.agent=min(self.agents_weight, key=self.agents_weight.get)
         self.agent = self.best_agentBox_combi[0]
     def selectBox(self):
-        #self.box=self.posBoxes[0]
         self.box = self.best_agentBox_combi[1]
     def weightBoxes(self):
         #hight weight means far away

@@ -72,11 +72,25 @@ def test_refine():
     boxes_used = []
     assert task.steps[0]['name']=='FullfillBoxGoal'
     assert not hasattr(task,'agentBox_combi')
-    task.refine(workload,boxes_used)
+    task.setWorkload(workload)
+    task.setUsedBoxes(boxes_used)
+    task.refine()
     assert task.steps[0]['name']=='SelectBox'
     assert task.steps[1]['name']=='SelectAgent'
     #assert callable(task.steps[2])
-    
+def test_setWorkload():
+    task = Task('FullfillBoxGoal',0,st,graph,[0,1],[0,1])
+    workload = [15,2]
+    assert task.workload==[]
+    task.setWorkload(workload)
+    assert task.workload==workload
+def test_setUsedBoxes():
+    task = Task('FullfillBoxGoal',0,st,graph,[0,1],[0,1])
+    usedBoxes = [15,2]
+    assert not hasattr(task,'used_boxes')
+    task.setUsedBoxes(usedBoxes)
+    assert hasattr(task,'used_boxes')
+    assert task.used_boxes==usedBoxes
  
 
 
