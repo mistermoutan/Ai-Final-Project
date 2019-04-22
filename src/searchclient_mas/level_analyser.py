@@ -75,9 +75,11 @@ class LevelAnalyser:
             self.goals_in_rooms[room_index] = goals_in_room or None
 
     
-    def is_connected_component(self,room)
+    def is_connected_component(self,room):
+        pass
 
-    def connected_component_is_broken:
+    def connected_component_is_broken(self):
+        pass
 
 
 
