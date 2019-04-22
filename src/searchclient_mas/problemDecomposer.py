@@ -33,17 +33,10 @@ class HTN():
         self.boxes_used =[]
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
-<<<<<<< HEAD
-            #TODO if goal type is box goal
-            boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
-            #TODO check if goal can be achieved by agents of different color...
-            agents= self.pd.searchPossibleAgentsForBox(boxes[0])
-=======
             print(i,file=sys.stderr,flush=True)
             #TODO if goal type is box goal 
             boxes  = [x for x in self.pd.searchPossibleGoalsForBoxIndex(i) if x not in self.boxes_used]
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
->>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
             self.boxes_used.append(self.Tasks[i].box)
@@ -56,15 +49,11 @@ class HTN():
             while not t.allPrimitive():
                 t.refine()
     def sortTasks(self):
-<<<<<<< HEAD
-        self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True)
-=======
         '''
         Sorts Tasks by its weight
         TODO implement weight funciton
         '''
         self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True) 
->>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
     def getTasks(self):
         return self.Tasks
     def getTasksByAgent(self):
@@ -244,13 +233,6 @@ class Task():
     def inSameRoom(self):
         return True
     #mapping to real actions if all actions are Primitive
-<<<<<<< HEAD
-    def generateActions(self):
-        if self.allPrimitive():
-            pass
-            #find actions
-=======
->>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
     def selectAgent(self):
         #self.agent=self.posAgents[0]
        # print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
