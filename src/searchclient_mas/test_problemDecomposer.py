@@ -30,8 +30,8 @@ matrix = [
 st = tu.make_state(matrix)
 pd = problemDecomposer(st)
 graph = Graph(st.maze)
-
 #test for class HTN
+'''
 def test_checkTasksLength():
     htn = HTN(st)
     assert len(htn.Tasks)==0
@@ -48,11 +48,11 @@ def test_taskRefinement():
 def test_getTasksByAgent():
     htn=HTN(st)
     assert isinstance(htn.getTasksByAgent(), dict)
-
+'''
 #test for class Tasks
 
-def test_refinementSchemaConsistent():
-    task = Task('FullfillBoxGoal',0,[0,1],[0,1])
+'''def test_refinementSchemaConsistent():
+    task = Task('FullfillBoxGoal',0,graph,st,[0,1],[0,1])
     #check if all steps are defined as actions
     assert all([k in task.refScheme for key,val in task.refScheme.items() for k in val['steps'] if val['isPrimitive']==False and isinstance(k, str)])
     #check names
@@ -60,48 +60,12 @@ def test_refinementSchemaConsistent():
     
 def test_CheckForDublicatesInSchema():
     #key duplicates
-    task = Task('FullfillBoxGoal',0,[0,1],[0,1])
+    task = Task('FullfillBoxGoal',0,graph,st,[0,1],[0,1])
     assert len(task.refScheme) == len(set(task.refScheme.keys()))
     #TODO check also if scheme entries are the same but have different names
-
+'''
 #Test function for subtasks
 
-def test_MoveAgent():
-    subt = subtask()
-    assert subt.child==None
-    assert subt.task==None
-    subt.MoveAgent((1,2),(2,2),graph)
-    assert subt.task==1
-    assert subt.fromPos[0] == 1 and subt.fromPos[1] == 2
-    assert subt.toPos[0]   == 2 and subt.toPos[1]   == 2
-def test_MoveAgent_actions():
-    subt = subtask()
-    source = (1,1)
-    target = (1,1)
-    subt.MoveAgent(source,target,graph)
-    path = subt.actions
-    #path = actions_to_move_between(graph,source,target)
-    assert path == []
-
-def test_MoveAgentWithBox():
-    subt = subtask()
-    assert subt.child==None
-    assert subt.task==None
-    subt.MoveAgentWithBox((1,2),(2,2))
-    assert subt.task==2
-    assert subt.fromPos[0] == 1 and subt.fromPos[1] == 2
-    assert subt.toPos[0]   == 2 and subt.toPos[1]   == 2
-def test_addChilTask():
-    subt = subtask()
-    assert type(subt) is subtask
-    assert subt.child == None
-    subt.addChildTask()
-    assert type(subt.child) is subtask
-    assert subt.child.child == None
-    subt.child.addChildTask()
-    assert type(subt.child.child) is subtask
-def test_getChildTask():
-    assert True
 
 #Test functions problemDecomposer
 def test_decomposeToActions():
@@ -132,7 +96,6 @@ def test_searchPossibleAgentsForBoxIndex():
 def test_getTasks():
     assert True
 
-test_MoveAgent()
 
 '''
 def test_searchPossibleAgentsForBoxIndex():

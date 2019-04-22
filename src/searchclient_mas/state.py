@@ -552,6 +552,7 @@ class StateMA:
             maze[i][j] = False
 
         return StateSA(maze, boxes, goals, self.agent_positions[agentID])
+
     def get_HTN_StateSA(self,agentID,agt_tasks,ignore_immovable=False):
         pos = self.agent_positions[agentID]
         boxes = []
@@ -583,6 +584,7 @@ class StateMA:
             return StateSA(self.maze, boxes, goals, self.agent_positions[agentID])
 
         maze = [[self.maze[i][j] for i in range(self.rows)] for j in range(self.cols)]
+        #print(maze,file=sys.stderr,flush=True)
         for i, j in extra_walls:
             maze[i][j] = False
 

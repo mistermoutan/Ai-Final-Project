@@ -137,7 +137,7 @@ class SearchClient:
 
     '''
     def sendJointAction(self,actions):
-
+        #print(actions,file=sys.stderr,flush=True)
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
         sys.stdout.write(jointAction+"\n")
         sys.stdout.flush()
