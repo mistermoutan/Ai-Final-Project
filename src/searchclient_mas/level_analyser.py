@@ -68,7 +68,6 @@ class LevelAnalyser:
         """More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
         Builds self.agents_per_room dictionary -> room: agents in room
         """"
-
         self.locate_separate_rooms()
         self.agents_per_room = {} # room: agents in room
         accounted_for_agents = set()
@@ -165,7 +164,8 @@ class LevelAnalyser:
         self.get_goals_distribution_per_room()
         walls = self.deep_copy(self.walls)
 
-        for room_index, room in enumerate(self.rooms):
+        #for room_index, room in enumerate(self.rooms):
+
 
             
 
@@ -545,7 +545,7 @@ class LevelAnalyser:
 # in choke points : see if they connect different rooms
 
 
-
+'''
 
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
@@ -572,3 +572,4 @@ L = LevelAnalyser(state)
 L.separate_rooms_exist()
 #L.locate_corridors()
 
+'''

@@ -6,6 +6,7 @@ from path_finder import actions_to_move_between,actions_to_push_box_between,acti
 from action import move,push,pull,north,south,east,west
 from master_plan import MasterPlan
 from planner import Planner
+from level_analyser import LevelAnalyser
 #from coordinator import Coordinator
 
 '''
@@ -22,6 +23,8 @@ idea
 refine until it is primitive
 '''
 class HTN():
+    #TODO implement decisions for seperate rooms
+    
     def __init__(self,state):
         self.state = state
         self.Tasks = []
@@ -31,11 +34,14 @@ class HTN():
         self.agent_workload = [0] * self.number_of_agents
         self.boxes_used =[]
         self.aproximated_agent_pos=self.state.agent_positions
+        self.aproximate=True
+        #self.level_analyser = LevelAnalyser(self.state)
+        #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
+        #print(self.graph_of_level.)
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
             #TODO if goal type is box goal 
-            boxes  = [x for x in self.pd.searchPossibleBoxesForGoalIndex(i) if x not in self.boxes_used]
-            #boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
+            boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
@@ -47,22 +53,29 @@ class HTN():
         refines given Tasks until they are primitive
         '''
         for i,t in enumerate(self.Tasks):
+            t.setWorkload(self.agent_workload)
+            t.setUsedBoxes(self.boxes_used)
+            t.setAgentPos(self.aproximated_agent_pos)
             while not t.allPrimitive():
-                t.refine(self.agent_workload,self.boxes_used)
-                if t.headTask == 'FullfillBoxGoal':
-                    self.boxes_used.append(self.Tasks[i].box)
-                    self.agent_workload= [self.agent_workload[k]+self.Tasks[i].workload[k] for k in range(len(self.Tasks[i].workload))]
-
-    def updateAgentsPos(self):
-        pass
+                t.refine()
+            if t.headTask == 'FullfillBoxGoal':
+                self.boxes_used.append(self.Tasks[i].box)
+                self.agent_workload= [self.agent_workload[k]+self.Tasks[i].workload[k] for k in range(len(self.Tasks[i].workload))]
+                #if (self.Tasks[i].agent != None):
+                #print('agent:' +str(self.Tasks[i].agent),file=sys.stderr,flush=True)
+                #print('aprx_agent_pos:' +str(self.aproximated_agent_pos[self.Tasks[i].agent]),file=sys.stderr,flush=True)
+                #print('state_goal_pos:' +str(self.state.goal_positions[self.Tasks[i].goal]),file=sys.stderr,flush=True)
+                self.updateAgentsPos(self.Tasks[i].agent,self.state.agent_positions[self.Tasks[i].agent])
+                #self.aproximated_agent_pos[self.Tasks[i].agent]=self.state.goal_positions[self.Tasks[i].goal]
+    def updateAgentsPos(self,agentID,newPos):
+        self.aproximated_agent_pos[agentID]=newPos
     def sortTasks(self):
         '''
         Sorts Tasks by its weight
         TODO implement weight funciton
         '''
         self.Tasks = sorted(self.Tasks, key=lambda k: k.order,reverse=True)
-    def getTasks(self):
-        return self.Tasks
+
     def getTasksByAgent(self):
         '''
         returns a dict of actions that is assigned to solve tasks
@@ -216,9 +229,13 @@ class Task():
         #start refinement loop
 
     #
-    def refine(self,workload,boxes_used):
+    def setWorkload(self,workload):
         self.workload = workload
-        self.boxes_used = boxes_used
+    def setUsedBoxes(self,used_boxes):
+        self.used_boxes=used_boxes
+    def setAgentPos(self,agent_pos):
+        self.agent_pos=agent_pos
+    def refine(self):
         #self.steps = [self.refScheme[y] for x in self.steps for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False  else [x]) if isinstance(y,str)]
         temp_steps=[]
         for x in self.steps:
@@ -237,13 +254,11 @@ class Task():
                         y()
             
         self.steps = temp_steps
-        print(self.steps,file=sys.stderr,flush=True)
+        #print(self.steps,file=sys.stderr,flush=True)
         return self
     def allPrimitive(self):
         #return all([i == True or i['isPrimitive'] for i in self.steps])
         return len(self.steps)==0
-    #t.runAllPrimitiveTasks(self.agent_workload,self.boxes_used)
-
 
     #effects and preconditions
     def agentAvl(self):
@@ -256,12 +271,8 @@ class Task():
         return True
     #mapping to real actions if all actions are Primitive
     def selectAgent(self):
-        #self.agent=self.posAgents[0]
-       # print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
-        #self.agent=min(self.agents_weight, key=self.agents_weight.get)
         self.agent = self.best_agentBox_combi[0]
     def selectBox(self):
-        #self.box=self.posBoxes[0]
         self.box = self.best_agentBox_combi[1]
     def weightBoxes(self):
         #hight weight means far away
@@ -269,30 +280,32 @@ class Task():
         #use a heuristic to get a weight
         pass
     def reducePosBoxes(self):
-        #check if box can reach goal -> same room
-        pass
+        self.posBoxes  = [x for x in self.posBoxes if x not in self.used_boxes]
+
     def getAgentWorkload(self):
         return self.workload if hasattr(self,'workload') else []
     def getAgentDistance(self):
-        agents_pos = self.state.agent_positions
+        if not hasattr(self,'agent_pos'):
+            self.agent_pos = self.state.agent_positions
         goal_pos = self.state.goal_positions[self.goal]
         for a in self.posAgents:
             if a in self.agents_weight:
-                self.agents_weight[a]+=self.distance_to(agents_pos[a],goal_pos)
+                self.agents_weight[a]+=self.distance_to(self.agent_pos[a],goal_pos)
             else:
-                self.agents_weight[a]=self.distance_to(agents_pos[a],goal_pos)
+                self.agents_weight[a]=self.distance_to(self.agent_pos[a],goal_pos)
     def getAgentBoxDistance(self):
+        if not hasattr(self,'agent_pos'):
+            self.agent_pos = self.state.agent_positions
         self.agentBox_combi = {}
-        agent_pos = self.state.agent_positions
         goal_pos = self.state.goal_positions[self.goal]
         box_pos = self.state.box_positions
         for a in self.posAgents:
             for b in self.posBoxes:
                 if (a,b) in self.agentBox_combi:
-                    self.agentBox_combi[(a,b)]+=self.distance_to(agent_pos[a],box_pos[b])
+                    self.agentBox_combi[(a,b)]+=self.distance_to(self.agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
                 else:
-                    self.agentBox_combi[(a,b)]=self.distance_to(agent_pos[a],box_pos[b])
+                    self.agentBox_combi[(a,b)]=self.distance_to(self.agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
         #best combi         
