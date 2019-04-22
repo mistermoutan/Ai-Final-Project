@@ -180,8 +180,15 @@ def main():
             server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('htn')
+        elif arg1=='-greedy_decomposition':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem('greedy_decomposition')
+
         else:
             raise ValueError("argument is not a solver")
+
+
 
         '''
         elif arg1=='-xxx':
