@@ -33,13 +33,15 @@ class HTN():
         self.boxes_used =[]
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
-            print(i,file=sys.stderr,flush=True)
             #TODO if goal type is box goal 
             boxes  = [x for x in self.pd.searchPossibleGoalsForBoxIndex(i) if x not in self.boxes_used]
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
             #TODO implement precondition data structure
-            self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
+            self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,self.agent_workload,boxes,agents))
             self.boxes_used.append(self.Tasks[i].box)
+            #add agent workload for task to global workload of agent
+            self.agent_workload= [self.agent_workload[k]+self.Tasks[i].workload[k] for k in range(len(self.Tasks[i].workload))]
+
 
     def refineTasks(self):
         '''
@@ -70,7 +72,7 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
-        
+        #return agentTask
     def distance_to(self, x, y):
         return len(self.graph_of_level.shortest_path_between(x,y))
 
@@ -169,8 +171,7 @@ class HTN():
 
         #create all single agents states to 
         single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
-        for i in range(self.number_of_agents):
-            print(i in single_agent_tasks,file=sys.stderr,flush=True)
+
         #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
         #create single agent plans
         single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
@@ -188,7 +189,7 @@ class Task():
     #TODO Choose between agents based on current Workload and Distance
     #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
     #TODO Choose between boxes 
-    def __init__(self,headTask,goal,state,graph,posBoxes=[],posAgents=[]):
+    def __init__(self,headTask,goal,state,graph,workload=[],posBoxes=[],posAgents=[]):
         #refinement schema for all actions
         #TODO make sure that headTask is in refScheme -> exception handling
         #schema = {'name':'','precond':[],'steps':[],'isPrimitive':False}
@@ -200,6 +201,7 @@ class Task():
         self.agent=None
         self.posBoxes = posBoxes
         self.box = None
+        self.workload = workload
         self.refScheme = {\
             'FullfillBoxGoal': {'name':'FullfillBoxGoal','precond':[self.agentAvl(),self.boxAvl()],'steps':['SelectBox','SelectAgent',self.getAgentBoxDistance()],'isPrimitive':False},\
             #'MoveAgentToBox':{'name':'MoveAgentToBox','precond':[self.agentAvl],'steps':[],'isPrimitive':True},\
@@ -274,7 +276,7 @@ class Task():
                     self.agentBox_combi[(a,b)]=self.distance_to(agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
-        #best combi =         
+        #best combi         
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
 
     def reducePosAgents(self):

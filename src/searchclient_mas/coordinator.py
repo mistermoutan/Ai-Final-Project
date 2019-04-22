@@ -110,7 +110,7 @@ class Coordinator:
         number_of_agents = len(self.state.agent_positions)
         agents = range(number_of_agents)
 
-        greedy_decomposition = False
+        greedy_decomposition = True
 
         if greedy_decomposition:
             pass

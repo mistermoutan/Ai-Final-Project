@@ -578,7 +578,7 @@ class StateMA:
         print(goals,file= sys.stderr, flush=True)
 
         print("extra walls:{}".format(extra_walls),file= sys.stderr,flush=True)
-        print(goals,file= sys.stderr, flush=True)
+        print(extra_walls,file= sys.stderr, flush=True)
         
         if len(extra_walls) == 0:
             return StateSA(self.maze, boxes, goals, self.agent_positions[agentID])
