@@ -33,15 +33,9 @@ class HTN():
         self.aproximated_agent_pos=self.state.agent_positions
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
-<<<<<<< HEAD
             #TODO if goal type is box goal 
             boxes  = [x for x in self.pd.searchPossibleBoxesForGoalIndex(i) if x not in self.boxes_used]
             #boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
-=======
-            print(i,file=sys.stderr,flush=True)
-            #TODO if goal type is box goal
-            boxes  = [x for x in self.pd.searchPossibleGoalsForBoxIndex(i) if x not in self.boxes_used]
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
@@ -66,22 +60,13 @@ class HTN():
         Sorts Tasks by its weight
         TODO implement weight funciton
         '''
-<<<<<<< HEAD
-        self.Tasks = sorted(self.Tasks, key=lambda k: k.order,reverse=True) 
-=======
-        self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True)
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
+        self.Tasks = sorted(self.Tasks, key=lambda k: k.order,reverse=True)
     def getTasks(self):
         return self.Tasks
     def getTasksByAgent(self):
         '''
-<<<<<<< HEAD
-        returns a dict of actions that is assigned to solve tasks 
-        !!! number of keys must not be equal to the number of agents -> leads to workaround
-=======
         returns a dict of actions that is assigned to solve tasks
         !!! number of keys must not be equal to the number of agents
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
         '''
         agentTask={i:[] for i in range(len(self.state.agent_positions))}
         #agentTask = {}
@@ -92,11 +77,6 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
-<<<<<<< HEAD
-        #return agentTask
-=======
-
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
     def distance_to(self, x, y):
         return len(self.graph_of_level.shortest_path_between(x,y))
     def min_distance_to_position_in_list(self, box, goals):
@@ -315,11 +295,7 @@ class Task():
                     self.agentBox_combi[(a,b)]=self.distance_to(agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
-<<<<<<< HEAD
         #best combi         
-=======
-        #best combi =
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
     def reducePosAgents(self):
         #check if agent can reach goal ->same room

@@ -110,20 +110,6 @@ class Coordinator:
         number_of_agents = len(self.state.agent_positions)
         agents = range(number_of_agents)
 
-<<<<<<< HEAD
-        greedy_decomposition = True
-
-        if greedy_decomposition:
-            pass
-            #print("box_types:{}".format(self.state.box_types),file= sys.stderr,flush=True)
-            pd = problemDecomposer(self.state)
-            agt_tasks = pd.assign_tasks_greedy()
-            single_agent_states = [self.state.get_greedy_StateSA(i,agt_tasks[i], True) for i in agents]
-            #print("single_agent_states",file=sys.stderr,flush=True)
-            #print(single_agent_states,file=sys.stderr,flush=True)
-        else:
-            single_agent_states = [self.state.get_StateSA(i, True) for i in agents]
-=======
         single_agent_states = [self.state.get_StateSA(i, True) for i in agents]
 
         single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
@@ -146,7 +132,6 @@ class Coordinator:
         single_agent_states = [self.state.get_greedy_StateSA(i,agt_tasks[i], True) for i in agents]
         #print("single_agent_states",file=sys.stderr,flush=True)
         #print(single_agent_states,file=sys.stderr,flush=True)
->>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
 
         single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
 
