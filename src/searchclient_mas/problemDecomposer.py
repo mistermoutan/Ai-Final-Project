@@ -19,7 +19,6 @@ idea
     - send actions
 '''
 '''
-
 refine until it is primitive
 '''
 class HTN():
@@ -34,9 +33,15 @@ class HTN():
         self.aproximated_agent_pos=self.state.agent_positions
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
+<<<<<<< HEAD
             #TODO if goal type is box goal 
             boxes  = [x for x in self.pd.searchPossibleBoxesForGoalIndex(i) if x not in self.boxes_used]
             #boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
+=======
+            print(i,file=sys.stderr,flush=True)
+            #TODO if goal type is box goal
+            boxes  = [x for x in self.pd.searchPossibleGoalsForBoxIndex(i) if x not in self.boxes_used]
+>>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
@@ -61,13 +66,22 @@ class HTN():
         Sorts Tasks by its weight
         TODO implement weight funciton
         '''
+<<<<<<< HEAD
         self.Tasks = sorted(self.Tasks, key=lambda k: k.order,reverse=True) 
+=======
+        self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True)
+>>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
     def getTasks(self):
         return self.Tasks
     def getTasksByAgent(self):
         '''
+<<<<<<< HEAD
         returns a dict of actions that is assigned to solve tasks 
         !!! number of keys must not be equal to the number of agents -> leads to workaround
+=======
+        returns a dict of actions that is assigned to solve tasks
+        !!! number of keys must not be equal to the number of agents
+>>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
         '''
         agentTask={i:[] for i in range(len(self.state.agent_positions))}
         #agentTask = {}
@@ -78,7 +92,11 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
+<<<<<<< HEAD
         #return agentTask
+=======
+
+>>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
     def distance_to(self, x, y):
         return len(self.graph_of_level.shortest_path_between(x,y))
     def min_distance_to_position_in_list(self, box, goals):
@@ -154,7 +172,7 @@ class HTN():
         box_to_goals_distances = [self.min_distance_to_position_in_list(box, goals) for box in boxes]
         agent_to_box_goal_goal_distances = [agent_to_box_distances[i] + box_to_goals_distances[i] for i in range(len(agent_to_box_distances))]
         return min(agent_to_box_goal_goal_distances) if len(goals)>0 else 0
-   
+
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     def make_single_agent_plan_empty(self,initial_state):
@@ -167,7 +185,7 @@ class HTN():
         print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
         #run all low level functions to create primitive tasks
 
-        #create all single agents states to 
+        #create all single agents states to
         single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
 
         #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
@@ -179,14 +197,14 @@ class HTN():
         for agent,plan in enumerate(single_agent_plans):
             master_plan.merge_plan_into_master(agent,plan)
         #workaround add empty plans for unused agents
-        
+
         return master_plan.plan
 
 
 class Task():
     #TODO Choose between agents based on current Workload and Distance
     #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
-    #TODO Choose between boxes 
+    #TODO Choose between boxes
     def __init__(self,headTask,goal,state,graph,posBoxes=[],posAgents=[]):
         #refinement schema for all actions
         #TODO make sure that headTask is in refScheme -> exception handling
@@ -297,7 +315,11 @@ class Task():
                     self.agentBox_combi[(a,b)]=self.distance_to(agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
+<<<<<<< HEAD
         #best combi         
+=======
+        #best combi =
+>>>>>>> 5573f07279c4a9845800ce0ec20135f901a0afb7
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
     def reducePosAgents(self):
         #check if agent can reach goal ->same room
@@ -316,7 +338,7 @@ class problemDecomposer():
         self.Plan = []
         self.state = state
         #print(self.state.box_types,file= sys.stderr, flush=True)
-    
+
 
     def getGoalOrientedProblems(self):
         '''
@@ -327,7 +349,7 @@ class problemDecomposer():
         self.Plan.insert(g)
         return self.Plan
     def searchPossibleAgentsForBox(self,box_idx):
-        ''' 
+        '''
         returns a dict of agent indexes that are able to move the box at pos box_idx in the box list
         and adds an initial value for the weight of an agent
         '''
@@ -391,38 +413,74 @@ class problemDecomposer():
         # - estimate workload of agents based on distance box to goal
 
     def assign_agent_goals(self, coordi):
+        '''
+        idea:
+        - for a goal in all goals
+            get all boxes that can satisfy that goal
+            get distance from goal to every such box
+            get distance of all possible agents for each such box and add current workload of the agent
+            sum both, take lowest
+            remove assigend box from list, add workload to agent
+        - repeat for all goals
+        '''
 
-        rmvd = set()
+        self.agt_tasks = [[] for i in range(len(self.state.agent_colors))]
+
+        #first step: assign boxes to goals--------------------------------------
+        print(self.state.box_types)
         assigned_boxes =[]
+
+        wrkld = [0]*len(self.state.agent_colors)
+
         for i in range(len(self.state.goal_types)):
-            psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-rmvd)
-            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
+
             print("-----------------------")
             print(i)
-            print(psbl_boxes_pos)
-            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+            print("current goal pos: {}".format(self.state.goal_positions[i]))
 
+            #get all possible boxes that could satisfy current goal
+            psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-set(assigned_boxes))
+            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
+            print("possible box pos: {}".format(psbl_boxes_pos))
+
+            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+            print("added_dists: {}".format(added_dists))
+
+            assigned_agents = []
+            #get all possible agents for each box in possible boxes
             for k,pb in enumerate(psbl_boxes):
-                #get closest agent for box
+                #get distance to agents for box
                 psbl_agents = self.searchPossibleAgentsForBoxIndex(pb)
                 psbl_agents_pos = [self.state.agent_positions[n] for n in psbl_agents]
-                print("k")
-                print(k)
-                print(psbl_agents_pos)
-                # add workload to box?
                 dists_box_2_agents = coordi.distances_to_position_in_list(self.state.box_positions[pb],psbl_agents_pos)
-                min_idx = dists_box_2_agents.index(min(dists_box_2_agents))
-                closest_agent = psbl_agents[min_idx]
 
-                added_dists[k] += dists_box_2_agents[min_idx]
-                print("added_dists")
-                print(added_dists)
+                #get current workload for all possible agents
+                psbl_wrkld = [wrkld[w] for w in psbl_agents]
+
+                #add workload to distance
+                dists_wrkld = [x+y for x,y in zip(dists_box_2_agents, psbl_wrkld)]
+
+                #take min of distance+workload (fastest agent to fullfill goal)
+                min_idx = dists_wrkld.index(min(dists_wrkld))
+
+                #this agent takes the task
+                assigned_agents.append(psbl_agents[min_idx])
+
+                #update the distances
+                added_dists[k] += dists_wrkld[min_idx]
 
             assigned_boxes.append(psbl_boxes[added_dists.index(min(added_dists))])
-            print("assigned_boxes")
-            print(assigned_boxes)
-        print(assigned_boxes)
 
+            #update workload of the agent that finally takes the task
+            assigned_agt = assigned_agents[added_dists.index(min(added_dists))]
+            wrkld[assigned_agt] +=  added_dists[k]+dists_box_2_agents[min_idx]
+
+            self.agt_tasks[assigned_agt].append(assigned_boxes[i])
+
+        print(self.agt_tasks)
+        print("done, assinged boxes for goals: {}".format(assigned_boxes))
+
+        return self.agt_tasks
 
     def getTasks(self):
         return self.Tasks

@@ -5,26 +5,28 @@ import unittest
 from graph import Graph
 # format agents, boxes, goals
 a0 = tu.agent(0,'r')
-a1 = tu.agent(1,'r')
+a1 = tu.agent(1,'b')
 a2 = tu.agent(2,'g')
 a3 = tu.agent(3,'b')
 
 b0 = tu.box('a','r')
 b1 = tu.box('a','r')
-b2 = tu.box('b','g')
-b3 = tu.box('c','b')
+b2 = tu.box('b','b')
+b3 = tu.box('b','b')
 
 g0 = tu.goal('a')
-g1 = tu.goal('b')
+g1 = tu.goal('a')
+g2 = tu.goal('b')
+g3 = tu.goal('b')
 
 #hardcode possible initial state
 matrix = [
     [False,False,False,False,False,False,False,False,False,False],
-    [False,a1,True,True,True,True,a0,False,g0,False],
-    [False,True,False,False,False,False,False,False,b0,False],
-    [False,True,True,True,True,b1,True,True,True,False],
-    [False,b2,False,False,False,False,False,False,True,False],
-    [False,g1,False,a2,True,True,b3,True,False,a3],
+    [False,a0   ,True ,True ,b0   ,True ,a1   ,False,g0   ,False],
+    [False,True ,False,False,False,False,False,False,True ,False],
+    [False,True ,True ,True ,True ,b1   ,True ,True ,a2   ,False],
+    [False,b2   ,False,False,False,False,False,False,True ,False],
+    [False,g1   ,False,g2   ,b2   ,a3   ,b3   ,g3    ,True ,False],
     [False,False,False,False,False,False,False,False,False,False]
 ]
 

@@ -6,7 +6,7 @@ from state import StateSA,StateMA,StateBuilder
 from problemDecomposer import problemDecomposer,Task,HTN
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
-import os  
+import os
 
 
 class SearchClient:
@@ -76,7 +76,7 @@ class SearchClient:
             for col, char in enumerate(line):
                 if char == '+':
                     maze[row][col] = False
-                    
+
                 elif char in "0123456789":
                     agent_id = int(char)
                     agent_spec = ((row, col),colors[char])
@@ -124,6 +124,12 @@ class SearchClient:
             master_plan = htn.solve()
             for action_vector in master_plan:
                 self.sendJointAction(action_vector)
+        elif solver=='greedy_decomposition':
+            coordinator = Coordinator(self.initial_state)
+            master_plan = coordinator.solve_greedy_decomposition()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
+
 
     '''
     send joints action
@@ -174,6 +180,10 @@ def main():
             server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('htn')
+        elif arg1=='-greedy_decomposition':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem('greedy_decomposition')
         else:
             raise ValueError("argument is not a solver")
 
@@ -183,7 +193,7 @@ def main():
             client = SearchClient(server_messages)
             client.solve_the_problem()
         '''
-        
+
 
 
     elif hard_coded_file_name:
@@ -199,7 +209,7 @@ def main():
         #Follow this to get where the planning happens
         client.solve_the_problem()
 
-    
+
 
 if __name__ == '__main__':
     main()
