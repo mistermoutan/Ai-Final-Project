@@ -219,40 +219,17 @@ class GoalAnalyzer:
 
         return False, cycle
 
-
-
-
-
-
     def compute_goal_order_plan(self):
         # computes a plan on how to order to goals in order to complete them, operates under the assumption that
         # every box is mobile and currently assumes every room has infinite space and goal cells are empty
 
         # TODO use different metric? perhaps use distance from largest room?
-        eccentricities = self.compute_goal_eccentricity()
+        #eccentricities = self.compute_goal_eccentricity()
         #eccentricity_order = [(eccentricities[i], pos) for i, pos in enumerate(self.state.goal_positions)]
         #eccentricity_order = sorted(eccentricity_order,key=lambda x: -x[0])
         #eccentricity_order = [x[1] for x in eccentricity_order]
 
-        type_required = defaultdict(int)
-        type_available = defaultdict(int)
         # TODO: find space left  and use as metric as well
-
-
-        # for i in self.state.goal_types:
-        #     type_required[i] += 1
-        #
-        # for i in self.state.box_types:
-        #     type_available[i] += 1
-        #
-        # for i in type_required:
-        #     assert type_available[i] <= type_required[i], "Not enough boxes to fulfill every goal"
-
-        #room_box_map = defaultdict(list)
-
-        #for i, pos in self.state.box_positions:
-        #    room = self.vert_in_room[pos]
-        #    room_box_map[room].append(i)
 
         removed = set()
         plan = []
@@ -295,8 +272,28 @@ class GoalAnalyzer:
                 incomplete_goals.remove(best)
                 removed.add(best)
 
-
         return plan
+
+    def get_viable_goals(self, completed):
+        incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions) if i not in completed}
+        available = []
+
+        for i in incomplete_goals:
+            cutsafe, cycle = self.check_cutsafe_cycle(i, completed, False)
+            if cutsafe:
+                available.append(i)
+
+        return available
+
+    def get_isolated_by_goal_completion(self, goal, completed):
+        """ computes which adjacent rooms will be isolated after given goal is completed given previously completed goals """
+        rooms = []
+        for n in self.connections[goal]:
+            if n not in completed:
+                if self.isolated(n, goal, completed):
+                    rooms.append(n)
+        return rooms
+
 
 
 
@@ -341,10 +338,16 @@ def try_get_goal_room_graph():
     print(state, "\n")
     analyzer.print_rooms()
     analyzer.compute_goal_order_plan()
-    plan, cycle_cuts = analyzer.compute_goal_order_plan()
+    plan = analyzer.compute_goal_order_plan()
     print(plan)
-    print(cycle_cuts)
-    if len(analyzer.rooms) != 8:
+    partial_plan = plan[:6]
+    print(partial_plan)
+    print("viable goal nodes:", analyzer.get_viable_goals(set(partial_plan)))
+    curr = 13
+    print("cutoff rooms given", curr, ":", analyzer.get_isolated_by_goal_completion(curr, partial_plan))
+
+
+    if len(analyzer.rooms) != 18:
         print("number of rooms is wrong")
         return False
     print(state)

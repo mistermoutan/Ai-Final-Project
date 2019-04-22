@@ -5,7 +5,7 @@ OnlySomeConflicts
 #colors
 red: 0, A
 green: 1, B
-blue: 2,C,F,5
+blue: 2,C,F,5,G
 purple: 3, D
 orange: 4, E
 #initial
@@ -20,11 +20,11 @@ orange: 4, E
 +       B    +
 +          4 +
 +   5       E+
-+D   F    C  +
++D   F    CG +
 ++++++++++++++
 #goal
 ++++++++++++++
-+    D      F+
++    D       +
 +B           +
 +            +
 +           E+
@@ -34,6 +34,6 @@ orange: 4, E
 +            +
 +            +
 +            +
-+        C   +
++ F      C  G+
 ++++++++++++++
 #end

@@ -1,6 +1,4 @@
-
 from typing import Tuple
-
 
 class Node:
     def __init__(self, vertex):
@@ -9,6 +7,8 @@ class Node:
 
     def __repr__(self):
         return str(self.vertex)
+
+
 class InversePathTree:
     def __init__(self, root):
         self.node_dict = {root: Node(root)}

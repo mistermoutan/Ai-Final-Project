@@ -8,10 +8,11 @@ import utilities as u
 from graph import Graph
 from itertools import groupby
 from collections import Counter
+from state import StateMA,StateBuilder
 
 class LevelAnalyser:
 
-    def __init__(self,state: StateMa):
+    def __init__(self,state: StateMA):
         self.bfs_trees = {}
         self.explored = {}
         self.vertices = set()
@@ -79,6 +80,11 @@ class LevelAnalyser:
 
     
     def is_connected_component(self,room):
+        pass
+
+    def connected_component_is_broken(self):
+        pass
+
 
     def connected_component_is_broken(self,room):
 
