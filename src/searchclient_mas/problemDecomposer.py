@@ -201,18 +201,20 @@ class Task():
         self.posBoxes = posBoxes
         self.box = None
         self.refScheme = {\
-            'FullfillBoxGoal': {'name':'FullfillBoxGoal','precond':[self.agentAvl(),self.boxAvl()],'steps':['SelectBox','SelectAgent',],'isPrimitive':False},\
+            'FullfillBoxGoal': {'name':'FullfillBoxGoal','precond':[self.agentAvl(),self.boxAvl()],'steps':['SelectBox','SelectAgent',self.getAgentBoxDistance()],'isPrimitive':False},\
             #'MoveAgentToBox':{'name':'MoveAgentToBox','precond':[self.agentAvl],'steps':[],'isPrimitive':True},\
             #'MoveAgentWithBox':  {'name':'MoveAgentWithBox','precond':[self.agentAdjToBox],'steps':[],'isPrimitive':True},\
             'SelectBox':{'name':'SelectBox','precond':[self.inSameRoom],'steps':[self.reducePosBoxes(),self.weightBoxes(),self.selectBox()],'isPrimitive':True},\
             'WeightBoxes':{'name':'WeightBoxes','precond':[],'steps':[],'isPrimitive':True},\
             'SelectAgent':{'name':'SelectAgent','precond':[self.inSameRoom],'steps':[self.reducePosAgents(),'WeightAgents'],'isPrimitive':False},\
-            'WeightAgents':{'name':'WeightAgents','precond':[],'steps':[self.getAgentWorkload,self.getAgentDistance(),self.selectAgent()],'isPrimitive':True},\
+            'WeightAgents':{'name':'WeightAgents','precond':[],'steps':[self.getAgentWorkload,self.selectAgent()],'isPrimitive':True},\
             'FullfillAgentGoal':{'name':'FullfillAgentGoal','precond':[],'steps':['selectAgent'],'isPrimitive':True},\
             'MoveAgent':{'name':'MoveAgent','precond':[self.agentAvl],'steps':[],'isPrimitive':True}
         }
         self.steps = [self.refScheme[headTask]]
         self.weight=0
+        self.agents_weight={}
+
         #start refinement loop
 
     #
@@ -233,10 +235,12 @@ class Task():
     #mapping to real actions if all actions are Primitive
     def selectAgent(self):
         #self.agent=self.posAgents[0]
-        print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
-        self.agent=min(self.agents_weight, key=self.agents_weight.get)
+       # print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
+        #self.agent=min(self.agents_weight, key=self.agents_weight.get)
+        self.agent = self.best_agentBox_combi[0]
     def selectBox(self):
-        self.box=self.posBoxes[0]
+        #self.box=self.posBoxes[0]
+        self.box = self.best_agentBox_combi[1]
     def weightBoxes(self):
         #hight weight means far away
         #TODO implement
@@ -249,16 +253,30 @@ class Task():
         #Workload amount of goals or amount of steps of already assigned tasks
         pass
     def getAgentDistance(self):
-        self.agents_weight={}
         agents_pos = self.state.agent_positions
         goal_pos = self.state.goal_positions[self.goal]
-        print(goal_pos,file=sys.stderr,flush=True)
         for a in self.posAgents:
             if a in self.agents_weight:
                 self.agents_weight[a]+=self.distance_to(agents_pos[a],goal_pos)
             else:
                 self.agents_weight[a]=self.distance_to(agents_pos[a],goal_pos)
-        
+    def getAgentBoxDistance(self):
+        self.agentBox_combi = {}
+        agent_pos = self.state.agent_positions
+        goal_pos = self.state.goal_positions[self.goal]
+        box_pos = self.state.box_positions
+        for a in self.posAgents:
+            for b in self.posBoxes:
+                if (a,b) in self.agentBox_combi:
+                    self.agentBox_combi[(a,b)]+=self.distance_to(agent_pos[a],box_pos[b])
+                    self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
+                else:
+                    self.agentBox_combi[(a,b)]=self.distance_to(agent_pos[a],box_pos[b])
+                    self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
+
+        #best combi =         
+        self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
+
     def reducePosAgents(self):
         #check if agent can reach goal ->same room
         pass
