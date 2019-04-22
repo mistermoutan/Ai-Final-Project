@@ -33,10 +33,17 @@ class HTN():
         self.boxes_used =[]
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
+<<<<<<< HEAD
+            #TODO if goal type is box goal
+            boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
+            #TODO check if goal can be achieved by agents of different color...
+            agents= self.pd.searchPossibleAgentsForBox(boxes[0])
+=======
             print(i,file=sys.stderr,flush=True)
             #TODO if goal type is box goal 
             boxes  = [x for x in self.pd.searchPossibleGoalsForBoxIndex(i) if x not in self.boxes_used]
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
+>>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
             self.boxes_used.append(self.Tasks[i].box)
@@ -49,11 +56,15 @@ class HTN():
             while not t.allPrimitive():
                 t.refine()
     def sortTasks(self):
+<<<<<<< HEAD
+        self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True)
+=======
         '''
         Sorts Tasks by its weight
         TODO implement weight funciton
         '''
         self.Tasks = sorted(self.Tasks, key=lambda k: k.weight,reverse=True) 
+>>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
     def getTasks(self):
         return self.Tasks
     def getTasksByAgent(self):
@@ -233,6 +244,13 @@ class Task():
     def inSameRoom(self):
         return True
     #mapping to real actions if all actions are Primitive
+<<<<<<< HEAD
+    def generateActions(self):
+        if self.allPrimitive():
+            pass
+            #find actions
+=======
+>>>>>>> 38bab549ab295b5214b96aac118a24e62ce20513
     def selectAgent(self):
         #self.agent=self.posAgents[0]
        # print('weights:'+str(self.agents_weight),file=sys.stderr,flush=True)
@@ -329,7 +347,6 @@ class problemDecomposer():
         '''
         return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
 
-
     def assign_tasks_greedy(self):
         '''
         - greedely assings tasks to agents with lowest workload that can fullfill the task
@@ -369,10 +386,44 @@ class problemDecomposer():
         # - pick agent that has lowest workload and is closest to box
         # - estimate workload of agents based on distance box to goal
 
+    def assign_agent_goals(self, coordi):
+
+        rmvd = set()
+        assigned_boxes =[]
+        for i in range(len(self.state.goal_types)):
+            psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-rmvd)
+            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
+            print("-----------------------")
+            print(i)
+            print(psbl_boxes_pos)
+            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+
+            for k,pb in enumerate(psbl_boxes):
+                #get closest agent for box
+                psbl_agents = self.searchPossibleAgentsForBoxIndex(pb)
+                psbl_agents_pos = [self.state.agent_positions[n] for n in psbl_agents]
+                print("k")
+                print(k)
+                print(psbl_agents_pos)
+                # add workload to box?
+                dists_box_2_agents = coordi.distances_to_position_in_list(self.state.box_positions[pb],psbl_agents_pos)
+                min_idx = dists_box_2_agents.index(min(dists_box_2_agents))
+                closest_agent = psbl_agents[min_idx]
+
+                added_dists[k] += dists_box_2_agents[min_idx]
+                print("added_dists")
+                print(added_dists)
+
+            assigned_boxes.append(psbl_boxes[added_dists.index(min(added_dists))])
+            print("assigned_boxes")
+            print(assigned_boxes)
+        print(assigned_boxes)
+
+
     def getTasks(self):
         return self.Tasks
 
-        
+
 class CompoundTask():
     def __init__(self,isPrimitive,name,goadId,boxes=[],agents=[],precond=None):
         self.isPrimitive = isPrimitive

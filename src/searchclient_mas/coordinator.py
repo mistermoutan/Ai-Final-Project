@@ -30,7 +30,7 @@ class Coordinator:
     def ind_n_dis_goals_to_closest_box(self, state, boxes, goals):
         '''
         for every goal return the index of closest box that can satisfy that goal
-        and is not assigned to another goal already, and the distance to it
+        (and is not assigned to another goal already) and the distance to it
         (we have to calculate the distance anyway so we might aswell keep it)
         '''
         closest_boxes = []
@@ -66,7 +66,7 @@ class Coordinator:
 
     def heuristic_adv(self, state, alpha = 1):
         '''
-        Idea is to combine different heurisitcs here and wheight them differently, squre them, etc.
+        Idea is to combine different heurisitcs here and wheight them differently, sqaure them, etc.
         Work in progress
         '''
         agent = (state.agent_row, state.agent_col)
@@ -75,7 +75,7 @@ class Coordinator:
 
         alpha = 1 #penalizing factor for distance goals_to_box
         square_goals2box = True #all goals will be solved almost in "parrallel"
-        square_agt2boxes = False # boxes will be pushed to their goals "sequentially"
+        square_agt2boxes = False #boxes will be pushed to their goals "sequentially"
 
         #closest box for every goal and the distance to it
         closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
@@ -110,7 +110,7 @@ class Coordinator:
         number_of_agents = len(self.state.agent_positions)
         agents = range(number_of_agents)
 
-        greedy_decomposition = True
+        greedy_decomposition = False
 
         if greedy_decomposition:
             pass

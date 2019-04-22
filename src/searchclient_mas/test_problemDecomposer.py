@@ -1,4 +1,5 @@
 from problemDecomposer import problemDecomposer,subtask,Task,HTN
+from coordinator import Coordinator
 import test_utilities as tu
 import unittest
 from graph import Graph
@@ -57,7 +58,7 @@ def test_getTasksByAgent():
     assert all([k in task.refScheme for key,val in task.refScheme.items() for k in val['steps'] if val['isPrimitive']==False and isinstance(k, str)])
     #check names
     assert all([val['name'] in task.refScheme for key,val in task.refScheme.items()])
-    
+
 def test_CheckForDublicatesInSchema():
     #key duplicates
     task = Task('FullfillBoxGoal',0,graph,st,[0,1],[0,1])
@@ -117,4 +118,9 @@ def test_searchPossibleGoalsForBoxes():
 #    pd.assign_tasks_greedy()
 #    assert pd.agt_tasks == [[0, 4], [1], [2], [3]]
 
+def test_assign_agent_goals():
+    st = tu.make_state(matrix)
+    coordinator = Coordinator(st)
+    pd.assign_agent_goals(coordinator)
 
+test_assign_agent_goals()
