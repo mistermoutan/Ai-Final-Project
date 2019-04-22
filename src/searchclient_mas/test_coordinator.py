@@ -52,6 +52,7 @@ def test_distances_to_position_in_list():
     agent = (st_SA.agent_row, st_SA.agent_col)
     assert coordinator.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes]) == [4, 2, 3, 4, 6]
 
+
 def test_ind_n_dis_goals_to_closest_box():
     boxes = st_SA.box_positions
     goals = st_SA.goal_positions
@@ -65,7 +66,7 @@ def test_heuristic_adv():
 
 #test_distance_to()
 #test_min_distance_to_position_in_list()
-#test_distances_to_position_in_list()
+test_distances_to_position_in_list()
 #test_ind_n_dis_goals_to_closest_box()
 
 #test_heuristic()

@@ -368,38 +368,74 @@ class problemDecomposer():
         # - estimate workload of agents based on distance box to goal
 
     def assign_agent_goals(self, coordi):
+        '''
+        idea:
+        - for a goal in all goals
+            get all boxes that can satisfy that goal
+            get distance from goal to every such box
+            get distance of all possible agents for each such box and add current workload of the agent
+            sum both, take lowest
+            remove assigend box from list, add workload to agent
+        - repeat for all goals
+        '''
 
-        rmvd = set()
+        self.agt_tasks = [[] for i in range(len(self.state.agent_colors))]
+
+        #first step: assign boxes to goals--------------------------------------
+        print(self.state.box_types)
         assigned_boxes =[]
+
+        wrkld = [0]*len(self.state.agent_colors)
+
         for i in range(len(self.state.goal_types)):
-            psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-rmvd)
-            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
+
             print("-----------------------")
             print(i)
-            print(psbl_boxes_pos)
-            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+            print("current goal pos: {}".format(self.state.goal_positions[i]))
 
+            #get all possible boxes that could satisfy current goal
+            psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-set(assigned_boxes))
+            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
+            print("possible box pos: {}".format(psbl_boxes_pos))
+
+            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+            print("added_dists: {}".format(added_dists))
+
+            assigned_agents = []
+            #get all possible agents for each box in possible boxes
             for k,pb in enumerate(psbl_boxes):
-                #get closest agent for box
+                #get distance to agents for box
                 psbl_agents = self.searchPossibleAgentsForBoxIndex(pb)
                 psbl_agents_pos = [self.state.agent_positions[n] for n in psbl_agents]
-                print("k")
-                print(k)
-                print(psbl_agents_pos)
-                # add workload to box?
                 dists_box_2_agents = coordi.distances_to_position_in_list(self.state.box_positions[pb],psbl_agents_pos)
-                min_idx = dists_box_2_agents.index(min(dists_box_2_agents))
-                closest_agent = psbl_agents[min_idx]
 
-                added_dists[k] += dists_box_2_agents[min_idx]
-                print("added_dists")
-                print(added_dists)
+                #get current workload for all possible agents
+                psbl_wrkld = [wrkld[w] for w in psbl_agents]
+
+                #add workload to distance
+                dists_wrkld = [x+y for x,y in zip(dists_box_2_agents, psbl_wrkld)]
+
+                #take min of distance+workload (fastest agent to fullfill goal)
+                min_idx = dists_wrkld.index(min(dists_wrkld))
+
+                #this agent takes the task
+                assigned_agents.append(psbl_agents[min_idx])
+
+                #update the distances
+                added_dists[k] += dists_wrkld[min_idx]
 
             assigned_boxes.append(psbl_boxes[added_dists.index(min(added_dists))])
-            print("assigned_boxes")
-            print(assigned_boxes)
-        print(assigned_boxes)
 
+            #update workload of the agent that finally takes the task
+            assigned_agt = assigned_agents[added_dists.index(min(added_dists))]
+            wrkld[assigned_agt] +=  added_dists[k]+dists_box_2_agents[min_idx]
+
+            self.agt_tasks[assigned_agt].append(assigned_boxes[i])
+
+        print(self.agt_tasks)
+        print("done, assinged boxes for goals: {}".format(assigned_boxes))
+
+        return self.agt_tasks
 
     def getTasks(self):
         return self.Tasks
