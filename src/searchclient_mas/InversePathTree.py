@@ -16,9 +16,6 @@ class InversePathTree:
 
 
     def add_node(self, vertex: Tuple[int, int]):
-        if vertex is None:
-            return False
-
         nxt = None
         if vertex in self.node_dict:
             nxt = self.node_dict[vertex]

@@ -63,10 +63,13 @@ class LevelAnalyser:
             new_room = {(i,j) for i,j in tree.keys()}
             rooms.append(new_room)
             new_room = {}
+
         self.rooms = rooms
 
     def goals_distribution_per_room(self):
+
         """get dict of goal positions in each room"""
+
         self.locate_separate_rooms()
         self.goals_in_room = {}
         number_of_rooms = len(self.rooms)
@@ -75,11 +78,9 @@ class LevelAnalyser:
             self.goals_in_rooms[room_index] = goals_in_room or None
 
     
-    def is_connected_component(self,room)
+    def is_connected_component(self,room):
 
-    def connected_component_is_broken:
-
-
+    def connected_component_is_broken(self,room):
 
     def locate_safe_storage(self):
         
@@ -132,11 +133,6 @@ class LevelAnalyser:
         print("open areas",self.open_areas)
 
     
-
-
-
-
-
 
 
 
@@ -349,7 +345,6 @@ class LevelAnalyser:
         return len(adjacent_to_vertex) == len(container)
 
         
-
     def is_corner(self,vertex):
         (x,y) = vertex
         opt1,opt2,opt3,opt4 = {(x-1,y),(x,y+1)},{(x+1,y),(x,y+1)},{(x+1,y),(x,y-1)},{(x-1,y),(x,y-1)}
@@ -477,10 +472,7 @@ class LevelAnalyser:
         are_walls = {v for v in vertices if self.is_wall(v)}
         return are_walls
 
-
-
  
-
 
 #def locate_high_density_areas:
 
@@ -520,40 +512,3 @@ L = LevelAnalyser(state)
 L.separate_rooms_exist()
 #L.locate_corridors()
 
-"""
-   def is_corridor_candidate_old(self,vertex):
-        For a vertex to possibly be in a corridor he should have 2 or 3 walls as neighbours, one of the neighbours should too be a corridor candidate
-        Well, to cover all edge case this got a bit complicated, I'll explain in person     
-
-        vertex_condition = self.corridor_vertex_condition(vertex)
-        neighbours = self.get_neighbours(vertex) 
-        second_order_neighbours = self.get_neighbours_2coordinates_away(vertex)
-        neighbours_that_verify_condition = {n for n in neighbours if self.corridor_vertex_condition(n)}
-        neighbours_that_are_corners = {n for n in neighbours if self.is_corner(n)}
-        second_order_neighbours_that_verify_condition = {n for n in second_order_neighbours if self.corridor_vertex_condition(n)}
-
-        if not vertex_condition: # edge case of H structure, if cell is not candidate but is in between two candidates
-            if self.edge_case_corridor_non_candidate_1(vertex):
-                return True# 
-            elif not neighbours_that_verify_condition: #surrounded by 4 walls
-                return False
-            elif neighbours_that_verify_condition == neighbours: #if all neighbours verify the condition, corridor intersection
-                return True
-            else:
-                return False
-        else: 
-            if self.is_corner(vertex) and not self.is_corridor_corner(vertex):
-                return False
-            #corridor corners have only one neighbour that cna either be a corridor candiate or part of an open space
-            elif self.is_corridor_corner(vertex) and neighbours_that_verify_condition:
-                return True
-            elif self.is_corridor_corner(vertex) and {n for n in neighbours if self.is_corridor_candidate(n)} and not neighbours_that_verify_condition: 
-                return True
-            elif self.is_corridor_corner(vertex) and not neighbours_that_verify_condition:
-                return False
-            else:
-                return True 
-
-def corridor_vertex_condition(self,vertex):
-        return 2 <= self.number_neighbouring_walls_of_vertex(vertex) <=3
-"""
