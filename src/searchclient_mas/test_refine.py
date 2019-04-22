@@ -1,2 +1,5 @@
-maze = [[False, False, False, False, False, False, False, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, True, True, True, True, True, True, False], [False, False, False, False, False, False, False, False]]
-#print(maze)
+from problemDecomposer import HTN,Task
+
+st = tu.make_state(matrix)
+pd = problemDecomposer(st)
+graph = Graph(st.maze)
