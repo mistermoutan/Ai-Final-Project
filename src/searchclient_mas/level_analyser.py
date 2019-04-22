@@ -82,12 +82,12 @@ class LevelAnalyser:
     def is_connected_component(self,room):
         pass
 
-    def connected_component_is_broken(self):
-        pass
+    #def connected_component_is_broken(self):
+    #    pass
 
 
     def connected_component_is_broken(self,room):
-
+        pass
     def locate_safe_storage(self):
         
         self.locate_separate_rooms()
@@ -491,7 +491,7 @@ class LevelAnalyser:
 #or just block and see if connection from room to otther rooms is not blocked
 
 
-
+'''
 
 agt0 = util.agent(0,"red")
 agt1 = util.agent(1,"blue")
@@ -518,3 +518,4 @@ L = LevelAnalyser(state)
 L.separate_rooms_exist()
 #L.locate_corridors()
 
+'''
