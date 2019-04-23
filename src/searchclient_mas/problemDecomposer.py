@@ -35,8 +35,9 @@ class HTN():
         self.boxes_used =[]
         self.aproximated_agent_pos=self.state.agent_positions
         self.aproximate=True
-        #self.level_analyser = LevelAnalyser(self.state)
-        #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
+        self.level_analyser = LevelAnalyser(self.state)
+        self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
+        print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
         #print(self.graph_of_level.)
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
@@ -56,6 +57,8 @@ class HTN():
             t.setWorkload(self.agent_workload)
             t.setUsedBoxes(self.boxes_used)
             t.setAgentPos(self.aproximated_agent_pos)
+            if self.separated_rooms_exisit:
+                t.setRoom(0)
             while not t.allPrimitive():
                 t.refine()
             if t.headTask == 'FullfillBoxGoal':
@@ -152,26 +155,19 @@ class HTN():
         return h
 
 
-    #Simple heuristic which minimizes the value (agent_to_box + box_to_goal) distance
-    def heuristic(self, state):
-        '''
-        copy of heurisitc in coordinator 
-        '''
-        agent = (state.agent_row, state.agent_col)
-        boxes = state.box_positions
-        goals = state.goal_positions
-
-        agent_to_box_distances = [self.distance_to(agent, box) for box in boxes]
-        box_to_goals_distances = [self.min_distance_to_position_in_list(box, goals) for box in boxes]
-        agent_to_box_goal_goal_distances = [agent_to_box_distances[i] + box_to_goals_distances[i] for i in range(len(agent_to_box_distances))]
-        return min(agent_to_box_goal_goal_distances) if len(goals)>0 else 0
-
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     def make_single_agent_plan_empty(self,initial_state):
         return Planner(initial_state)
     def solve(self):
         self.createTasks()
+        if self.separated_rooms_exisit:
+            #get goals by room
+            self.level_analyser.get_goals_distribution_per_room()
+            print(self.level_analyser.goals_in_rooms,file=sys.stderr,flush=True)
+            #set room for each task
+            #get agents and boxes by room
+            #reduce possible agents and boxes
         self.refineTasks()
         self.sortTasks()
         single_agent_tasks = self.getTasksByAgent()
@@ -235,6 +231,8 @@ class Task():
         self.used_boxes=used_boxes
     def setAgentPos(self,agent_pos):
         self.agent_pos=agent_pos
+    def setRoom(self,room_id):
+        self.room=room_id
     def refine(self):
         #self.steps = [self.refScheme[y] for x in self.steps for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False  else [x]) if isinstance(y,str)]
         temp_steps=[]
