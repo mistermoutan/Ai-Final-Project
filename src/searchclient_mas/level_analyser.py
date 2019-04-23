@@ -34,11 +34,11 @@ class LevelAnalyser:
 
  
     def separate_rooms_exist(self):
-        """True if there are separate rooms (isolated parts of the level), False otherwise"""
+        '''True if there are separate rooms (isolated parts of the level), False otherwise'''
         return self.is_connected_component(self.vertices)
 
     def locate_separate_rooms(self):
-        """Creates self.rooms: list containing each separate room as sets, this sets are all the vertices that correspond to a room"""
+        '''Creates self.rooms: list containing each separate room as sets, this sets are all the vertices that correspond to a room'''
 
         #assert self.separate_rooms_exist(), "There are no isolated rooms"
         if self.rooms: #rooms already built
@@ -116,7 +116,7 @@ class LevelAnalyser:
             self.goals_in_rooms[room_index] = goals_in_room or None        
  
     def locate_corridors(self):
-        """Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  """
+        '''Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  '''
         # Consider: if corridor is of size 1 it's just a "door", still say it a corridor?
         self.locate_separate_rooms()
         if self.corridors:
@@ -134,7 +134,7 @@ class LevelAnalyser:
         print("\nSelf.corridors: ",self.corridors)
 
     def locate_open_areas(self):
-        """Dependent on finding corridors first"""
+        '''Dependent on finding corridors first'''
 
         self.locate_corridors()
         if self.open_areas:
@@ -215,12 +215,12 @@ class LevelAnalyser:
     ##########################################################
 
     def run_bfs(self,source_vertex,cutoff_vertex=None,save_explored=None): #add self.bfs_trees_cut?
-        """
+        '''
         Builds complete bfs tree with source_vertex as root, adds it so self.bfs_trees. 
         Tree is in the form of a dictionary structured in the following way: {vertex:(parent)}
         A cutoff_vertex may be passed in order to stop building the tree once that vertex is reached.
         May lead to congestion due to path similarity as it is used to get shortest paths from vertices to the source/root vertex
-        """
+        '''
         assert source_vertex in self.vertices
         if source_vertex in self.bfs_trees: #if tree is already built
             return
@@ -251,7 +251,7 @@ class LevelAnalyser:
             self.explored[source_vertex] = explored_set
 
     def bfs_tree(self,source_vertex):
-        """Checks if tree with source_vertex as root is in self.bfs_trees, if not builds the tree and stores it in self.bfs_trees, returns tree"""
+        '''Checks if tree with source_vertex as root is in self.bfs_trees, if not builds the tree and stores it in self.bfs_trees, returns tree'''
         assert source_vertex in self.vertices
         #if tree is not built, build it and store it
         if source_vertex not in self.bfs_trees:
@@ -259,10 +259,10 @@ class LevelAnalyser:
         return self.bfs_trees[source_vertex]
 
     def bfs_shortestpath_notree(self,source_vertex,target_vertex,illegal_vertices = {}, cutoff_branch = None):
-        """ 
+        ''' 
         Returns Shortest path between two vertices without having a tree pre built or building one and storing it in self.bfs_trees
         If there is no path between the two vertices, returns None. May be useful if memory/time problems arise.
-        """
+        '''
         assert source_vertex in self.vertices and target_vertex in self.vertices,  "Insert coordinates that are part of the state or not walls"
         if source_vertex == target_vertex:
             return deque()
@@ -296,7 +296,7 @@ class LevelAnalyser:
 
 
     def backtrack(self, source_vertex, target_vertex, parent_dict):
-        """Used to Return shortest path between two vertices, used in bfs_shortestpath_notree"""
+        '''Used to Return shortest path between two vertices, used in bfs_shortestpath_notree'''
 
         path = [target_vertex]
         parent = parent_dict[target_vertex]
@@ -313,12 +313,12 @@ class LevelAnalyser:
     ##########################################################
 
     def corridor_vertices_of_room(self,room):
-        """Returns all vertices in a room which are part of corridors"""
+        '''Returns all vertices in a room which are part of corridors'''
         corridor_vertices = {vertex for vertex in room if self.is_corridor_candidate(vertex)}
         return corridor_vertices
 
     def corridor_vertex_condition(self,vertex):
-        """neighbours are quicly acesssible among them without having to go through vertex"""
+        '''neighbours are quicly acesssible among them without having to go through vertex'''
         neighbours = deque(self.get_neighbours(vertex))
         if neighbours:
             neighbour = neighbours.pop()
@@ -359,7 +359,7 @@ class LevelAnalyser:
         return set_union
 
     def break_container_into_adjacent_vertices(self,container):
-        """Goes through vertices in container and returns list of deques with vertices grouped with adjacent vertices"""
+        '''Goes through vertices in container and returns list of deques with vertices grouped with adjacent vertices'''
 
         list_of_deques = []
         while container:
@@ -371,7 +371,7 @@ class LevelAnalyser:
         return list_of_deques
 
     def find_adjacent_vertices_in_container(self,vertex,container):
-        """Find adjacent vertices of adjacent vertices and so on for a particular vertex in a container"""
+        '''Find adjacent vertices of adjacent vertices and so on for a particular vertex in a container'''
 
         #assert container , "container is empty"
         explored_set = set([vertex])
@@ -386,7 +386,7 @@ class LevelAnalyser:
         return adjacent_to_vertex
 
     def container_is_composed_of_adjacent_vertices(self,container):
-        """True if container is composed of only adjacent vertices, same as previous function but used to check condition instead,"""
+        '''True if container is composed of only adjacent vertices, same as previous function but used to check condition instead,'''
         # TODO: merge it into previous one as argument
         assert container , "container is empty"
         vertex = container.pop()
@@ -424,7 +424,7 @@ class LevelAnalyser:
             return False
 
     def get_neighbours(self,vertex,in_vertices = True, in_walls = False):
-        """Returns neighbours, returns none if there are no neighbours"""
+        '''Returns neighbours, returns none if there are no neighbours'''
 
         assert vertex in self.vertices
         (x,y) = vertex
@@ -437,7 +437,7 @@ class LevelAnalyser:
         return neighbours
 
     def get_specific_neighbours(self,vertex,in_vertices = True, in_walls = False, S_ = None,N_ = None, W_ = None, E_ = None):
-        """Returns neighbours, returns none if there are no neighbours"""
+        '''Returns neighbours, returns none if there are no neighbours'''
 
         assert vertex in self.vertices
         (x,y) = vertex
@@ -467,7 +467,7 @@ class LevelAnalyser:
         return neighbours
 
     def number_neighbouring_walls_of_vertex(self,vertex):
-        """Returns amount of neighbours of partical vertex that are walls (min:0 ; max:4) """
+        '''Returns amount of neighbours of partical vertex that are walls (min:0 ; max:4) '''
 
         neighbours = self.get_neighbours(vertex, in_vertices = None)
         n_neighbouring_walls = 0
@@ -484,8 +484,8 @@ class LevelAnalyser:
         return lenght      
 
     def from_not_in (self, from_container, not_in_containers):
-        """Get an element in from_container that isn't in any of the not_in_containers,
-        Returns None if not possibe to do so"""
+        '''Get an element in from_container that isn't in any of the not_in_containers,
+        Returns None if not possibe to do so'''
         explored_elements = set()
         for element in from_container:
             for not_in_container in not_in_containers:
@@ -516,7 +516,7 @@ class LevelAnalyser:
         return (_from,direction)    
 
     def get_children_dictionary(self,parent_dictionary):
-        """Turn dictionary in form children:(parent) to parent:(children)"""
+        '''Turn dictionary in form children:(parent) to parent:(children)'''
         children = defaultdict(list)
         for child, parent in parent_dictionary.items():
             children[parent].append(child)
