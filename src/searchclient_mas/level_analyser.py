@@ -65,9 +65,9 @@ class LevelAnalyser:
         self.rooms = rooms
 
     def get_agent_distribution_per_room(self):
-        '''More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
-        Builds self.agents_per_room dictionary -> room: agents in room
-        '''
+        """More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
+        Builds self.agents_per_room dictionary ->  room: agents in room
+        """"
         self.locate_separate_rooms()
         self.agents_per_room = {} # room: agents in room
         accounted_for_agents = set()
@@ -96,7 +96,8 @@ class LevelAnalyser:
         #    assert self.agents_per_room[agent], "Agent was not assigned a room"
 
     def get_goals_distribution_per_room(self):
-        '''get dict of goal positions in each room; room:goal_positions'''
+        """get dict of goal distribution in each room; 
+        self.goals_per_room dictionary ->  room:goal_positions"""
 
         self.locate_separate_rooms()
         self.goals_per_room = {}
@@ -105,6 +106,8 @@ class LevelAnalyser:
             self.goals_in_rooms[room_index] = goals_in_room or None
 
     def get_box_distribution_per_room(self):
+        """get dict of box distribution in each room; 
+        self.boxes_per_room dictionary->  room:box_positions"""
 
         self.locate_separate_rooms()
         self.boxes_per_room = {}
