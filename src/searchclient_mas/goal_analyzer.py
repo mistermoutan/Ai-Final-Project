@@ -311,18 +311,15 @@ class GoalAnalyzer:
 
         start = None
         # neighbours to rooms should be goal spots so we just grab the space and find its neighbours
-        # and pick the one within our desired room
+        # if those spaces are in our room they are neighbour entrance, we also pick one at random as our start
         neighbors = self.connections[room_id]
-        neighbor = None
-        # Dirty way to get arbitrary item from set
-        for i in neighbors:
-            neighbor = i
-            break
-        space = set(self.rooms[neighbor]).pop()
-        for n in get_neighbours(space):
-            if n in room:
-                start = n
-                break
+        neighbor_entrances = set()
+        for neighbor in neighbors:
+            space = set(self.rooms[neighbor]).pop()
+            for n in get_neighbours(space):
+                if n in room:
+                    start = n
+                    neighbor_entrances.add(n)
 
         unseen.remove(start)
         path.add(start)
@@ -350,13 +347,15 @@ class GoalAnalyzer:
                     if self.state.box_at(i[0], i[1]):
                         score -= 4
                     if i in self.state.agent_by_cords:
-                        score -= 1
+                        score -= 0.5
+                    if i in neighbor_entrances:
+                        score += 0.1
                     score += gain
 
                     if score > best_score:
                         best = i
                         best_score = score
-                        if gain == 3: # we cant gain access to more than 3 new spaces
+                        if gain == 3 and score > 0: # we cant gain access to more than 3 new spaces
                             break
 
             for i in decided_free:
@@ -378,6 +377,7 @@ class GoalAnalyzer:
             found = False
             assert len(self.rooms[neighbor]) == 1, "we should only have goals adjacent to the current room"
 
+            # TODO: avoid picking spaces with boxes on them
             for space in self.rooms[neighbor]:
                 for n in get_neighbours(space):
                     if n in room:
