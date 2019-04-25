@@ -1,5 +1,5 @@
 from action import Action,move,push,pull,north,south,east,west
-from graph_alternative import Graph
+from graph import Graph
 from typing import Tuple,List
 from utilities import pairwise,next_position_in_direction,are_adjacent,direction_between_adjacent_positions
 import itertools as it
@@ -52,7 +52,7 @@ def actions_to_move_to_target_while_pulling_box(graph, agent, box, target):
     agent_to_target_path = list(graph.shortest_path_between(agent,target))
     assert agent_to_target_path[1] != box, "box is blocks agents path to target"
     
-    #For convenience
+    #For convenience: calculates the direction between p1 and p2 
     direction = lambda p1,p2: direction_between_adjacent_positions(p1,p2)
     
     #The box's location is not included in the shortest path from agent to target, and must be added individually
@@ -61,10 +61,11 @@ def actions_to_move_to_target_while_pulling_box(graph, agent, box, target):
 
     for (p1,p2) in pairwise(agent_to_target_path):
         #Note how p1 and p2 are reversed in the two following statements
+        #This is the direction of the agent on the path
         agent_directions.append(direction(p1,p2))
+        #This is the direction from the agent to the adjacent box
         agent_to_box_directions.append(direction(p2,p1))
-    
-    
+        
     #Combine the directions into pull actions
     directions = zip(agent_directions,agent_to_box_directions)
     return [pull(a,b) for (a,b) in directions]
@@ -80,6 +81,7 @@ def first_off_path_node(graph, path):
             continue
         return neighbours[0]
     return None
+
 
 
 
