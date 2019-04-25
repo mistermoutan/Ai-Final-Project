@@ -32,6 +32,7 @@ class GoalAnalyzer:
             self.connections[j].add(i)
 
         self.n_goals = len(state.goal_positions)
+        self.storage = dict()
 
 
     def get_goal_room_graph(self, goals):
@@ -202,9 +203,10 @@ class GoalAnalyzer:
             stack = [i]
             while stack:
                 curr = stack.pop()
+                seen.add(curr)
                 neighbours = self.connections[curr]
                 for n in neighbours:
-                    if n not in seen:
+                    if n not in seen and n not in removed:
                         seen.add(n)
                         stack.append(n)
                         if n in viable and n != i:
@@ -218,43 +220,21 @@ class GoalAnalyzer:
 
         return False, cycle
 
-
-
-
-
-
     def compute_goal_order_plan(self):
         # computes a plan on how to order to goals in order to complete them, operates under the assumption that
         # every box is mobile and currently assumes every room has infinite space and goal cells are empty
 
         # TODO use different metric? perhaps use distance from largest room?
-        eccentricities = self.compute_goal_eccentricity()
+        #eccentricities = self.compute_goal_eccentricity()
         #eccentricity_order = [(eccentricities[i], pos) for i, pos in enumerate(self.state.goal_positions)]
         #eccentricity_order = sorted(eccentricity_order,key=lambda x: -x[0])
         #eccentricity_order = [x[1] for x in eccentricity_order]
 
-        type_required = defaultdict(int)
-        type_available = defaultdict(int)
         # TODO: find space left  and use as metric as well
-
-
-        for i in self.state.goal_types:
-            type_required[i] += 1
-
-        for i in self.state.box_types:
-            type_available[i] += 1
-
-        for i in type_required:
-            assert type_available[i] <= type_required[i], "Not enough boxes to fulfill every goal"
-
-        #room_box_map = defaultdict(list)
-
-        #for i, pos in self.state.box_positions:
-        #    room = self.vert_in_room[pos]
-        #    room_box_map[room].append(i)
 
         removed = set()
         plan = []
+        cycle_cuts = []
 
         incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions)}
 
@@ -266,6 +246,7 @@ class GoalAnalyzer:
 
             best = -1
             lowest = 99999999999
+            in_cycle = False
             easy_removals = []
             cycle_found = False
             for i in incomplete_goals:
@@ -273,31 +254,174 @@ class GoalAnalyzer:
                 cycle_found = cycle or cycle_found
                 if cutsafe:
                     loss = self.compute_loss(i, removed)
-                    if loss == 0:
+                    if loss == 0 and not cycle:
                         easy_removals.append(i)
                     if loss < lowest:
                         best = i
                         lowest = loss
+                        in_cycle = cycle
 
             if len(easy_removals) > 0:
                 for i in easy_removals:
                     plan.append(i)
                     incomplete_goals.remove(i)
                     removed.add(i)
+                    cycle_cuts.append(False)
             else:
                 plan.append(best)
+                cycle_cuts.append(in_cycle)
                 incomplete_goals.remove(best)
                 removed.add(best)
 
         return plan
+
+    def get_viable_goals(self, completed):
+        incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions) if i not in completed}
+        available = []
+
+        for i in incomplete_goals:
+            cutsafe, cycle = self.check_cutsafe_cycle(i, completed, False)
+            if cutsafe:
+                available.append(i)
+
+        return available
+
+    def get_isolated_by_goal_completion(self, goal, completed):
+        """ computes which adjacent rooms will be isolated after given goal is completed given previously completed goals """
+        rooms = []
+        for n in self.connections[goal]:
+            if n not in completed:
+                if self.isolated(n, goal, completed):
+                    rooms.append(n)
+        return rooms
+
+    def get_storage_spaces_for_room(self, room_id):
+        if room_id in self.storage:
+            return self.storage[room_id]
+
+        room = self.rooms[room_id]
+        if len(room) == 1:
+            self.storage[room_id] = set()
+            return self.storage[room_id]
+
+        unseen = set(room)
+        path = set()
+        undecided = set()
+        storage = set()
+
+        start = None
+        # neighbours to rooms should be goal spots so we just grab the space and find its neighbours
+        # if those spaces are in our room they are neighbour entrance, we also pick one at random as our start
+        neighbors = self.connections[room_id]
+        neighbor_entrances = set()
+        for neighbor in neighbors:
+            space = set(self.rooms[neighbor]).pop()
+            for n in get_neighbours(space):
+                if n in room:
+                    start = n
+                    neighbor_entrances.add(n)
+
+        unseen.remove(start)
+        path.add(start)
+        for i in get_neighbours(start):
+            if i in room:
+                unseen.remove(i)
+                undecided.add(i)
+
+        # TODO: this can be done more efficiently than this brute force, but it is more complicated
+        while len(undecided) > 0:
+            best = None
+            best_score = -9999
+            decided_free = []
+            for i in undecided:
+                neighbors = get_neighbours(i)
+                gain = 0
+                for n in neighbors:
+                    if n in room and n in unseen:
+                        gain += 1
+                if gain == 0:
+                    decided_free.append(i)
+                else:
+                    score = 0
+                    # TODO: find better values for penalizing boxes and agents in path
+                    if self.state.box_at(i[0], i[1]):
+                        score -= 4
+                    if i in self.state.agent_by_cords:
+                        score -= 0.5
+                    if i in neighbor_entrances:
+                        score += 0.1
+                    score += gain
+
+                    if score > best_score:
+                        best = i
+                        best_score = score
+                        if gain == 3 and score > 0: # we cant gain access to more than 3 new spaces
+                            break
+
+            for i in decided_free:
+                storage.add(i)
+                undecided.remove(i)
+
+            if best is not None:
+                undecided.remove(best)
+                path.add(best)
+                for n in get_neighbours(best):
+                    if n in unseen and n in room:
+                        undecided.add(n)
+                        unseen.remove(n)
+
+        # we now must ensure that all neighbors are reachable from the given path
+        # so we check if this is the case, if not we can fix it by turning 1 storage space to path space
+        for neighbor in self.connections[room_id]:
+            potential = None
+            found = False
+            assert len(self.rooms[neighbor]) == 1, "we should only have goals adjacent to the current room"
+
+            # TODO: avoid picking spaces with boxes on them
+            for space in self.rooms[neighbor]:
+                for n in get_neighbours(space):
+                    if n in room:
+                        potential = n
+                        if n in path:
+                            found = True
+                            break
+                if not found:
+                    storage.remove(potential)
+                    path.add(potential)
+
+        self.storage[room_id] = storage
+        return storage
+
+    def is_storage(self, cord):
+        if not cord in self.vert_in_room:
+            return False
+        room = self.vert_in_room[cord]
+        storage = self.get_storage_spaces_for_room(room)
+        if cord in storage:
+            return True
+        return False
+
+    def print_storage_spaces(self, path=" ", storage="0"):
+        s = ""
+        for i in range(self.state.rows):
+            for j in range(self.state.cols):
+                if not self.state.maze[i][j]:
+                    s += "+"
+                else:
+                    if self.is_storage((i,j)):
+                        s += storage
+                    else:
+                        s += path
+
+            s += "\n"
+        print(s)
 
 
 
 def try_get_goal_room_graph():
     import test_utilities as tu
 
-    maze = tu.create_maze()
-    goal = tu.goal('a')
+    maze = tu.create_maze(16)
 
     for i in range(len(maze)-2):
         maze[i][4] = False
@@ -310,6 +434,13 @@ def try_get_goal_room_graph():
     maze[5][5] = tu.goal('b')
     maze[4][5] = tu.goal('a')
     maze[3][6] = tu.goal('f')
+    maze[9][5] = tu.goal('g')
+    maze[10][5] = tu.goal('h')
+    maze[11][5] = tu.goal('h')
+    maze[12][5] = tu.goal('h')
+    maze[13][5] = tu.goal('h')
+    maze[14][5] = tu.goal('h')
+    maze[14][6] = tu.goal('h')
 
     # [row][col]
     maze[2][5] = tu.box('a', 'lul')
@@ -328,19 +459,23 @@ def try_get_goal_room_graph():
     print(state, "\n")
     analyzer.print_rooms()
     analyzer.compute_goal_order_plan()
-    print(analyzer.compute_goal_eccentricity())
-    print(analyzer.compute_goal_order_plan())
-    if len(analyzer.rooms) != 8:
+    plan = analyzer.compute_goal_order_plan()
+    print(plan)
+    partial_plan = plan[:6]
+    print(partial_plan)
+    print("viable goal nodes:", analyzer.get_viable_goals(set(partial_plan)))
+    curr = 13
+    print("cutoff rooms given", curr, ":", analyzer.get_isolated_by_goal_completion(curr, partial_plan))
+
+    analyzer.print_storage_spaces()
+    if len(analyzer.rooms) != 18:
         print("number of rooms is wrong")
-        return False
-    print(state)
-    if len(analyzer.edges) != len(analyzer.rooms)-1:
-        print("number of edges is not correct")
         return False
     spaces = 0
     for r in analyzer.rooms:
         for _ in r:
             spaces += 1
+
 
     if spaces != sum([sum(i) for i in state.maze]):
         print("number of spaces in rooms are not equal to actual number of spaces")
