@@ -7,6 +7,7 @@ from action import move,push,pull,north,south,east,west
 from master_plan import MasterPlan
 from planner import Planner
 from level_analyser import LevelAnalyser
+from goal_analyzer import GoalAnalyzer
 #from coordinator import Coordinator
 
 '''
@@ -28,6 +29,8 @@ class HTN():
     #TODO implement blocking corridor
     #TODO goal ordering in the actual plan...
     #TODO partly parallel partly sequetially
+    #TODO 1. implement sequential order execution
+    #TODO 2. get viable goals and execute them in parrall before the sequential part
     def __init__(self,state):
         self.state = state
         self.Tasks = []
@@ -38,17 +41,27 @@ class HTN():
         self.boxes_used =[]
         self.aproximated_agent_pos=self.state.agent_positions
         self.aproximate=True
-        self.level_analyser = LevelAnalyser(self.state)
-        self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
+        self.ga = GoalAnalyzer(self.state)
+        self.goal_in_order = self.ga.compute_goal_order_plan()
+        self.goals_par = []
+        self.goals_seq = []
+        #,file=sys.stderr,flush= True)
+        #self.level_analyser = LevelAnalyser(self.state)
+        #self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
         #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
         #print(self.graph_of_level.)
     def createTasks(self):
-        for i in range(len(self.state.goal_types)):
+        #for i in range(len(self.state.goal_types)):
+        for idx,i in enumerate(self.goal_in_order):
             #TODO if goal type is box goal 
             boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
+            print(boxes,file=sys.stderr,flush=True)
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
+            print(agents,file=sys.stderr,flush=True)
+
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
+            self.Tasks[i].setOrder(idx)
             #add agent workload for task to global workload of agent
             #self.boxes_used.append(self.Tasks[i].box)
             #self.agent_workload= [self.agent_workload[k]+self.Tasks[i].workload[k] for k in range(len(self.Tasks[i].workload))]
@@ -60,8 +73,8 @@ class HTN():
             t.setWorkload(self.agent_workload)
             t.setUsedBoxes(self.boxes_used)
             t.setAgentPos(self.aproximated_agent_pos)
-            if self.separated_rooms_exisit:
-                t.setRoom(0)
+            #if self.separated_rooms_exisit:
+            #    t.setRoom(0)
             while not t.allPrimitive():
                 t.refine()
             if t.headTask == 'FullfillBoxGoal':
@@ -96,6 +109,8 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
+    def createSinglePlan(self):
+        pass
     def distance_to(self, x, y):
         return len(self.graph_of_level.shortest_path_between(x,y))
     def min_distance_to_position_in_list(self, box, goals):
@@ -163,15 +178,6 @@ class HTN():
         return Planner(initial_state)
     def solve(self):
         self.createTasks()
-        if self.separated_rooms_exisit:
-            #get goals by room
-            self.level_analyser.get_goals_distribution_per_room()
-            self.goals_per_room = self.level_analyser.goals_per_room
-            #map goal positions to goal index
-            print(self.level_analyser.goals_per_room,file=sys.stderr,flush=True)
-            #set room for each task
-            #get agents and boxes by room
-            #reduce possible agents and boxes
         self.refineTasks()
         self.sortTasks()
         single_agent_tasks = self.getTasksByAgent()
@@ -181,6 +187,7 @@ class HTN():
         #create all single agents states to
         single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
 
+        
         #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
         #create single agent plans
         single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
@@ -192,7 +199,29 @@ class HTN():
         #workaround add empty plans for unused agents
 
         return master_plan.plan
+    def solve_seq(self):
+        self.createTasks()
+        self.refineTasks()
+        self.sortTasks()
+        single_agent_tasks = self.getTasksByAgent()
+        print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
+        #run all low level functions to create primitive tasks
 
+        #create all single agents states to
+        single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
+
+        
+        #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
+        #create single agent plans
+        single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
+        #create masterplan
+        master_plan = MasterPlan(self.number_of_agents, self.state)
+        #merge singleAgentPlans into MasterPlan
+        for agent,plan in enumerate(single_agent_plans):
+            master_plan.merge_plan_into_master(agent,plan)
+        #workaround add empty plans for unused agents
+
+        return master_plan.plan
 class Task():
     #TODO Choose between agents based on current Workload and Distance
     #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
@@ -236,6 +265,8 @@ class Task():
         self.agent_pos=agent_pos
     def setRoom(self,room_id):
         self.room=room_id
+    def setOrder(self,order):
+        self.order = order
     def refine(self):
         #self.steps = [self.refScheme[y] for x in self.steps for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False  else [x]) if isinstance(y,str)]
         temp_steps=[]
@@ -327,9 +358,27 @@ class problemDecomposer():
         self.Tasks  = []
         self.Plan = []
         self.state = state
+        self.level_analyser = LevelAnalyser(self.state)
+        self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
+        if self.separated_rooms_exisit:
+            self.level_analyser.get_agent_distribution_per_room()
+            self.agents_per_room = self.level_analyser.agents_per_room
+            self.level_analyser.get_box_distribution_per_room()
+            self.boxes_per_room = self.level_analyser.boxes_per_room
+            self.level_analyser.get_goals_distribution_per_room()
+            self.goals_per_room = self.level_analyser.goals_per_room
+            print('agents_per_room'+str(self.agents_per_room),file=sys.stderr,flush=True)
+            print('boxes_per_room'+str(self.boxes_per_room),file=sys.stderr,flush=True)
+            print('goals_per_room'+str(self.goals_per_room),file=sys.stderr,flush=True)
+
         #print(self.state.box_types,file= sys.stderr, flush=True)
 
-
+    def get_room(self,room_cor,_dict): 
+        for room, value in _dict.items():
+            if  value !=None:
+                if room_cor in value: 
+                    return room
+        return None
     def getGoalOrientedProblems(self):
         '''
         '''
@@ -343,25 +392,43 @@ class problemDecomposer():
         returns a dict of agent indexes that are able to move the box at pos box_idx in the box list
         and adds an initial value for the weight of an agent
         '''
+        #TODO in same room?
         return {idx:0 for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]}
 
     def searchPossibleBoxesForGoalIndex(self,goal_idx):
         '''
         returns a list of box-indexes that are able to satisfy the goal at pos goad_idx in the goal list
         '''
-        return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
+        if self.separated_rooms_exisit:
+            #get room of goal
+            goal_room = self.get_room(self.state.goal_positions[goal_idx],self.goals_per_room)
+            #print(str(goal_idx)+' '+str(self.state.goal_positions[goal_idx])+' '+str(goal_room),file=sys.stderr,flush=True)
+            return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx] and self.state.box_positions[idx] in self.boxes_per_room[goal_room]]
+        else:    
+            return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
 
     def searchPossibleGoalsForBoxIndex(self,box_idx):
         '''
         returns a list of goal-indexes that are able to store the box at index box_idx
         '''
+        #TODO in same room?
         return [idx for idx in range(len(self.state.goal_types)) if self.state.goal_types[idx] ==self.state.box_types[box_idx]]
 
     def searchPossibleAgentsForBoxIndex(self,box_idx):
         '''
         returns a list of agent indexes that are able to move the boxes at pos i in the box list
         '''
-        return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
+        if self.separated_rooms_exisit:
+            #get room of goal
+            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)
+            #print(str(box_idx)+' '+str(self.state.box_positions[box_idx])+' '+str(box_room),file=sys.stderr,flush=True)
+            for k in range(len(self.state.agent_colors)):
+                print(self.state.box_colors[box_idx]==self.state.agent_colors[k],file=sys.stderr,flush=True)
+                print(str(k)+ 'in' +str(self.agents_per_room[box_room]),file=sys.stderr,flush=True)
+                
+            return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx] and idx in self.agents_per_room[box_room]]
+        else:
+            return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
 
     def assign_tasks_greedy(self):
         '''

@@ -113,7 +113,7 @@ class LevelAnalyser:
         self.boxes_per_room = {}
         for room_index in range(len(self.rooms)):
             boxes_in_room = {box_pos for box_pos in self.box_positions if box_pos in self.rooms[room_index]}
-            self.goals_in_rooms[room_index] = goals_in_room or None        
+            self.boxes_per_room[room_index] =   boxes_in_room or None        
  
     def locate_corridors(self):
         '''Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  '''
