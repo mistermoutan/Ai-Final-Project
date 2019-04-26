@@ -8,6 +8,8 @@ from master_plan import MasterPlan
 from planner import Planner
 from level_analyser import LevelAnalyser
 from goal_analyzer import GoalAnalyzer
+from action import NOOP
+
 #from coordinator import Coordinator
 
 '''
@@ -109,8 +111,8 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
-    def createSinglePlan(self):
-        pass
+    def getSingleTaskByAgent(self,task):
+        return (task.agent,[(task.goal,task.box)])
     def distance_to(self, x, y):
         return len(self.graph_of_level.shortest_path_between(x,y))
     def min_distance_to_position_in_list(self, box, goals):
@@ -176,12 +178,12 @@ class HTN():
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     def make_single_agent_plan_empty(self,initial_state):
         return Planner(initial_state)
-    def solve(self):
+    def solve_par(self):
         self.createTasks()
         self.refineTasks()
         self.sortTasks()
         single_agent_tasks = self.getTasksByAgent()
-        print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
+        #print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
         #run all low level functions to create primitive tasks
 
         #create all single agents states to
@@ -197,31 +199,33 @@ class HTN():
         for agent,plan in enumerate(single_agent_plans):
             master_plan.merge_plan_into_master(agent,plan)
         #workaround add empty plans for unused agents
-
         return master_plan.plan
+    def plan_for_agent_where_other_agents_are_waiting(self, agent_id, agent_plan):
+        #Make an action vector where no agent does anything/Users/ek/Downloads/sequentialized_plans_hack.py
+        empty_action_vector = [NOOP] * self.number_of_agents
+
+        #Make an empty plan of the same length as parameter agent_plan, where no agent does anything
+        empty_plan = [empty_action_vector.copy() for i in agent_plan]
+
+         #Put the plan for the agent agent_id into the empty action plan
+        for i,action_vector in enumerate(empty_plan):
+            action_vector[agent_id] = agent_plan[i]
+   
+        return empty_plan
     def solve_seq(self):
         self.createTasks()
         self.refineTasks()
         self.sortTasks()
-        single_agent_tasks = self.getTasksByAgent()
-        print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
+        single_agent_tasks = [self.getSingleTaskByAgent(t) for t in self.Tasks]
+        #print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
         #run all low level functions to create primitive tasks
-
-        #create all single agents states to
-        single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
-
-        
-        #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
-        #create single agent plans
-        single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
-        #create masterplan
-        master_plan = MasterPlan(self.number_of_agents, self.state)
-        #merge singleAgentPlans into MasterPlan
-        for agent,plan in enumerate(single_agent_plans):
-            master_plan.merge_plan_into_master(agent,plan)
-        #workaround add empty plans for unused agents
-
-        return master_plan.plan
+        #create sequential multi agent plans
+        multi_agent_plans_seq = [self.plan_for_agent_where_other_agents_are_waiting(agent,self.make_single_agent_plan(self.state.get_HTN_StateSA(agent,tasks,True))) for agent,tasks in single_agent_tasks]
+        final_plan = []
+        for i in multi_agent_plans_seq:
+            final_plan+=i
+        #print(final_plan)
+        return final_plan
 class Task():
     #TODO Choose between agents based on current Workload and Distance
     #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
@@ -367,9 +371,9 @@ class problemDecomposer():
             self.boxes_per_room = self.level_analyser.boxes_per_room
             self.level_analyser.get_goals_distribution_per_room()
             self.goals_per_room = self.level_analyser.goals_per_room
-            print('agents_per_room'+str(self.agents_per_room),file=sys.stderr,flush=True)
-            print('boxes_per_room'+str(self.boxes_per_room),file=sys.stderr,flush=True)
-            print('goals_per_room'+str(self.goals_per_room),file=sys.stderr,flush=True)
+            #print('agents_per_room'+str(self.agents_per_room),file=sys.stderr,flush=True)
+            #print('boxes_per_room'+str(self.boxes_per_room),file=sys.stderr,flush=True)
+            #print('goals_per_room'+str(self.goals_per_room),file=sys.stderr,flush=True)
 
         #print(self.state.box_types,file= sys.stderr, flush=True)
 
@@ -400,9 +404,7 @@ class problemDecomposer():
         returns a list of box-indexes that are able to satisfy the goal at pos goad_idx in the goal list
         '''
         if self.separated_rooms_exisit:
-            #get room of goal
             goal_room = self.get_room(self.state.goal_positions[goal_idx],self.goals_per_room)
-            #print(str(goal_idx)+' '+str(self.state.goal_positions[goal_idx])+' '+str(goal_room),file=sys.stderr,flush=True)
             return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx] and self.state.box_positions[idx] in self.boxes_per_room[goal_room]]
         else:    
             return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
@@ -420,12 +422,7 @@ class problemDecomposer():
         '''
         if self.separated_rooms_exisit:
             #get room of goal
-            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)
-            #print(str(box_idx)+' '+str(self.state.box_positions[box_idx])+' '+str(box_room),file=sys.stderr,flush=True)
-            for k in range(len(self.state.agent_colors)):
-                print(self.state.box_colors[box_idx]==self.state.agent_colors[k],file=sys.stderr,flush=True)
-                print(str(k)+ 'in' +str(self.agents_per_room[box_room]),file=sys.stderr,flush=True)
-                
+            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)    
             return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx] and idx in self.agents_per_room[box_room]]
         else:
             return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]

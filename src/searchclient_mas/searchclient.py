@@ -121,7 +121,12 @@ class SearchClient:
                 self.sendJointAction(action_vector)
         elif solver=='htn':
             htn = HTN(self.initial_state)
-            master_plan = htn.solve()
+            master_plan = htn.solve_par()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
+        elif solver=='htn_seq':
+            htn = HTN(self.initial_state)
+            master_plan = htn.solve_seq()
             for action_vector in master_plan:
                 self.sendJointAction(action_vector)
         elif solver=='greedy_decomposition':
@@ -180,6 +185,10 @@ def main():
             server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('htn')
+        elif arg1=='-htn_seq':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem('htn_seq')
         elif arg1=='-greedy_decomposition':
             server_messages = sys.stdin
             client = SearchClient(server_messages)

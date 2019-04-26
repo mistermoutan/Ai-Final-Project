@@ -14,12 +14,3 @@ x = s.get_child(action)
 
 y = 123
 """
-def get_room(val,_dict): 
-    for room, value in _dict.items(): 
-        print(value)
-        if val in value: 
-            return room
-    return None
-  
-goals_per_room={0: {(3, 10), (6, 8), (6, 1)}}
-print(get_room((3,10),goals_per_room))
