@@ -24,7 +24,10 @@ refine until it is primitive
 '''
 class HTN():
     #TODO implement decisions for seperate rooms
-    
+    #TODO implement decisions for boxes and goals with the same name
+    #TODO implement blocking corridor
+    #TODO goal ordering in the actual plan...
+    #TODO partly parallel partly sequetially
     def __init__(self,state):
         self.state = state
         self.Tasks = []
@@ -37,7 +40,7 @@ class HTN():
         self.aproximate=True
         self.level_analyser = LevelAnalyser(self.state)
         self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
-        print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
+        #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
         #print(self.graph_of_level.)
     def createTasks(self):
         for i in range(len(self.state.goal_types)):
@@ -154,7 +157,6 @@ class HTN():
         h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
         return h
 
-
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     def make_single_agent_plan_empty(self,initial_state):
@@ -164,7 +166,9 @@ class HTN():
         if self.separated_rooms_exisit:
             #get goals by room
             self.level_analyser.get_goals_distribution_per_room()
-            print(self.level_analyser.goals_in_rooms,file=sys.stderr,flush=True)
+            self.goals_per_room = self.level_analyser.goals_per_room
+            #map goal positions to goal index
+            print(self.level_analyser.goals_per_room,file=sys.stderr,flush=True)
             #set room for each task
             #get agents and boxes by room
             #reduce possible agents and boxes
@@ -188,7 +192,6 @@ class HTN():
         #workaround add empty plans for unused agents
 
         return master_plan.plan
-
 
 class Task():
     #TODO Choose between agents based on current Workload and Distance
@@ -270,6 +273,9 @@ class Task():
     #mapping to real actions if all actions are Primitive
     def selectAgent(self):
         self.agent = self.best_agentBox_combi[0]
+    def reducePosAgents(self):
+        #reduce to agents that are in the same room
+        pass
     def selectBox(self):
         self.box = self.best_agentBox_combi[1]
     def weightBoxes(self):
@@ -279,7 +285,7 @@ class Task():
         pass
     def reducePosBoxes(self):
         self.posBoxes  = [x for x in self.posBoxes if x not in self.used_boxes]
-
+        #reduce to boxes that are in the same room
     def getAgentWorkload(self):
         return self.workload if hasattr(self,'workload') else []
     def getAgentDistance(self):
@@ -308,9 +314,6 @@ class Task():
 
         #best combi         
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
-    def reducePosAgents(self):
-        #check if agent can reach goal ->same room
-        pass
     #Help Functions
     def distance_to(self, x, y):
         return len(self.graph.shortest_path_between(x,y))
