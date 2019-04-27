@@ -332,15 +332,18 @@ class GoalAnalyzer:
         while len(undecided) > 0:
             best = None
             best_score = -9999
-            decided_free = []
+            decided_storage = []
             for i in undecided:
                 neighbors = get_neighbours(i)
                 gain = 0
+                undecided_bonus = 0
                 for n in neighbors:
                     if n in room and n in unseen:
                         gain += 1
+                    if n in room and n in undecided:
+                        undecided_bonus += 0.01
                 if gain == 0:
-                    decided_free.append(i)
+                    decided_storage.append(i)
                 else:
                     score = 0
                     # TODO: find better values for penalizing boxes and agents in path
@@ -350,7 +353,7 @@ class GoalAnalyzer:
                         score -= 0.5
                     if i in neighbor_entrances:
                         score += 0.1
-                    score += gain
+                    score += gain + undecided_bonus
 
                     if score > best_score:
                         best = i
@@ -358,7 +361,7 @@ class GoalAnalyzer:
                         if gain == 3 and score > 0: # we cant gain access to more than 3 new spaces
                             break
 
-            for i in decided_free:
+            for i in decided_storage:
                 storage.add(i)
                 undecided.remove(i)
 
@@ -369,6 +372,9 @@ class GoalAnalyzer:
                     if n in unseen and n in room:
                         undecided.add(n)
                         unseen.remove(n)
+            # self.debug_storage_print(storage, path)
+
+
 
         # we now must ensure that all neighbors are reachable from the given path
         # so we check if this is the case, if not we can fix it by turning 1 storage space to path space
@@ -401,7 +407,7 @@ class GoalAnalyzer:
             return True
         return False
 
-    def print_storage_spaces(self, path=" ", storage="0"):
+    def print_storage_spaces(self, path_symbol=" ", storage_symbol="0"):
         s = ""
         for i in range(self.state.rows):
             for j in range(self.state.cols):
@@ -409,9 +415,26 @@ class GoalAnalyzer:
                     s += "+"
                 else:
                     if self.is_storage((i,j)):
-                        s += storage
+                        s += storage_symbol
                     else:
-                        s += path
+                        s += path_symbol
+
+            s += "\n"
+        print(s)
+
+    def debug_storage_print(self, storage, path):
+        s = ""
+        for i in range(self.state.rows):
+            for j in range(self.state.cols):
+                if not self.state.maze[i][j]:
+                    s += "+"
+                else:
+                    if (i, j) in path:
+                        s += " "
+                    elif (i, j) in storage:
+                        s += "0"
+                    else:
+                        s += "?"
 
             s += "\n"
         print(s)

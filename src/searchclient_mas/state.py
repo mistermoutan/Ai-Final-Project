@@ -337,13 +337,33 @@ class StateMA:
 
         self._hash = None
 
-    def is_free(self, row: 'int', col: 'int') -> 'bool':
+    def in_bounds(self, pos):
+        row, col = pos
+        if row < self.rows and col < self.cols and row >= 0 and col >= 0:
+            return self.maze[row][col]
+
+    def is_free(self, row: 'int', col: 'int' = None) -> 'bool':
+        if isinstance(row, tuple):
+            row, col = row
         return self.maze[row][col] and \
                 (row, col) not in self.box_by_cords and \
                 (row, col) not in self.agent_by_cords
 
     def box_at(self, row: 'int', col: 'int') -> 'bool':
         return (row, col) in self.box_by_cords
+
+    def set_agent_position(self, old_pos, new_pos):
+        id = self.agent_by_cords[old_pos]
+        self.agent_positions[id] = new_pos
+        del self.agent_by_cords[old_pos]
+        self.agent_by_cords[new_pos] = id
+
+    def set_box_position(self, old_pos, new_pos):
+        id = self.box_by_cords[old_pos]
+        self.box_positions[id] = new_pos
+        del self.box_by_cords[old_pos]
+        self.box_by_cords[new_pos] = id
+
 
     def copy(self):
         # TODO make a shallow copy solution
