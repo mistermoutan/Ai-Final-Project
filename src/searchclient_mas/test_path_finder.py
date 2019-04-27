@@ -173,11 +173,10 @@ def test_find_first_off_path_node_empty_oath_throws_error():
         with pytest.raises(Exception):
                 first_off_path_node(graph, [])
 
-def test_find_first_off_path_node_for_single_node_without_neighbours_throws_error():
+def test_find_first_off_path_node_for_single_node_without_neighbours_returns_none():
         #a level with only one vertex
         graph = Graph([[True]])
-        with pytest.raises(Exception):
-                first_off_path_node(graph, [(0,0)])
+        assert first_off_path_node(graph, [(0,0)]) == None
 
 def test_find_first_off_path_node_one_element_returns_only_neighbour():
         assert first_off_path_node(graph, [(1,1)]) == (2,1)
