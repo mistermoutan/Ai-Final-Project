@@ -159,10 +159,10 @@ class HTN():
             agent = (state.agent_row, state.agent_col)
             boxes = state.box_positions
             goals = state.goal_positions
-
             alpha = 5.5 #penalizing factor for distance goals_to_box
-            square_goals2box = True #all goals will be solved almost in "parrallel"
-            square_agt2boxes = False #boxes will be pushed to their goals "sequentially"
+            square_goals2box = False #True: goals will be solved almost in "parrallel" / False: #boxes will be pushed to their goals "sequentially"
+            square_agt2boxes = False # not really helpful
+            goal_reward = 100 # additional reward to keep box at goal
 
             #closest box for every goal and the distance to it
             closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
@@ -170,6 +170,9 @@ class HTN():
             #distances form agent to all boxes that are not in goal state
             dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
             dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
+
+            #reward for solved goals
+            goal_reward = goal_reward*len(set(dist_goals_to_box)-set([0]))
 
             # not enough boxes for goals
             if 2500 in dist_goals_to_box:
@@ -185,8 +188,9 @@ class HTN():
             if square_agt2boxes:
                 dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
 
+            #print("dist_goals_to_box: {}".format(dist_goals_to_box))
             #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
-            h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
+            h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + goal_reward + state.g
 
             return h
 
