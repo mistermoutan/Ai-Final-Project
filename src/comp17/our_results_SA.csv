@@ -1,27 +1,27 @@
-lvl; actions; time; comments
-SAAIoliMAsh; ; ; need goal ordering 
-SABeliebers; 401; 48.622
-SABlinky; 153; 3.465
-SABoxBunny; ; ; need free paths
-SABronies; ; ; need goal ordering + free paths
-SADAT; ; ; need free paths + goal ordering
-SADoDo; 262; 15.269
-SAEvilCorp; ; ; need free paths
-SAFooBar; 359; 65.849
-SAGeneralAI; ; ; need goal ordering + free paths
-SAgroupname;2024; 407.128; pfactor=10
-SAGroupOne; ; ; need goal ordering + free paths
-SAHALnineK; ; ; wtf
-SAHiveMind; ; ; error in room detection 
-SAIamGreedy; ; ; need goal ordering
-SAJomark; 60; 0.429
-SAKalle; ; ; need goal ordering
-SALemmings; 170; 215.816; 
-SALiquorice; 95; 108.076
-SAMasAiArne; ; ; need goal ordering
-SAMASters; 291; 18.484
-SANeverMind; ; ; error in room detection
-SAOmnics; ; ; need goal ordering + free paths
-SATALK; ; ; need goal ordering + free paths
-SAtnrbts; ; ; need goal ordering + free paths
+lvl, actions, time, comments
+SAAIoliMAsh, , , need goal ordering 
+SABeliebers, 401, 48.622
+SABlinky, 153, 3.465
+SABoxBunny, , , need free paths
+SABronies, , , need goal ordering + free paths
+SADAT, , , need free paths + goal ordering
+SADoDo, 262, 15.269
+SAEvilCorp, , , need free paths
+SAFooBar, 359, 65.849
+SAGeneralAI, , , need goal ordering + free paths
+SAgroupname,2024, 407.128, pfactor=10
+SAGroupOne, , , need goal ordering + free paths
+SAHALnineK, , , wtf
+SAHiveMind, , , error in room detection 
+SAIamGreedy, , , need goal ordering
+SAJomark, 60, 0.429
+SAKalle, , , need goal ordering
+SALemmings, 170, 215.816, 
+SALiquorice, 95, 108.076
+SAMasAiArne, , , need goal ordering
+SAMASters, 291, 18.484
+SANeverMind, , , error in room detection
+SAOmnics, , , need goal ordering + free paths
+SATALK, , , need goal ordering + free paths
+SAtnrbts, , , need goal ordering + free paths
 
