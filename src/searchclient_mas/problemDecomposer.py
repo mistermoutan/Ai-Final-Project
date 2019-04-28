@@ -55,7 +55,7 @@ class HTN():
     def createTasks(self):
         #for i in range(len(self.state.goal_types)):
         for idx,i in enumerate(self.goal_in_order):
-            #TODO if goal type is box goal 
+            #TODO if goal type is box goal
             boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
             print(boxes,file=sys.stderr,flush=True)
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
@@ -114,7 +114,12 @@ class HTN():
     def getSingleTaskByAgent(self,task):
         return (task.agent,[(task.goal,task.box)])
     def distance_to(self, x, y):
-        return len(self.graph_of_level.shortest_path_between(x,y))
+        #changed this to resolve error
+        path_length = len(self.graph_of_level.shortest_path_between(x,y))
+        if path_length > 0:
+            return path_length-1
+        else:
+            return path_length
     def min_distance_to_position_in_list(self, box, goals):
         distances = [self.distance_to(box, goal) for goal in goals]
         return min(distances)
@@ -134,7 +139,7 @@ class HTN():
             for j, box in enumerate(boxes):
                 if j not in closest_boxes:
                     if state.goal_types[i] == state.box_types[j]:
-                        d.append(self.distance_to(box, goal)-1) # -1 to
+                        d.append(self.distance_to(box, goal))
                     else:
                         d.append(2500)
                 else:
@@ -146,33 +151,44 @@ class HTN():
 
         return closest_boxes, distances
 
-    def heuristic_adv(self, state, alpha = 1):
-        '''
-        Copy of heuristic_adv in coordinater
-        '''
-        agent = (state.agent_row, state.agent_col)
-        boxes = state.box_positions
-        goals = state.goal_positions
+        def heuristic_adv(self, state, alpha = 1):
+            '''
+            Idea is to combine different heurisitcs here and wheight them differently, sqaure them, etc.
+            Work in progress
+            '''
+            agent = (state.agent_row, state.agent_col)
+            boxes = state.box_positions
+            goals = state.goal_positions
 
-        alpha = 1 #penalizing factor for distance goals_to_box
-        square_goals2box = True #all goals will be solved almost in "parrallel"
-        square_agt2boxes = False # boxes will be pushed to their goals "sequentially"
-        #closest box for every goal and the distance to it
-        closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
-        #distances form agent to all boxes that are not in goal state
-        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes if dist_goals_to_box[i] != 0])
-        dist_agent_to_boxes = [d-2 for d in dist_agent_to_boxes]#currently error of 2 #TODO resolve this
-        # not enough boxes for goals
-        assert 2500 not in dist_goals_to_box
-        #avoid error in goal state - every goal is satisfied
-        if dist_agent_to_boxes == []:
-            dist_agent_to_boxes = [0]
-        if square_goals2box:
-            dist_goals_to_box = [d*d for d in dist_goals_to_box]
-        if square_agt2boxes:
-            dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
-        h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
-        return h
+            alpha = 5.5 #penalizing factor for distance goals_to_box
+            square_goals2box = True #all goals will be solved almost in "parrallel"
+            square_agt2boxes = False #boxes will be pushed to their goals "sequentially"
+
+            #closest box for every goal and the distance to it
+            closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
+
+            #distances form agent to all boxes that are not in goal state
+            dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
+            dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
+
+            # not enough boxes for goals
+            if 2500 in dist_goals_to_box:
+                raise ValueError("Not enough boxes to satisfy all goals")
+
+            #avoid error in goal state - every goal is satisfied
+            if dist_agent_to_boxes == []:
+                dist_agent_to_boxes = [0]
+
+            if square_goals2box:
+                dist_goals_to_box = [d*d for d in dist_goals_to_box]
+
+            if square_agt2boxes:
+                dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
+
+            #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
+            h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
+
+            return h
 
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
@@ -189,7 +205,7 @@ class HTN():
         #create all single agents states to
         single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
 
-        
+
         #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
         #create single agent plans
         single_agent_plans = [self.make_single_agent_plan(s) for s in single_agent_states]
@@ -210,7 +226,7 @@ class HTN():
          #Put the plan for the agent agent_id into the empty action plan
         for i,action_vector in enumerate(empty_plan):
             action_vector[agent_id] = agent_plan[i]
-   
+
         return empty_plan
     def solve_seq(self):
         self.createTasks()
@@ -288,7 +304,7 @@ class Task():
                 for y in (self.refScheme[x['name']]['steps']):
                     if callable(y):
                         y()
-            
+
         self.steps = temp_steps
         #print(self.steps,file=sys.stderr,flush=True)
         return self
@@ -347,7 +363,7 @@ class Task():
                     self.agentBox_combi[(a,b)]=self.distance_to(self.agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
-        #best combi         
+        #best combi
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
     #Help Functions
     def distance_to(self, x, y):
@@ -377,10 +393,10 @@ class problemDecomposer():
 
         #print(self.state.box_types,file= sys.stderr, flush=True)
 
-    def get_room(self,room_cor,_dict): 
+    def get_room(self,room_cor,_dict):
         for room, value in _dict.items():
             if  value !=None:
-                if room_cor in value: 
+                if room_cor in value:
                     return room
         return None
     def getGoalOrientedProblems(self):
@@ -406,7 +422,7 @@ class problemDecomposer():
         if self.separated_rooms_exisit:
             goal_room = self.get_room(self.state.goal_positions[goal_idx],self.goals_per_room)
             return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx] and self.state.box_positions[idx] in self.boxes_per_room[goal_room]]
-        else:    
+        else:
             return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
 
     def searchPossibleGoalsForBoxIndex(self,box_idx):
@@ -422,7 +438,7 @@ class problemDecomposer():
         '''
         if self.separated_rooms_exisit:
             #get room of goal
-            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)    
+            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)
             return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx] and idx in self.agents_per_room[box_room]]
         else:
             return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
