@@ -11,14 +11,23 @@ class Coordinator:
     def __init__(self, state:StateMA):
         self.state = state
         self.bfs_counter = 0
-        self.graph_of_level = Graph(state.maze)
+        self.graph_of_level = Graph(state.maze, precompute = "all_shortest_paths")
 
     def bfs_heuristic(self, state):
         self.bfs_counter += 1
         return self.bfs_counter
 
     def distance_to(self, x, y):
-        return len(self.graph_of_level.shortest_path_between(x,y))
+        ### current error here -> differnce of 2 for last step
+        # distance_to((1,1),(1,2)) = 2
+        # distance_to((1,1),(1,1)) = 0
+
+        #resolve here:
+        path_length = len(self.graph_of_level.shortest_path_between(x,y))
+        if path_length > 0:
+            return path_length-1
+        else:
+            return path_length
 
     def min_distance_to_position_in_list(self, box, goals):
         distances = [self.distance_to(box, goal) for goal in goals]
@@ -41,7 +50,7 @@ class Coordinator:
             for j, box in enumerate(boxes):
                 if j not in closest_boxes:
                     if state.goal_types[i] == state.box_types[j]:
-                        d.append(self.distance_to(box, goal)-1) # -1 to
+                        d.append(self.distance_to(box, goal))
                     else:
                         d.append(2500)
                 else:
@@ -73,7 +82,7 @@ class Coordinator:
         boxes = state.box_positions
         goals = state.goal_positions
 
-        alpha = 1 #penalizing factor for distance goals_to_box
+        alpha = 5.5 #penalizing factor for distance goals_to_box
         square_goals2box = True #all goals will be solved almost in "parrallel"
         square_agt2boxes = False #boxes will be pushed to their goals "sequentially"
 
@@ -81,11 +90,12 @@ class Coordinator:
         closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
 
         #distances form agent to all boxes that are not in goal state
-        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes if dist_goals_to_box[i] != 0])
-        dist_agent_to_boxes = [d-2 for d in dist_agent_to_boxes]#currently error of 2 #TODO resolve this
+        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
+        dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
 
         # not enough boxes for goals
-        assert 2500 not in dist_goals_to_box
+        if 2500 in dist_goals_to_box:
+            raise ValueError("Not enough boxes to satisfy all goals")
 
         #avoid error in goal state - every goal is satisfied
         if dist_agent_to_boxes == []:
@@ -97,13 +107,14 @@ class Coordinator:
         if square_agt2boxes:
             dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
 
+        #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
         h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
 
         return h
 
 
     def make_single_agent_plan(self, initial_state):
-        return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
+        return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=300).make_plan()
 
     def solve(self):
 
