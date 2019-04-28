@@ -83,7 +83,7 @@ class Coordinator:
         goals = state.goal_positions
 
         alpha = 10.5 #penalizing factor for distance goals_to_box
-        square_goals2box = False #True: goals will be solved almost in "parrallel" / False: #boxes will be pushed to their goals "sequentially"
+        pfactor_goals2box=1 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
         square_agt2boxes = False # not really helpful
         goal_reward = 100 # additional reward to keep box at goal
 
@@ -105,8 +105,7 @@ class Coordinator:
         if dist_agent_to_boxes == []:
             dist_agent_to_boxes = [0]
 
-        if square_goals2box:
-            dist_goals_to_box = [d*d for d in dist_goals_to_box]
+        dist_goals_to_box = [d**pfactor_goals2box for d in dist_goals_to_box]
 
         if square_agt2boxes:
             dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
@@ -119,7 +118,7 @@ class Coordinator:
 
 
     def make_single_agent_plan(self, initial_state):
-        return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=300).make_plan()
+        return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=300, print_status = True).make_plan()
 
     def solve(self):
 

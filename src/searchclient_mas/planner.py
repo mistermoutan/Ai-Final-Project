@@ -74,7 +74,7 @@ def default_get_children(state):
     return state.get_children()
 
 class Planner(object):
-    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None, g_value = None, cutoff_solution_length = None):
+    def __init__(self,initial_state,get_children = None,is_goal_state = None,extract_plan = None, heuristic = None, g_value = None, cutoff_solution_length = None, print_status = True):
         #Setting the functions used to explore the state space
         #Use implementaitons in state unless new functions are provided
         self.get_children = get_children if get_children else default_get_children
@@ -96,7 +96,8 @@ class Planner(object):
         #Replace the cutoff with a suitably large number if there is no cutoff
         self.cutoff_solution_length = cutoff_solution_length if cutoff_solution_length else 2000000000
 
-        #add time output
+        #output planner status
+        self.print_status = print_status
         self.start_time = perf_counter()
         self.times_printed = []
 
@@ -132,9 +133,11 @@ class Planner(object):
         for entry in children:
             heapq.heappush(self.frontier, entry)
 
-        if not int('%.f' % self.used_time()) % 10 and int('%.f' % self.used_time()) not in self.times_printed:
-            self.times_printed.append(int('%.f' % self.used_time()))
-            print(self.search_status(), file=sys.stderr)
+        # will print the current search status roughly every 10 seconds
+        if self.print_status:
+            if not int('%.f' % self.used_time()) % 10 and int('%.f' % self.used_time()) not in self.times_printed:
+                self.times_printed.append(int('%.f' % self.used_time()))
+                print(self.search_status(), file=sys.stderr)
 
     #Expands at most n more states from the frontier.
     #Returns the plan if it is found, otherwise returns None
