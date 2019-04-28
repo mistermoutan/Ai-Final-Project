@@ -151,48 +151,49 @@ class HTN():
 
         return closest_boxes, distances
 
-        def heuristic_adv(self, state, alpha = 1):
-            '''
-            Idea is to combine different heurisitcs here and wheight them differently, sqaure them, etc.
-            Work in progress
-            '''
-            agent = (state.agent_row, state.agent_col)
-            boxes = state.box_positions
-            goals = state.goal_positions
-            alpha = 5.5 #penalizing factor for distance goals_to_box
-            square_goals2box = False #True: goals will be solved almost in "parrallel" / False: #boxes will be pushed to their goals "sequentially"
-            square_agt2boxes = False # not really helpful
-            goal_reward = 100 # additional reward to keep box at goal
+    def heuristic_adv(self, state, alpha = 1):
+        '''
+        Idea is to combine different heurisitcs here and wheight them differently, sqaure them, etc.
+        Work in progress
+        '''
+        agent = (state.agent_row, state.agent_col)
+        boxes = state.box_positions
+        goals = state.goal_positions
 
-            #closest box for every goal and the distance to it
-            closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
+        alpha = 10.5 #penalizing factor for distance goals_to_box
+        #TODO: automatically detect when high parallelisation is needed
+        pfactor_goals2box=1 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
+        square_agt2boxes = False # not really helpful
+        goal_reward = 100 # additional reward to keep box at goal
 
-            #distances form agent to all boxes that are not in goal state
-            dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
-            dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
+        #closest box for every goal and the distance to it
+        closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
 
-            #reward for solved goals
-            goal_reward = goal_reward*len(set(dist_goals_to_box)-set([0]))
+        #distances form agent to all boxes that are not in goal state
+        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
+        dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
 
-            # not enough boxes for goals
-            if 2500 in dist_goals_to_box:
-                raise ValueError("Not enough boxes to satisfy all goals")
+        #reward for solved goals
+        goal_reward = goal_reward*len(set(dist_goals_to_box)-set([0]))
 
-            #avoid error in goal state - every goal is satisfied
-            if dist_agent_to_boxes == []:
-                dist_agent_to_boxes = [0]
+        # not enough boxes for goals
+        if 2500 in dist_goals_to_box:
+            raise ValueError("Not enough boxes to satisfy all goals")
 
-            if square_goals2box:
-                dist_goals_to_box = [d*d for d in dist_goals_to_box]
+        #avoid error in goal state - every goal is satisfied
+        if dist_agent_to_boxes == []:
+            dist_agent_to_boxes = [0]
 
-            if square_agt2boxes:
-                dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
+        dist_goals_to_box = [d**pfactor_goals2box for d in dist_goals_to_box]
 
-            #print("dist_goals_to_box: {}".format(dist_goals_to_box))
-            #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
-            h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + goal_reward + state.g
+        if square_agt2boxes:
+            dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
 
-            return h
+        #print("dist_goals_to_box: {}".format(dist_goals_to_box))
+        #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
+        h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + goal_reward + state.g
+
+        return h
 
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()

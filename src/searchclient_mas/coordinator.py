@@ -83,6 +83,7 @@ class Coordinator:
         goals = state.goal_positions
 
         alpha = 10.5 #penalizing factor for distance goals_to_box
+        #TODO: automatically detect when high parallelisation is needed
         pfactor_goals2box=1 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
         square_agt2boxes = False # not really helpful
         goal_reward = 100 # additional reward to keep box at goal
