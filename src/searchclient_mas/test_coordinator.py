@@ -8,15 +8,15 @@ a2 = tu.agent(2,'g')
 a3 = tu.agent(3,'b')
 
 b0 = tu.box('a','r')
-b1 = tu.box('a','r')
-b2 = tu.box('a','r')
-b3 = tu.box('a','r')
+b1 = tu.box('b','r')
+b2 = tu.box('c','r')
+b3 = tu.box('d','r')
 b4 = tu.box('a','r')
 
 g0 = tu.goal('a')
-g1 = tu.goal('a')
-g2 = tu.goal('a')
-g3 = tu.goal('a')
+g1 = tu.goal('b')
+g2 = tu.goal('c')
+g3 = tu.goal('d')
 g4 = tu.goal('a')
 
 
@@ -32,14 +32,29 @@ matrix = [
     [False,False,False,False,False,False,False,False,False,False]
 ]
 
-st = tu.make_state(matrix)
+matrix2 = [
+    [False,False,False,False,False,False,False,False,False,False],
+    [False,True ,True ,True ,b1   ,a0   ,True  ,False,True ,False],
+    [False,True ,b3   ,b2   ,True ,True ,b0  ,True ,True ,False ],
+    [False,False,False,False,False,False,False,False,False,False]
+]
+
+
+st = tu.make_state(matrix2)
 st_SA = st.get_StateSA(0, True)
 coordinator = Coordinator(st)
 
 def test_distance_to():
     #shortest_path_between is currently of by 2 (or 1)
     #print(coordinator.distance_to((1,2),(1,8)) )
-    assert coordinator.distance_to((1,1),(4,4)) == 7
+    bx = st.box_positions[0]
+    print(bx)
+    ag = st.agent_positions[0]
+    print(ag)
+    gl = st.goal_positions[0]
+    print(gl)
+
+    print(coordinator.distance_to((1,4),(bx)))
 
 def test_min_distance_to_position_in_list():
     box = (1,1)
@@ -56,18 +71,23 @@ def test_distances_to_position_in_list():
 def test_ind_n_dis_goals_to_closest_box():
     boxes = st_SA.box_positions
     goals = st_SA.goal_positions
-    assert coordinator.ind_n_dis_goals_to_closest_box(st_SA, boxes, goals) == ([1, 0, 2, 3, 4], [3, 6, 6, 6, 5])
+    #print(coordinator.ind_n_dis_goals_to_closest_box(st_SA, boxes, goals))
+    #assert coordinator.ind_n_dis_goals_to_closest_box(st_SA, boxes, goals) == ([1, 0, 2, 3, 4], [3, 6, 6, 6, 5])
 
 def test_heuristic():
     assert coordinator.heuristic(st_SA) == 8
 
 def test_heuristic_adv():
-    assert coordinator.heuristic_adv(st_SA) == 142
+    st_SA.goal_types = ['a', 'b', 'c', 'd']
+    st_SA.goal_by_cords = {(2, 5): 0, (2, 6): 1, (2, 7): 2, (2, 8): 3}
+    st_SA.goal_positions = [(2, 5), (2, 6), (2, 7), (2, 8)]
+    print(coordinator.heuristic_adv(st_SA))
+    #assert coordinator.heuristic_adv(st_SA) == 142
 
 #test_distance_to()
 #test_min_distance_to_position_in_list()
-test_distances_to_position_in_list()
+#test_distances_to_position_in_list()
 #test_ind_n_dis_goals_to_closest_box()
 
 #test_heuristic()
-#test_heuristic_adv()
+test_heuristic_adv()
