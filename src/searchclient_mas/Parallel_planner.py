@@ -85,7 +85,7 @@ class HighLevelPartialPlan:
 class SpaceTracker:
     def __init__(self, state: StateMA):
         initial = [[False for _ in range(state.cols)] for _ in range(state.rows)]
-
+        self.latest_update = [[0 for _ in range(state.cols)] for _ in range(state.rows)]
         # TODO: is a dictionary solution better?
         for i in range(state.rows):
             for j in range(state.cols):
@@ -95,13 +95,21 @@ class SpaceTracker:
         self.ignore_set = set()
 
     def set_position_to_end(self, time_step, pos, val):
+        row, col = pos
         for t in range(time_step, len(self.spaces)):
-            row, col = pos
             self.spaces[t][row][col] = val
+        if time_step < len(self.spaces):
+            self.latest_update[row][col] = time_step
 
     def set_position(self, t, pos, val):
         row, col = pos
         self.spaces[t][row][col] = val
+        if t > self.latest_update[row][col]:
+            self.latest_update[row][col] = t
+
+    def changes(self, time_step, pos):
+        row, col = pos
+        return self.latest_update[row][col] > time_step
 
     def print_time_step(self,t):
         step = self.spaces[t]
@@ -172,9 +180,6 @@ class SpaceTracker:
 
         return self.spaces[time_step][row][col] or pos in self.ignore_set
 
-    def will_be_free(self, time_step, pos):
-        # TODO: returns true if space won't be occupied from given time step until the end, could be useful
-        pass
 
 
 class ParallelPlanner:
@@ -374,11 +379,19 @@ class ParallelPlanner:
 
             steps = state.time - initial_time
 
+            # we dont wanna leave the box or agent in spaces that will be occupied in the near future
+            # TODO: test if this works properly
+            changes = 0
+            if spaces.changes(state.time, state.agent):
+                changes += 1
+            if state.box is not None and spaces.changes(state.time, state.box):
+                changes += 1
+
             if state.box is None or manhattan_dist(state.box, box_target) == 0:
-                return steps + manhattan_dist(agent_target, state.agent)
+                return steps + manhattan_dist(agent_target, state.agent) + changes
             else:
                 dist_to_box = manhattan_dist(state.agent, state.box) - 1
-                box_to_goal = manhattan_dist(state.box, box_target)
+                box_to_goal = manhattan_dist(state.box, box_target) + changes
 
                 # TODO: find some coefficients for the different metrics
                 return steps + 2*dist_to_box + 2*box_to_goal + goal_diff
@@ -421,6 +434,7 @@ class ParallelPlanner:
         initial = PlanState(initial_time, agent_curr, box_curr, None)
         pq = []
         seen = set()
+        # TODO: all stuff at time_step > spaces is the same in terms of seen
 
         heapq.heappush(pq, (heuristic(initial), initial))
         goal = None
@@ -442,6 +456,14 @@ class ParallelPlanner:
                         h = heuristic(c)
                         best = goal_dist
                     if goal_dist == 0:
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
+                        # TODO: we must ensure that once the plan is formed that it does not conflict with future plans
                         done = True
                         goal = c
                         break
