@@ -609,6 +609,7 @@ class StateMA:
             maze[i][j] = False
 
         return StateSA(maze, boxes, goals, self.agent_positions[agentID])
+
     def get_greedy_StateSA(self, agentID, agt_tasks, ignore_immovable=False):
         pos = self.agent_positions[agentID]
         color = self.agent_colors[agentID]
