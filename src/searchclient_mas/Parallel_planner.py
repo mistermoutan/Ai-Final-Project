@@ -569,11 +569,12 @@ def realizer_test():
     maze = tu.create_maze(10)
     for i in range(1, 9):
         maze[1][i] = tu.box('a', 'blue')
-        maze[2][i] = tu.box('a', 'blue')
+        maze[2][i] = tu.box('b', 'green')
 
     maze[8][5] = tu.goal('a')
 
     maze[3][5] = tu.agent(0, 'blue')
+    maze[4][5] = tu.agent(1, 'green')
 
     state = tu.make_state(maze)
 
