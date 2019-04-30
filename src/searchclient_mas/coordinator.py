@@ -84,7 +84,7 @@ class Coordinator:
 
         alpha = 10.5 #penalizing factor for distance goals_to_box
         #TODO: automatically detect when high parallelisation is needed
-        pfactor_goals2box=1 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
+        pfactor_goals2box=2 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
         square_agt2boxes = False # not really helpful
         goal_reward = 100 # additional reward to keep box at goal
 
@@ -143,8 +143,10 @@ class Coordinator:
         agents = range(number_of_agents)
 
         #print("box_types:{}".format(self.state.box_types),file= sys.stderr,flush=True)
-        pd = problemDecomposer(self.state)
-        agt_tasks = pd.assign_tasks_greedy()
+        pd = problemDecomposer(self.state, self.graph_of_level)
+        #agt_tasks = pd.assign_tasks_greedy()
+        agt_tasks = pd.assign_agent_goals(self.state)
+        print(agt_tasks, file=sys.stderr,flush=True)
         single_agent_states = [self.state.get_greedy_StateSA(i,agt_tasks[i], True) for i in agents]
         #print("single_agent_states",file=sys.stderr,flush=True)
         #print(single_agent_states,file=sys.stderr,flush=True)
