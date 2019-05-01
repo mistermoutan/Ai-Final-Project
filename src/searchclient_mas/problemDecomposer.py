@@ -7,6 +7,9 @@ from action import move,push,pull,north,south,east,west
 from master_plan import MasterPlan
 from planner import Planner
 from level_analyser import LevelAnalyser
+from goal_analyzer import GoalAnalyzer
+from action import NOOP
+
 #from coordinator import Coordinator
 
 '''
@@ -24,27 +27,43 @@ refine until it is primitive
 '''
 class HTN():
     #TODO implement decisions for seperate rooms
-    
+    #TODO implement decisions for boxes and goals with the same name
+    #TODO implement blocking corridor
+    #TODO goal ordering in the actual plan...
+    #TODO partly parallel partly sequetially
+    #TODO 1. implement sequential order execution
+    #TODO 2. get viable goals and execute them in parrall before the sequential part
     def __init__(self,state):
         self.state = state
         self.Tasks = []
-        self.pd = problemDecomposer(state)
         self.graph_of_level = Graph(state.maze)
+        self.pd = problemDecomposer(state, graph_of_level)
         self.number_of_agents = len(self.state.agent_positions)
         self.agent_workload = [0] * self.number_of_agents
         self.boxes_used =[]
         self.aproximated_agent_pos=self.state.agent_positions
         self.aproximate=True
+        self.ga = GoalAnalyzer(self.state)
+        self.goal_in_order = self.ga.compute_goal_order_plan()
+        self.goals_par = []
+        self.goals_seq = []
+        #,file=sys.stderr,flush= True)
         #self.level_analyser = LevelAnalyser(self.state)
+        #self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
         #print(self.level_analyser.separate_rooms_exist(),file=sys.stderr,flush=True)
         #print(self.graph_of_level.)
     def createTasks(self):
-        for i in range(len(self.state.goal_types)):
-            #TODO if goal type is box goal 
+        #for i in range(len(self.state.goal_types)):
+        for idx,i in enumerate(self.goal_in_order):
+            #TODO if goal type is box goal
             boxes = self.pd.searchPossibleBoxesForGoalIndex(i)
+            print(boxes,file=sys.stderr,flush=True)
             agents= self.pd.searchPossibleAgentsForBoxIndex(boxes[0])
+            print(agents,file=sys.stderr,flush=True)
+
             #TODO implement precondition data structure
             self.Tasks.append(Task('FullfillBoxGoal',i,self.state,self.graph_of_level,boxes,agents))
+            self.Tasks[i].setOrder(idx)
             #add agent workload for task to global workload of agent
             #self.boxes_used.append(self.Tasks[i].box)
             #self.agent_workload= [self.agent_workload[k]+self.Tasks[i].workload[k] for k in range(len(self.Tasks[i].workload))]
@@ -56,6 +75,8 @@ class HTN():
             t.setWorkload(self.agent_workload)
             t.setUsedBoxes(self.boxes_used)
             t.setAgentPos(self.aproximated_agent_pos)
+            #if self.separated_rooms_exisit:
+            #    t.setRoom(0)
             while not t.allPrimitive():
                 t.refine()
             if t.headTask == 'FullfillBoxGoal':
@@ -90,8 +111,15 @@ class HTN():
                 agentTask[t.agent].append((t.goal,t.box))
         #Workaround because the agent order matters
         return {key: agentTask[key]for key in sorted(agentTask.keys())}
+    def getSingleTaskByAgent(self,task):
+        return (task.agent,[(task.goal,task.box)])
     def distance_to(self, x, y):
-        return len(self.graph_of_level.shortest_path_between(x,y))
+        #changed this to resolve error
+        path_length = len(self.graph_of_level.shortest_path_between(x,y))
+        if path_length > 0:
+            return path_length-1
+        else:
+            return path_length
     def min_distance_to_position_in_list(self, box, goals):
         distances = [self.distance_to(box, goal) for goal in goals]
         return min(distances)
@@ -111,7 +139,7 @@ class HTN():
             for j, box in enumerate(boxes):
                 if j not in closest_boxes:
                     if state.goal_types[i] == state.box_types[j]:
-                        d.append(self.distance_to(box, goal)-1) # -1 to
+                        d.append(self.distance_to(box, goal))
                     else:
                         d.append(2500)
                 else:
@@ -125,61 +153,63 @@ class HTN():
 
     def heuristic_adv(self, state, alpha = 1):
         '''
-        Copy of heuristic_adv in coordinater
+        Idea is to combine different heurisitcs here and wheight them differently, sqaure them, etc.
+        Work in progress
         '''
         agent = (state.agent_row, state.agent_col)
         boxes = state.box_positions
         goals = state.goal_positions
 
-        alpha = 1 #penalizing factor for distance goals_to_box
-        square_goals2box = True #all goals will be solved almost in "parrallel"
-        square_agt2boxes = False # boxes will be pushed to their goals "sequentially"
+        alpha = 10.5 #penalizing factor for distance goals_to_box
+        #TODO: automatically detect when high parallelisation is needed
+        pfactor_goals2box=1 #>1: goals will be solved almost in "parrallel" / <=1: #boxes will be pushed to their goals "sequentially"
+        square_agt2boxes = False # not really helpful
+        goal_reward = 100 # additional reward to keep box at goal
+
         #closest box for every goal and the distance to it
         closest_boxes, dist_goals_to_box = self.ind_n_dis_goals_to_closest_box(state, boxes, goals)
+
         #distances form agent to all boxes that are not in goal state
-        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[i] for i in closest_boxes if dist_goals_to_box[i] != 0])
-        dist_agent_to_boxes = [d-2 for d in dist_agent_to_boxes]#currently error of 2 #TODO resolve this
+        dist_agent_to_boxes = self.distances_to_position_in_list(agent, [boxes[cb] for i,cb in enumerate(closest_boxes) if dist_goals_to_box[i] != 0])
+        dist_agent_to_boxes = [d-1 for d in dist_agent_to_boxes] #currently error of 1 #TODO resolve this?
+
+        #reward for solved goals
+        goal_reward = goal_reward*len(set(dist_goals_to_box)-set([0]))
+
         # not enough boxes for goals
-        assert 2500 not in dist_goals_to_box
+        if 2500 in dist_goals_to_box:
+            raise ValueError("Not enough boxes to satisfy all goals")
+
         #avoid error in goal state - every goal is satisfied
         if dist_agent_to_boxes == []:
             dist_agent_to_boxes = [0]
-        if square_goals2box:
-            dist_goals_to_box = [d*d for d in dist_goals_to_box]
+
+        dist_goals_to_box = [d**pfactor_goals2box for d in dist_goals_to_box]
+
         if square_agt2boxes:
             dist_agent_to_boxes = [d*d for d in dist_agent_to_boxes]
-        h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + state.g
+
+        #print("dist_goals_to_box: {}".format(dist_goals_to_box))
+        #print("dist_goals_to_box: {}, dist_agent_to_boxes: {} ".format(dist_goals_to_box, dist_agent_to_boxes), file= sys.stderr,flush=True)
+        h = alpha * sum(dist_goals_to_box) + min(dist_agent_to_boxes) + goal_reward + state.g
+
         return h
-
-
-    #Simple heuristic which minimizes the value (agent_to_box + box_to_goal) distance
-    def heuristic(self, state):
-        '''
-        copy of heurisitc in coordinator 
-        '''
-        agent = (state.agent_row, state.agent_col)
-        boxes = state.box_positions
-        goals = state.goal_positions
-
-        agent_to_box_distances = [self.distance_to(agent, box) for box in boxes]
-        box_to_goals_distances = [self.min_distance_to_position_in_list(box, goals) for box in boxes]
-        agent_to_box_goal_goal_distances = [agent_to_box_distances[i] + box_to_goals_distances[i] for i in range(len(agent_to_box_distances))]
-        return min(agent_to_box_goal_goal_distances) if len(goals)>0 else 0
 
     def make_single_agent_plan(self, initial_state):
         return Planner(initial_state, heuristic=self.heuristic_adv, g_value=lambda x: 1,cutoff_solution_length=30).make_plan()
     def make_single_agent_plan_empty(self,initial_state):
         return Planner(initial_state)
-    def solve(self):
+    def solve_par(self):
         self.createTasks()
         self.refineTasks()
         self.sortTasks()
         single_agent_tasks = self.getTasksByAgent()
-        print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
+        #print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
         #run all low level functions to create primitive tasks
 
         #create all single agents states to
         single_agent_states = [self.state.get_HTN_StateSA(agent,tasks,True) for agent,tasks in single_agent_tasks.items()]
+
 
         #single_agent_states = [self.state.get_HTN_StateSA(i,single_agent_tasks[i]) for i in  range(number_of_agents)]
         #create single agent plans
@@ -190,10 +220,33 @@ class HTN():
         for agent,plan in enumerate(single_agent_plans):
             master_plan.merge_plan_into_master(agent,plan)
         #workaround add empty plans for unused agents
-
         return master_plan.plan
+    def plan_for_agent_where_other_agents_are_waiting(self, agent_id, agent_plan):
+        #Make an action vector where no agent does anything/Users/ek/Downloads/sequentialized_plans_hack.py
+        empty_action_vector = [NOOP] * self.number_of_agents
 
+        #Make an empty plan of the same length as parameter agent_plan, where no agent does anything
+        empty_plan = [empty_action_vector.copy() for i in agent_plan]
 
+         #Put the plan for the agent agent_id into the empty action plan
+        for i,action_vector in enumerate(empty_plan):
+            action_vector[agent_id] = agent_plan[i]
+
+        return empty_plan
+    def solve_seq(self):
+        self.createTasks()
+        self.refineTasks()
+        self.sortTasks()
+        single_agent_tasks = [self.getSingleTaskByAgent(t) for t in self.Tasks]
+        #print('sat'+str(single_agent_tasks),file=sys.stderr,flush=True)
+        #run all low level functions to create primitive tasks
+        #create sequential multi agent plans
+        multi_agent_plans_seq = [self.plan_for_agent_where_other_agents_are_waiting(agent,self.make_single_agent_plan(self.state.get_HTN_StateSA(agent,tasks,True))) for agent,tasks in single_agent_tasks]
+        final_plan = []
+        for i in multi_agent_plans_seq:
+            final_plan+=i
+        #print(final_plan)
+        return final_plan
 class Task():
     #TODO Choose between agents based on current Workload and Distance
     #TODO Availablity of agents - init selection function in Task but run it in HTN if all Tasks are created
@@ -235,6 +288,10 @@ class Task():
         self.used_boxes=used_boxes
     def setAgentPos(self,agent_pos):
         self.agent_pos=agent_pos
+    def setRoom(self,room_id):
+        self.room=room_id
+    def setOrder(self,order):
+        self.order = order
     def refine(self):
         #self.steps = [self.refScheme[y] for x in self.steps for y in (self.refScheme[x['name']]['steps'] if x['name'] in self.refScheme and x['isPrimitive']==False  else [x]) if isinstance(y,str)]
         temp_steps=[]
@@ -252,7 +309,7 @@ class Task():
                 for y in (self.refScheme[x['name']]['steps']):
                     if callable(y):
                         y()
-            
+
         self.steps = temp_steps
         #print(self.steps,file=sys.stderr,flush=True)
         return self
@@ -272,6 +329,9 @@ class Task():
     #mapping to real actions if all actions are Primitive
     def selectAgent(self):
         self.agent = self.best_agentBox_combi[0]
+    def reducePosAgents(self):
+        #reduce to agents that are in the same room
+        pass
     def selectBox(self):
         self.box = self.best_agentBox_combi[1]
     def weightBoxes(self):
@@ -281,7 +341,7 @@ class Task():
         pass
     def reducePosBoxes(self):
         self.posBoxes  = [x for x in self.posBoxes if x not in self.used_boxes]
-
+        #reduce to boxes that are in the same room
     def getAgentWorkload(self):
         return self.workload if hasattr(self,'workload') else []
     def getAgentDistance(self):
@@ -308,11 +368,8 @@ class Task():
                     self.agentBox_combi[(a,b)]=self.distance_to(self.agent_pos[a],box_pos[b])
                     self.agentBox_combi[(a,b)]+=self.distance_to(box_pos[b],goal_pos)
 
-        #best combi         
+        #best combi
         self.best_agentBox_combi=min(self.agentBox_combi, key=self.agentBox_combi.get)
-    def reducePosAgents(self):
-        #check if agent can reach goal ->same room
-        pass
     #Help Functions
     def distance_to(self, x, y):
         return len(self.graph.shortest_path_between(x,y))
@@ -322,13 +379,43 @@ This class decomposes a level into high level problems where tasks can be create
 on possible agents that can bring possible boxes to specific goals
 '''
 class problemDecomposer():
-    def __init__(self,state):
+    def __init__(self,state, graph_of_level):
         self.Tasks  = []
         self.Plan = []
         self.state = state
+        self.graph_of_level = graph_of_level
+        self.level_analyser = LevelAnalyser(self.state)
+        self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
+        if self.separated_rooms_exisit:
+            self.level_analyser.get_agent_distribution_per_room()
+            self.agents_per_room = self.level_analyser.agents_per_room
+            self.level_analyser.get_box_distribution_per_room()
+            self.boxes_per_room = self.level_analyser.boxes_per_room
+            self.level_analyser.get_goals_distribution_per_room()
+            self.goals_per_room = self.level_analyser.goals_per_room
+            #print('agents_per_room'+str(self.agents_per_room),file=sys.stderr,flush=True)
+            #print('boxes_per_room'+str(self.boxes_per_room),file=sys.stderr,flush=True)
+            #print('goals_per_room'+str(self.goals_per_room),file=sys.stderr,flush=True)
+
         #print(self.state.box_types,file= sys.stderr, flush=True)
 
 
+    def distances_to_position_in_list(self, pos1, poslist):
+        return [self.distance_to(pos1, pos2) for pos2 in poslist]
+
+    def distance_to(self, x, y):
+        path_length = len(self.graph_of_level.shortest_path_between(x,y))
+        if path_length > 0:
+            return path_length-1
+        else:
+            return path_length
+
+    def get_room(self,room_cor,_dict):
+        for room, value in _dict.items():
+            if  value !=None:
+                if room_cor in value:
+                    return room
+        return None
     def getGoalOrientedProblems(self):
         '''
         '''
@@ -342,25 +429,36 @@ class problemDecomposer():
         returns a dict of agent indexes that are able to move the box at pos box_idx in the box list
         and adds an initial value for the weight of an agent
         '''
+        #TODO in same room?
         return {idx:0 for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]}
 
     def searchPossibleBoxesForGoalIndex(self,goal_idx):
         '''
         returns a list of box-indexes that are able to satisfy the goal at pos goad_idx in the goal list
         '''
-        return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
+        if self.separated_rooms_exisit:
+            goal_room = self.get_room(self.state.goal_positions[goal_idx],self.goals_per_room)
+            return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx] and self.state.box_positions[idx] in self.boxes_per_room[goal_room]]
+        else:
+            return [idx for idx in range(len(self.state.box_types)) if self.state.goal_types[goal_idx] ==self.state.box_types[idx]]
 
     def searchPossibleGoalsForBoxIndex(self,box_idx):
         '''
         returns a list of goal-indexes that are able to store the box at index box_idx
         '''
+        #TODO in same room?
         return [idx for idx in range(len(self.state.goal_types)) if self.state.goal_types[idx] ==self.state.box_types[box_idx]]
 
     def searchPossibleAgentsForBoxIndex(self,box_idx):
         '''
         returns a list of agent indexes that are able to move the boxes at pos i in the box list
         '''
-        return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
+        if self.separated_rooms_exisit:
+            #get room of goal
+            box_room = self.get_room(self.state.box_positions[box_idx],self.boxes_per_room)
+            return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx] and idx in self.agents_per_room[box_room]]
+        else:
+            return [idx for idx in range(len(self.state.agent_colors)) if self.state.box_colors[box_idx]==self.state.agent_colors[idx]]
 
     def assign_tasks_greedy(self):
         '''
@@ -401,59 +499,66 @@ class problemDecomposer():
         # - pick agent that has lowest workload and is closest to box
         # - estimate workload of agents based on distance box to goal
 
-    def assign_agent_goals(self, coordi):
+    def assign_agent_goals(self, new_state=None, use_workload=True):
         '''
         idea:
         - for a goal in all goals
             get all boxes that can satisfy that goal
+            get all agents that can push boxes of this color
             get distance from goal to every such box
-            get distance of all possible agents for each such box and add current workload of the agent
+            get distance from every box to all agents and add current workload of the agent
             sum both, take lowest
             remove assigend box from list, add workload to agent
         - repeat for all goals
+
+        returns: [([agent_0_boxes],[agent_0_goals]), ([agent_1_boxes],[agent_1_goals]), ... ]
         '''
 
-        self.agt_tasks = [[] for i in range(len(self.state.agent_colors))]
+        # allow to call this function with a new state, without instanciating PD again
+        if not new_state == None:
+            self.state = new_state
 
-        #first step: assign boxes to goals--------------------------------------
-        print(self.state.box_types)
+
+        #TODO: Estimate the updated distance after agent got "assigned" a task
+        self.agt_goals = [[] for i in range(len(self.state.agent_colors))]
+        self.agt_boxes = [[] for i in range(len(self.state.agent_colors))]
         assigned_boxes =[]
 
         wrkld = [0]*len(self.state.agent_colors)
 
         for i in range(len(self.state.goal_types)):
 
-            print("-----------------------")
-            print(i)
-            print("current goal pos: {}".format(self.state.goal_positions[i]))
-
-            #get all possible boxes that could satisfy current goal
+            #get all possible boxes that could satisfy current goal -> they all have the same color!
+            #TODO: Only get agents/boxes within the same room
             psbl_boxes = list(set(self.searchPossibleBoxesForGoalIndex(i))-set(assigned_boxes))
-            psbl_boxes_pos = [self.state.box_positions[j] for j in psbl_boxes]
-            print("possible box pos: {}".format(psbl_boxes_pos))
+            psbl_boxes_pos = [self.state.box_positions[n] for n in psbl_boxes]
 
-            added_dists = coordi.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
-            print("added_dists: {}".format(added_dists))
+            #get all possible agents that can move boxes of this color
+            psbl_agents = self.searchPossibleAgentsForBoxIndex(psbl_boxes[0])
+            psbl_agents_pos = [self.state.agent_positions[n] for n in psbl_agents]
 
-            assigned_agents = []
-            #get all possible agents for each box in possible boxes
+            added_dists = self.distances_to_position_in_list(self.state.goal_positions[i],psbl_boxes_pos)
+
+            closest_agents = []
             for k,pb in enumerate(psbl_boxes):
-                #get distance to agents for box
-                psbl_agents = self.searchPossibleAgentsForBoxIndex(pb)
-                psbl_agents_pos = [self.state.agent_positions[n] for n in psbl_agents]
-                dists_box_2_agents = coordi.distances_to_position_in_list(self.state.box_positions[pb],psbl_agents_pos)
+
+                #get distance to all possible agents for box
+                dists_box_2_agents = self.distances_to_position_in_list(self.state.box_positions[pb],psbl_agents_pos)
 
                 #get current workload for all possible agents
                 psbl_wrkld = [wrkld[w] for w in psbl_agents]
 
                 #add workload to distance
-                dists_wrkld = [x+y for x,y in zip(dists_box_2_agents, psbl_wrkld)]
+                if use_workload == True:
+                    dists_wrkld = [x+y for x,y in zip(dists_box_2_agents, psbl_wrkld)]
+                else:
+                    dists_wrkld = dists_box_2_agents
 
                 #take min of distance+workload (fastest agent to fullfill goal)
                 min_idx = dists_wrkld.index(min(dists_wrkld))
 
-                #this agent takes the task
-                assigned_agents.append(psbl_agents[min_idx])
+                #this agent is the closest
+                closest_agents.append(psbl_agents[min_idx])
 
                 #update the distances
                 added_dists[k] += dists_wrkld[min_idx]
@@ -461,15 +566,15 @@ class problemDecomposer():
             assigned_boxes.append(psbl_boxes[added_dists.index(min(added_dists))])
 
             #update workload of the agent that finally takes the task
-            assigned_agt = assigned_agents[added_dists.index(min(added_dists))]
+            assigned_agt = closest_agents[added_dists.index(min(added_dists))]
             wrkld[assigned_agt] +=  added_dists[k]+dists_box_2_agents[min_idx]
 
-            self.agt_tasks[assigned_agt].append(assigned_boxes[i])
+            self.agt_boxes[assigned_agt].append(assigned_boxes[i])
+            self.agt_goals[assigned_agt].append(i)
 
-        print(self.agt_tasks)
-        print("done, assinged boxes for goals: {}".format(assigned_boxes))
-
+        self.agt_tasks=[(self.agt_boxes[i],self.agt_goals[i]) for i in range(0,len(self.agt_boxes))]
         return self.agt_tasks
+
 
     def getTasks(self):
         return self.Tasks

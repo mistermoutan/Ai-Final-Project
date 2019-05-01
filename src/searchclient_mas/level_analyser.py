@@ -14,11 +14,12 @@ import time
 class LevelAnalyser:
 
     def __init__(self,state: StateMA):
+        self.state = state #had to add this (Tom)
         self.bfs_trees = {}
         self.vertices = set()
         self.walls = set()
         self.goal_positions = {goal_pos for goal_pos in state.goal_positions}
-        self.box_positions = {box_pos for box_pos in state.box_positions} 
+        self.box_positions = {box_pos for box_pos in state.box_positions}
         self.agent_positions = [agent_pos for agent_pos in state.agent_positions] #agents are identified by the order their positions appear in the array
         self.rooms = None #list
         self.corridors = None
@@ -36,7 +37,7 @@ class LevelAnalyser:
                 else:
                     self.walls.add((i,j))
 
- 
+
     def separate_rooms_exist(self):
         '''True if there are separate rooms (isolated parts of the level), False otherwise'''
         return self.is_connected_component(self.vertices)
@@ -46,10 +47,10 @@ class LevelAnalyser:
 
         #assert self.separate_rooms_exist(), "There are no isolated rooms"
         if self.rooms: #rooms already built
-            return 
-        initial_vertex = self.vertices.pop() 
+            return
+        initial_vertex = self.vertices.pop()
         self.vertices.add(initial_vertex)
-        tree = self.bfs_tree(initial_vertex) 
+        tree = self.bfs_tree(initial_vertex)
         vertices_list = list(self.vertices) #will need to iterate
         rooms = []
 
@@ -58,9 +59,9 @@ class LevelAnalyser:
         rooms.append(initial_room)
 
         #while we haven't accounted for all vertices to be in their room
-        while self.sum_len_elements_of_list(rooms) != len(self.vertices): 
+        while self.sum_len_elements_of_list(rooms) != len(self.vertices):
             vertex_not_in_initial_room = self.from_not_in(vertices_list,rooms)
-            tree = self.bfs_tree(vertex_not_in_initial_room) 
+            tree = self.bfs_tree(vertex_not_in_initial_room)
             new_room = []
             new_room = {(i,j) for i,j in tree.keys()}
             rooms.append(new_room)
@@ -69,9 +70,9 @@ class LevelAnalyser:
         self.rooms = rooms
 
     def get_agent_distribution_per_room(self):
-        """More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
+        '''More efficient way of doing this? depends on the balance of nr of rooms vr nr of agents
         Builds self.agents_per_room dictionary ->  room: agents in room
-        """
+        '''
         self.locate_separate_rooms()
         if self.agents_per_room:
             return
@@ -102,7 +103,7 @@ class LevelAnalyser:
         #    assert self.agents_per_room[agent], "Agent was not assigned a room"
 
     def get_goals_distribution_per_room(self):
-        """get dict of goal distribution in each room; 
+        """get dict of goal distribution in each room;
         self.goals_per_room dictionary ->  room:goal_positions"""
 
         self.locate_separate_rooms()
@@ -114,7 +115,7 @@ class LevelAnalyser:
             self.goals_per_room[room_index] = goals_in_room or None
 
     def get_box_distribution_per_room(self):
-        """get dict of box distribution in each room; 
+        """get dict of box distribution in each room;
         self.boxes_per_room dictionary->  room:box_positions"""
 
         self.locate_separate_rooms()
@@ -152,6 +153,16 @@ class LevelAnalyser:
        # self.delete_useless_elements
 
  
+            self.boxes_per_room[room_index] =   boxes_in_room or None
+
+    def get_box_indices_per_room(self): #had to add this (Tom)
+        '''get list of box_indices per room'''
+        self.locate_separate_rooms()
+        self.boxes_per_room = []
+        for room_index in range(len(self.rooms)):
+            boxes_in_room = [i for i,box_pos in enumerate(self.state.box_positions) if box_pos in self.rooms[room_index]]
+            self.boxes_per_room.append(boxes_in_room)
+
     def locate_corridors(self):
         '''Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  '''
         # Consider: if corridor is of size 1 it's just a "door", still say it a corridor?
@@ -167,7 +178,7 @@ class LevelAnalyser:
             else:
                 corridors_in_room = self.break_container_into_adjacent_vertices(corridor_vertices_of_room)
                 self.corridors[room_index] = corridors_in_room
-                
+
         print("\nSelf.corridors: ",self.corridors)
 
     def locate_open_areas(self):
@@ -179,7 +190,7 @@ class LevelAnalyser:
         self.open_areas = {}
         number_of_rooms = len(self.rooms)
         for room_index in range(number_of_rooms):
-            #get vertices that are corridors of a room as a single set 
+            #get vertices that are corridors of a room as a single set
             corridors_of_room = self.corridors[room_index]
             if corridors_of_room:
                 corridor_vertices_of_room = self.union_of_sets(corridors_of_room)
@@ -222,7 +233,6 @@ class LevelAnalyser:
                 list_sets_illegal_vertices = corridors              
             else:
                 list_sets_illegal_vertices = [goals_of_room]
-
 
             print("\nROOM %s" %(room_index))
             print("GOALS OF ROOM")
@@ -282,7 +292,7 @@ class LevelAnalyser:
 
     def run_bfs(self,source_vertex,cutoff_vertex=None,store_tree = True): #add self.bfs_trees_cut?
         '''
-        Builds complete bfs tree with source_vertex as root, adds it so self.bfs_trees. 
+        Builds complete bfs tree with source_vertex as root, adds it so self.bfs_trees.
         Tree is in the form of a dictionary structured in the following way: {vertex:(parent)}
         A cutoff_vertex may be passed in order to stop building the tree once that vertex is reached.
         May lead to congestion due to path similarity as it is used to get shortest paths from vertices to the source/root vertex
@@ -290,8 +300,8 @@ class LevelAnalyser:
         assert source_vertex in self.vertices
         if source_vertex in self.bfs_trees: #if tree is already built
             return
-        
-        queue = deque([source_vertex]) 
+
+        queue = deque([source_vertex])
         explored_set = set([source_vertex])
         parent = {} # vertex:parent
         parent[source_vertex] = None #this is different from the graph class! Facilitates some of this methods, for keys and values of dict comparison
@@ -301,12 +311,12 @@ class LevelAnalyser:
             if current_vertex == cutoff_vertex:
                 break
             #filter out explored neighbours
-            unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]  
+            unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]
             #mark them as explored
             explored_set.update(unexplored_neighbours)
             #add them to queue
             queue.extend(unexplored_neighbours)
-            #Add a new entry to the dictionary for each neighbour, potining to the current 
+            #Add a new entry to the dictionary for each neighbour, potining to the current
             #node as their parent
             node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
             parent.update(node_parent_pairs)
@@ -322,7 +332,7 @@ class LevelAnalyser:
         assert source_vertex in self.vertices
         #if tree is not built, build it and store it
         if source_vertex not in self.bfs_trees:
-            self.run_bfs(source_vertex)    
+            self.run_bfs(source_vertex)
         return self.bfs_trees[source_vertex]
 
     def bfs_tree_no_store(self,source_vertex):
@@ -332,17 +342,17 @@ class LevelAnalyser:
         return tree
 
     def bfs_shortestpath_notree(self,source_vertex,target_vertex,illegal_vertices = {}, cutoff_branch = None):
-        ''' 
+        '''
         Returns Shortest path between two vertices without having a tree pre built or building one and storing it in self.bfs_trees
         If there is no path between the two vertices, returns None. May be useful if memory/time problems arise.
         '''
         assert source_vertex in self.vertices and target_vertex in self.vertices,  "Insert coordinates that are part of the state or not walls"
         if source_vertex == target_vertex:
             return deque()
-        queue = deque([source_vertex]) 
+        queue = deque([source_vertex])
         explored_set = set([source_vertex])
         explored_set.update(illegal_vertices)
-        parent = {} # vertex:parent 
+        parent = {} # vertex:parent
         counter = 0
         while queue:
             if counter == cutoff_branch:
@@ -353,13 +363,13 @@ class LevelAnalyser:
                 return path
 
             #filter out explored neighbours
-            unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]  
+            unexplored_neighbours = [v for v in self.get_neighbours(current_vertex) if not v in explored_set]
 
             #mark them as explored
             explored_set.update(unexplored_neighbours)
             #add them to queue
             queue.extend(unexplored_neighbours)
-            #Add a new entry to the dictionary for each neighbour, potining to the current 
+            #Add a new entry to the dictionary for each neighbour, potining to the current
             #node as their parent
             node_parent_pairs = [(v,current_vertex) for v in unexplored_neighbours]
             parent.update(node_parent_pairs)
@@ -375,11 +385,11 @@ class LevelAnalyser:
         parent = parent_dict[target_vertex]
         #get path, composed of vertices
         while parent != source_vertex:
-            path.insert(0,parent) 
-            parent = parent_dict[parent] 
+            path.insert(0,parent)
+            parent = parent_dict[parent]
         path.insert(0,source_vertex) #still missing the source vertex (it has no parent)
-        return path      
- 
+        return path
+
 
     ##########################################################
     ###############           UTILS               ############
@@ -402,17 +412,17 @@ class LevelAnalyser:
             for path in neighbours_shortest_paths:
                 if len(path) > 5:
                     return True
-        
+
         return False
 
     def is_corridor_candidate(self,vertex):
         neighbours = [n for n in self.get_neighbours(vertex)]
         if len(neighbours) == 1: #3 walls around him
-            return self.corridor_vertex_condition(neighbours[0]) or False 
-            
+            return self.corridor_vertex_condition(neighbours[0]) or False
+
         elif self.corridor_vertex_condition(vertex):
             return True
-        else: 
+        else:
             return False
 
     def is_connected_component(self,container_of_vertices: set, particular_vertices_are_all_in_a_component= None, vertices = None):
@@ -510,7 +520,7 @@ class LevelAnalyser:
         list_of_deques = []
         while container:
             current_vertex = container.pop()
-            adjacent_to_current_vertex = self.find_adjacent_vertices_in_container(current_vertex,container) 
+            adjacent_to_current_vertex = self.find_adjacent_vertices_in_container(current_vertex,container)
             adjacent_to_current_vertex.update([current_vertex]) #we'll say the current vertex is adjacent to himself because we use this for determining corridors
             container.difference_update(adjacent_to_current_vertex)
             list_of_deques.append(adjacent_to_current_vertex)
@@ -550,7 +560,7 @@ class LevelAnalyser:
         #print(len(adjacent_to_vertex) == len(container))
         return len(adjacent_to_vertex) == len(container)
 
-        
+
     def is_corner(self,vertex):
         (x,y) = vertex
         opt1,opt2,opt3,opt4 = {(x-1,y),(x,y+1)},{(x+1,y),(x,y+1)},{(x+1,y),(x,y-1)},{(x-1,y),(x,y-1)}
@@ -608,7 +618,7 @@ class LevelAnalyser:
         if in_walls:
             neighbours = {n for n in neighbours if n in self.walls}
         return neighbours
-    
+
     def get_neighbours_2coordinates_away(self,vertex):
         assert vertex in self.vertices
         (x,y) = vertex
@@ -632,7 +642,7 @@ class LevelAnalyser:
         lenght = 0
         for element in list_:
             lenght += len(element)
-        return lenght      
+        return lenght
 
     def from_not_in (self, from_container, not_in_containers):
         '''Get an element in from_container that isn't in any of the not_in_containers,
@@ -645,7 +655,7 @@ class LevelAnalyser:
                     break
             if element not in explored_elements:
                 return element
-                
+
         if len(explored_elements) == len(from_container):
             return None
 
@@ -664,7 +674,7 @@ class LevelAnalyser:
         else:
             raise ValueError("Vertices are not adjacent")
 
-        return (_from,direction)    
+        return (_from,direction)
 
     def get_children_dictionary(self,parent_dictionary):
         '''Turn dictionary in form children:(parent) to parent:(children)'''
@@ -682,9 +692,9 @@ class LevelAnalyser:
     def are_walls (self,vertices):
         are_walls = {v for v in vertices if self.is_wall(v)}
         return are_walls
-    
+
     def deep_copy(self,x):
-        return copy.deepcopy(x)  
+        return copy.deepcopy(x)
 
 #def locate_high_density_areas:
 #def locate_high_density_clustered_goals_in_corridor:
@@ -707,7 +717,7 @@ maze = [                                        #6            #8
         [False,True, True, False, False, False, False, True,  True,  True, False],
         [False,False,True,False, False, False,  False, True,  True,  True, False],
         [False,False, False,False, False,False, False, False, False, False,False]
-                             #3                
+                             #3
     ]
 
 builder = StateBuilder()
