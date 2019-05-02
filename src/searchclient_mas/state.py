@@ -672,12 +672,12 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    if self.box_types[box] is int:
+                    if isinstance(self.box_types[box], int):
                         line.append(chars[self.box_types[box]].upper())
                     else:
                         line.append(self.box_types[box].upper())
                 elif goal is not None:
-                    if self.goal_types[goal] is int:
+                    if isinstance(self.goal_types[goal], int):
                         line.append(chars[self.goal_types[goal]].lower())
                     else:
                         line.append(self.goal_types[goal].lower())

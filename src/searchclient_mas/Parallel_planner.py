@@ -287,6 +287,7 @@ class ParallelPlanner:
                     continue
                 heapq.heappush(pq, (pn.value, pn))
         # This can only happen if the given coordinates are not in the same connected component
+        assert False, "agent, goal, box combination was invalid and should never have been considered"
         return None
 
     def clear_path(self, path, agent, box):
@@ -463,7 +464,7 @@ class ParallelPlanner:
     def complete_goal(self, goal):
         boxes, agents = self.find_boxes_and_agents_for_goal(goal)
         for box in boxes:
-            # TODO: sort agents by business
+            # TODO: sort agents by business and distance
             for agent in agents:
                 goal_plan = self.find_goal_plan(goal, agent, box)
                 if goal_plan is not None:

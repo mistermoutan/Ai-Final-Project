@@ -181,7 +181,7 @@ def main():
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
     #hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-    hard_coded_file_name = "../levels/chokepoint.lvl"
+    hard_coded_file_name = "../comp17/MAAIoliMAsh.lvl"
     server_messages = sys.stdin
     if os.path.isfile(hard_coded_file_name):
         server_messages = open(hard_coded_file_name)
@@ -228,8 +228,6 @@ def main():
         client = SearchClient(server_messages)
         #Follow this to get where the planning happens
         client.solve_the_problem()
-
-
 
 if __name__ == '__main__':
     main()
