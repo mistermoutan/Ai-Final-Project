@@ -1,42 +1,62 @@
 from parallel_realizer import HighLevelPartialPlan
-from goal_analyzer import GoalAnalyzer, get_neighbours
+from goal_analyzer import GoalAnalyzer,GoalMetric, get_neighbours
 from queue import Queue
 from state import StateMA
 from parallel_realizer import ParallelRealizer
+from collections import defaultdict
+from typing import List
 import test_utilities as tu
 import heapq
 
 class PathNode:
-    def __init__(self, pos, parent=None):
+    def __init__(self, pos, parent=None, value=0):
         self.parent = parent
         self.pos = pos
+        self.value = value
+
+    def to_set(self):
+        res = set()
+        curr = self
+        while curr is not None:
+            res.add(curr.pos)
+            curr = curr.parent
+        return res
+
+    def __repr__(self):
+        return "{}:{}".format(self.pos, self.value)
+
+    def __lt__(self, other):
+        return self.value < other.value
 
 class ParallelPlanner:
     def __init__(self, state: StateMA):
-        self.initial_state= state
+        self.initial_state = state
         self.state = state.copy()
         self.goal_analyzer = GoalAnalyzer(state)
-        self.goal_order = self.goal_analyzer.compute_goal_order_plan()
-        self.immovable_boxes = {}
         self.current_plan = []
+        self.blocked = set()
+        self.completed = set()
+        self.unusable_boxes = set()
+        self.unusable_agents = set()
 
-    def find_box_and_agent_for_goal(self, goal_id):
-        # TODO: do this in a smart way, not at random
-        # TODO: have this function yield? in case found match is not usable we don't wanna restart the process
-        # TODO: what if this is agent goal?
+    def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
-        viable_boxes = []
+        if self.state.goal_agent[goal_id]:
+            return ([None], [int(g_type)])
+        else:
+            viable_boxes = []
+            viable_agents = []
+            b_color = None
+            for i, b_type in enumerate(self.state.box_types):
+                if g_type == b_type and i not in self.unusable_boxes:
+                    viable_boxes.append(i)
+                    b_color = self.state.box_colors[i]
 
-        for b_type, i in enumerate(self.state.box_types):
-            if i in self.immovable_boxes:
-                continue
-            if g_type == b_type:
-                viable_boxes.append(i)
+            for i, a_color in enumerate(self.state.agent_colors):
+                if a_color == b_color and i not in self.unusable_agents:
+                    viable_agents.append(i)
 
-        for a_color, i in enumerate(self.state.agent_colors):
-            for b in viable_boxes:
-                if self.state.box_colors[b] == self.state.agent_colors:
-                    return b, i
+            return viable_boxes, viable_agents
 
     def get_node_before_position(self, node: PathNode, pos):
         curr = node
@@ -45,20 +65,20 @@ class ParallelPlanner:
                 return curr.pos
             curr = curr.parent
 
-    def move_box_to_storage(self, pos):
-        box_id = self.state.box_by_cords[pos]
-        color = self.state.box_colors[box_id]
+    def move_box_to_storage(self, pos, state, forbidden=set(), custom_agent_func=None):
+        box_id = state.box_by_cords[pos]
+        color = state.box_colors[box_id]
 
         # returns true if position is a free storage space
         def check_storage(x):
-            return self.state.is_free(x) and self.goal_analyzer.is_storage(x)
+            return state.is_free(x) and self.goal_analyzer.is_storage(x) and x not in forbidden
 
         # returns true if position is agent at the position is same color as the box
         def check_agent(x):
-            if x in self.state.agent_by_cords:
-                agent_id = self.state.agent_by_cords[x]
-                return color == self.state.agent_colors[agent_id]
-            return False
+            if x in state.agent_by_cords:
+                agent_id = state.agent_by_cords[x]
+                return color == state.agent_colors[agent_id]
+            return None
 
         # check if it is possible to change the orientation of agent around the box at given position
         def check_turning(x):
@@ -66,76 +86,82 @@ class ParallelPlanner:
             viable = 0
 
             for n in neighbors:
-                if self.state.is_free(n):
+                if state.is_free(n):
                     viable += 1
 
             return viable > 2
 
         # find nearest storage possible
-        storage_node = self.find_path_to_condition(pos, check_storage)
+        storage_node = self.find_path_to_condition(pos,state, check_storage)
         if storage_node is None:
-            return False
+            return None
 
         # find nearest available agent
-        agent_node = self.find_path_to_condition(pos, check_agent)
+        agent_node = self.find_path_to_condition(pos, state, check_agent)
         if agent_node is None:
-            return False
+            return None
 
         agent_pre_box = self.get_node_before_position(agent_node, pos)
 
-        # check if we can orient the agent however we want
-        can_turn = self.find_path_to_condition(pos, check_turning)
+        # check if we can orient the agent however we want, this is possible if we can find a layout like this:
+        # o
+        # xo
+        # o
+        # where x is a node with 3 or more neighbors
+        # so we do 3 checks 1 search from the agent, 1 search from the goal and
+        # finally we do 1 simple check at the box position
+        can_turn = self.find_path_to_condition(pos, state, check_turning)
         if can_turn is None:
-            # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
-            return False
+            can_turn = self.find_path_to_condition(storage_node.pos, state, check_turning)
+            if can_turn is None:
+                if not check_turning(pos):
+                    # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
+                    return None
 
         box_final_pos = storage_node.pos
         agent_origin = agent_node.pos
 
-        self.state.set_box_position(pos, box_final_pos)
+        state.set_box_position(pos, box_final_pos)
         # Temporarily remove agent from the board before deciding where to put him around the box
-        self.state.set_agent_position(agent_origin, box_final_pos)
+        state.set_agent_position(agent_origin, box_final_pos)
 
-        agent_node_finished = self.find_path_to_condition(box_final_pos, check_storage)
+        agent_node_finished = self.find_path_to_condition(box_final_pos, state, check_storage)
         if agent_node_finished is None:
             # TODO: this should be a very rare case, we could return the agent back to his origin if we want instead
 
             # undo state changes made for search
-            self.state.set_agent_position(box_final_pos, agent_origin)
-            self.state.set_box_position(box_final_pos, pos)
+            state.set_agent_position(box_final_pos, agent_origin)
+            state.set_box_position(box_final_pos, pos)
 
-            return False
+            return None
 
         agent_final = agent_node_finished.pos
-        self.state.set_agent_position(box_final_pos, agent_final)
+        state.set_agent_position(box_final_pos, agent_final)
 
-        self.current_plan.append(HighLevelPartialPlan(self.state.agent_by_cords[agent_final], agent_origin, agent_final,
-                                                      box_id, pos, box_final_pos))
+        return HighLevelPartialPlan(state.agent_by_cords[agent_final], agent_origin, agent_final,
+                                                      box_id, pos, box_final_pos)
 
-        return True
-
-    def move_agent_to_storage(self, pos):
+    def move_agent_to_storage(self, pos, state, forbidden=set()):
 
         def check_storage(x):
-            return self.state.is_free(x) and self.goal_analyzer.is_storage(x)
+            return state.is_free(x) and self.goal_analyzer.is_storage(x) and x not in forbidden
 
         # move box to storage may affect agents which is why we must ensure that agent is still present ingiven position
-        if pos not in self.state.agent_by_cords:
-            return False
+        if pos not in state.agent_by_cords:
+            return None
 
-        storage_node = self.find_path_to_condition(pos, check_storage)
+        storage_node = self.find_path_to_condition(pos,state, check_storage)
         if storage_node is None:
-            return False
+            return None
 
         final_pos = storage_node.pos
 
-        self.current_plan.append(HighLevelPartialPlan(self.state.agent_by_cords[pos], pos, final_pos))
-        self.state.set_agent_position(pos, final_pos)
+        state.set_agent_position(pos, final_pos)
 
-        return True
+        return HighLevelPartialPlan(state.agent_by_cords[final_pos], pos, final_pos)
 
     # finds shortest path from pos to a square given by the condition function using BFS
-    def find_path_to_condition(self, pos, condition) -> PathNode:
+    def find_path_to_condition(self, pos, state, condition) -> PathNode:
         seen = set()
         seen.add(pos)
         start_node = PathNode(pos, None)
@@ -148,21 +174,21 @@ class ParallelPlanner:
             curr = q.get()
             neighbors = get_neighbours(curr.pos)
             for n in neighbors:
-                if self.state.in_bounds(n) and condition(n):
+                if state.in_bounds(n) and condition(n):
                     return PathNode(n, curr)
-                if n not in seen and self.state.is_free(n):
+                if n not in seen and state.is_free(n):
                     seen.add(n)
                     q.put(PathNode(n, curr))
 
         return None
 
-    def get_not_stored_objects(self):
+    def get_not_stored_objects(self, state):
         not_stored = set()
-        for i in self.state.box_positions:
+        for i in state.box_positions:
             if not self.goal_analyzer.is_storage(i):
                 not_stored.add(("box", i))
 
-        for i in self.state.agent_positions:
+        for i in state.agent_positions:
             if not self.goal_analyzer.is_storage(i):
                 not_stored.add(("agent", i))
 
@@ -170,36 +196,317 @@ class ParallelPlanner:
 
     def prepare_storage(self):
 
-        not_stored = self.get_not_stored_objects()
 
+        plan = []
+        state = self.state.copy()
+        not_stored = self.get_not_stored_objects(state)
         while len(not_stored) > 0:
             changed = False
             for type, pos in not_stored:
                 if type == "box":
-                    changed = changed | self.move_box_to_storage(pos)
+                    res = self.move_box_to_storage(pos, state)
+                    if res is not None:
+                        plan.append(res)
+                        changed = True
                 if type == "agent":
-                    changed = changed | self.move_agent_to_storage(pos)
+                    res = self.move_agent_to_storage(pos, state)
+                    if res is not None:
+                        plan.append(res)
+                        changed = True
 
             if not changed:
                 break
 
-            not_stored = self.get_not_stored_objects()
-        # TODO: clean this up to not use internal structures?
-        return self.current_plan, self.state
+            not_stored = self.get_not_stored_objects(state)
+        return plan, state
 
+    def get_state_color_info(self):
+        color_agents = defaultdict(int)
+        for color in self.state.agent_colors:
+            color_agents[color] += 1
+        color_goals = defaultdict(int)
+        type_color_map = {}
+
+        for i in range(len(self.state.box_types)):
+            type = self.state.box_types[i]
+            color = self.state.box_colors[i]
+            type_color_map[type] = color
+
+        for type, agent_goal in zip(self.state.goal_types, self.state.goal_agent):
+            if not agent_goal:
+                color = type_color_map[type]
+                color_goals[color] += 1
+
+        return color_agents, color_goals, type_color_map
+
+    def goal_value(self, gm: GoalMetric):
+        val = gm.loss
+        if not gm.leaf:
+            val += 5
+        if gm.agent_goal:
+            # we want to complete agent goals as late as possible because agents are mobile
+            # and may be required to clear for other goals
+            val += 5000
+        return val
+
+    def clear_rooms(self, path: set, state: StateMA, room_ids: List[int]):
+        # TODO: remove stuff that you need from this room
+        # TODO: put useless stuff in this room?
+        return state, []
+
+    def required(self, item, is_box=True):
+        # TODO: determine if we will need this to be accessible after goal is completed
+        return True
+
+    def find_easiest_path(self, begin, end) -> PathNode:
+        initial = PathNode(begin)
+        pq = []
+        # TODO: there may be some inefficiencies here
+        heapq.heappush(pq, (initial.value, initial))
+        seen = set()
+        while pq:
+            res = heapq.heappop(pq)
+            _, state = res
+            if state.pos in seen:
+                continue
+            if state.pos == end:
+                return state
+            seen.add(state.pos)
+
+            for n in get_neighbours(state.pos):
+                pn = None
+                if n in self.blocked:
+                    continue
+                if self.state.is_free(n):
+                    pn = PathNode(n, state, state.value + 1)
+                elif n in self.state.agent_by_cords:
+                    pn = PathNode(n, state, state.value + 3)  # penalize for passing an agent
+                elif n in self.state.box_by_cords:
+                    pn = PathNode(n, state, state.value + 18) # penalize for passing a box
+                else:
+                    continue
+                heapq.heappush(pq, (pn.value, pn))
+        # This can only happen if the given coordinates are not in the same connected component
+        return None
+
+    def clear_path(self, path, agent, box):
+        boxes_in_path = set()
+        agents_in_path = set()
+
+        for pos in path:
+            if pos in self.state.box_by_cords:
+                box_id = self.state.box_by_cords[pos]
+                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
+                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
+                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
+                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
+                if box_id != box:
+                    boxes_in_path.add(box_id)
+            elif pos in self.state.agent_by_cords:
+                agent_id = self.state.agent_by_cords[pos]
+                if agent_id != agent:
+                    agents_in_path.add(agent_id)
+
+        plan_index = 0
+        current_plan = []
+        state = self.state.copy()
+        while len(boxes_in_path) > 0 or len(agents_in_path) > 0:
+            # update what needs to be done
+            while plan_index < len(current_plan):
+                pln = current_plan[plan_index]
+                if pln.box_id is not None:
+                    boxes_in_path.remove(pln.box_id)
+                if pln.agent_id in agents_in_path:
+                    agents_in_path.remove(pln.agent_id)
+                plan_index += 1
+
+            if len(boxes_in_path) == 0 and len(agents_in_path) == 0:
+                break
+
+            changed = False
+            for b in boxes_in_path:
+                box_pos = state.box_positions[b]
+                partial_plan = self.move_box_to_storage(box_pos, state, path)
+                if partial_plan is not None:
+                    changed = True
+                    current_plan.append(partial_plan)
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: we also want to try to ensure that other agents used to move the boxes can return to the path for more work
+            if changed:
+                # we wanna retry some boxes before we start trying to move the agents
+                continue
+
+            for a in agents_in_path:
+                a_pos = state.agent_positions[a]
+                partial_plan = self.move_agent_to_storage(a_pos, state, path)
+                if partial_plan is not None:
+                    changed = True
+                    current_plan.append(partial_plan)
+
+            if not changed:
+                return None
+
+        return state, current_plan
+
+
+    def find_goal_plan(self, goal, agent, box):
+        plan = []
+        path = set()
+        agent_pos = self.state.agent_positions[agent]
+        goal_pos = self.state.goal_positions[goal]
+        box_pos = None
+        
+        if box is not None:
+            box_pos = self.state.box_positions[box]
+            if box_pos == goal_pos:
+                # TODO: if goal is already solved we may not need to do anything, but we also might want to clear rooms
+                return plan
+
+            box_plan = self.find_easiest_path(box_pos, goal_pos)
+            agent_plan = self.find_easiest_path(agent_pos, box_pos)
+            path = box_plan.to_set().union(agent_plan.to_set())
+        else:
+            path = self.find_easiest_path(agent_pos, goal_pos).to_set()
+
+        res = self.clear_path(path, agent, box)
+
+        if res is None:
+            return None
+
+        state, plan = res
+
+        isolated_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
+
+        state, room_clearing_plan = self.clear_rooms(path, state, isolated_rooms)
+
+        plan.extend(room_clearing_plan)
+
+        # these positions may have changed so we need them updated
+        agent_pos = state.agent_positions[agent]
+        if box_pos is not None:
+            box_pos = state.box_positions[box]
+
+        def is_goal(x):
+            return x == goal_pos
+
+        def is_box(x):
+            return x == box_pos
+
+        # check if it is possible to change the orientation of agent around the box at given position
+        def check_turning(x):
+            neighbors = get_neighbours(x)
+            viable = 0
+
+            for n in neighbors:
+                if state.is_free(n):
+                    viable += 1
+
+            return viable > 2
+
+
+
+        if box is None:
+            path = self.find_path_to_condition(agent_pos, state, is_goal)
+            if path is None:
+                return None
+            else:
+                plan.append(HighLevelPartialPlan(agent, agent_pos, goal_pos))
+                state.set_agent_position(agent_pos, goal_pos)
+        else:
+
+            agent_to_box = self.find_path_to_condition(agent_pos,state, is_box)
+            if agent_to_box is None:
+                return None
+
+            box_to_goal = self.find_path_to_condition(box_pos, state, is_goal)
+            if box_to_goal is None:
+                return None
+
+            can_turn = self.find_path_to_condition(goal_pos, state, check_turning)
+            if can_turn is None:
+                can_turn = self.find_path_to_condition(agent_pos, state, check_turning)
+                if can_turn is None:
+                    if not check_turning(box_pos):
+                        # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
+                        return None
+
+            # TODO: check if agent will be useful after goal is complete
+
+            agent_final = None
+            for n in get_neighbours(goal_pos):
+                if state.is_free(n):
+                    agent_final = n
+                else:
+                    continue
+                good = True
+                for room in isolated_rooms:
+                    if n in self.goal_analyzer.rooms[room]:
+                        good = False
+                if good:
+                    break
+            assert agent_final is not None, "something fucky happened when choosing final position for agent after delivering box"
+            partial = HighLevelPartialPlan(agent, agent_pos, agent_final, box, box_pos, goal_pos)
+            state.set_agent_position(agent_pos, agent_final)
+            state.set_box_position(box_pos, goal_pos)
+            plan.append(partial)
+
+        self.state = state
+        return plan
+
+    def complete_goal(self, goal):
+        boxes, agents = self.find_boxes_and_agents_for_goal(goal)
+        for box in boxes:
+            # TODO: sort agents by business
+            for agent in agents:
+                goal_plan = self.find_goal_plan(goal, agent, box)
+                if goal_plan is not None:
+                    return goal_plan
+        return None
 
     def compute_plan(self):
-        # TODO : change this to work for agent goals
 
-        for goal in self.goal_order:
-            #TODO: move required stuff out of rooms getting blocked when goal is completed
-            box, agent = self.find_box_and_agent_for_goal(goal)
+        # TODO: make use of this info and maybe add one for boxes?
+        color_agents_left, color_goals_left, type_color_map = self.get_state_color_info()
+        complete_plan = []
+        while len(self.completed) < len(self.state.goal_positions):
+            goal_order = self.goal_analyzer.get_viable_goals(self.completed)
+            goal_order = sorted(goal_order, key=self.goal_value)
+            goal_order = [g.id for g in goal_order]
+            goal_plan = None
+            goal = None
+            for goal in goal_order:
+                goal_plan = self.complete_goal(goal)
+                if goal_plan is not None:
+                    break
 
-            path = self.find_path_to_box(agent, box)
-            # TODO: for item on path move to storage
+            if goal_plan is None:
+                # TODO: by setting some stuff as immovable we may be able to change path choice to one that is solvable
+                # TODO: by moving some stuff to storage first we may also be able to solve it
+                assert False, "no solution could be found"
+            else:
+                complete_plan.extend(goal_plan)
+                blocked_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
+                for room in blocked_rooms:
+                    room_verts = self.goal_analyzer.rooms[room]
+                    self.blocked = self.blocked.union(room_verts)
+                self.completed.add(goal)
+                self.blocked.add(self.state.goal_positions[goal])
+                goal_pos = self.state.goal_positions[goal]
+                if self.state.goal_agent[goal]:
+                    self.unusable_agents.add(self.state.agent_by_cords[goal_pos])
+                else:
+                    self.unusable_boxes.add(self.state.box_by_cords[goal_pos])
+                #print(self.state)
 
-            path = self.move_box_to_goal(agent, box, goal)
-            # TODO: for item on path move to storage
+        return complete_plan
+
 
 
 
@@ -252,16 +559,66 @@ def storage_realization_test():
         result = result.get_child(a)
         assert result is not None, "something has gone wrong in realization :("
 
-    # TODO: something is wrong with StateMa.__eq__() causing this to not be correct
+    # TODO: something is wrong with StateMA.__eq__() causing this to not be correct
     if str(result) != str(expected_state):
         print("target:\n", expected_state)
         print("result:\n", result)
         assert False, "something has gone wrong in plan realization or partial plan was never valid :("
 
 
+def compute_plan_test():
+    maze = tu.create_maze(10)
+    for i in range(1, 9):
+        maze[1][i] = tu.box('a', 'blue')
+        maze[2][i] = tu.box('b', 'green')
+
+
+    maze[8][5] = tu.goal('a')
+    maze[7][1] = tu.goal('b')
+    maze[8][2] = tu.goal('b')
+    maze[8][1] = tu.goal('a')
+    maze[8][3] = tu.goal('a')
+    maze[7][2] = tu.goal('a')
+    maze[6][1] = tu.goal('a')
+
+    maze[3][5] = tu.agent(0, 'blue')
+    maze[4][5] = tu.agent(1, 'green')
+
+    maze[8][8] = tu.goal(0, True)
+    maze[8][7] = tu.goal(1, True)
+
+    state = tu.make_state(maze)
+
+
+    planner = ParallelPlanner(state)
+    #planner.goal_analyzer.print_storage_spaces()
+
+    plan = planner.compute_plan()
+    realizer = ParallelRealizer(state)
+    action_plan = realizer.realize_plan(plan)
+    print("Initial:")
+    print(state)
+    result = state
+    count = 0
+    for a in action_plan:
+        # print(a)
+        # print(state)
+        old = result
+        result = result.get_child(a)
+        if result is None:
+            print(old)
+            print(count)
+            print(a)
+            old.get_child(a)
+            assert False, "something has gone wrong in realization :("
+        count += 1
+
+    print("result:\n", result)
+    print("solution_length:", len(action_plan))
 
 from state import StateBuilder
 
 if __name__ == '__main__':
     #prepare_storage_test()
-    storage_realization_test()
+    #storage_realization_test()
+    compute_plan_test()

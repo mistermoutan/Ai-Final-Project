@@ -380,7 +380,7 @@ on possible agents that can bring possible boxes to specific goals
 '''
 class problemDecomposer():
     def __init__(self,state, graph_of_level):
-        self.Tasks  = []
+        self.Tasks = []
         self.Plan = []
         self.state = state
         self.graph_of_level = graph_of_level

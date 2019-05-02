@@ -103,7 +103,9 @@ class SpaceTracker:
         row, col = pos
         return self.latest_update[row][col] > time_step
 
-    def print_time_step(self,t):
+    def print_time_step(self, t):
+        if t >= len(self.spaces):
+            t = len(self.spaces) - 1
         step = self.spaces[t]
 
         s = ""
@@ -241,7 +243,8 @@ class ParallelRealizer:
             if in_range:
                 for a in get_neighbours(agent_pos):
                     if spaces.is_free(timestep, a) and a != box_pos:
-                        children.append(PlanState(timestep, a, agent_pos, state))
+                        s = PlanState(timestep, a, agent_pos, state)
+                        children.append(s)
 
             # noop
             children.append(PlanState(timestep, agent_pos, box_pos, state))

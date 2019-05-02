@@ -23,7 +23,9 @@ def agent(id,color):
 def box(type,color):
     return "b:"+str(type)+":"+str(color)
 
-def goal(type):
+def goal(type,a=False):
+    if a:
+        return "g:"+str(type) + ":T"
     return "g:"+str(type)
 
 def make_state(matrix):
@@ -46,7 +48,10 @@ def make_state(matrix):
                 builder.add_box(e[1], (i,j), e[2])
             #AGoal
             elif e[0] == "g":
-                builder.add_goal(e[1], (i,j))
+                if len(e) == 3:
+                    builder.add_goal(e[1], (i,j), True)
+                else:
+                    builder.add_goal(e[1], (i,j))
             else: 
                 raise AssertionError("Cannot recognize " + e[0] + " as an agent, box or goal")
             

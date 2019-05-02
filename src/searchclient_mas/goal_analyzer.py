@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 from state import StateMA, StateSA
 from collections import defaultdict
 import queue
@@ -8,6 +9,16 @@ def get_neighbours(vertex):
     """Returns neighbours as set"""
     (x, y) = vertex
     return {(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)}
+
+class GoalMetric:
+    def __init__(self, id, loss, leaf, agent_goal):
+        self.id = id
+        self.loss = loss
+        self.leaf = leaf
+        self.agent_goal = agent_goal
+
+    def __repr__(self):
+        return "{}: (loss:{}, leaf:{}, agent:{})".format(self.id, self.loss, self.leaf, self.agent_goal)
 
 
 class GoalAnalyzer:
@@ -148,7 +159,7 @@ class GoalAnalyzer:
         return important_neighbours < 2, loss, losses
 
     def free_space(self, id):
-        return len(self.rooms[id])
+        return len(self.get_storage_spaces_for_room(id))
 
     def isolated(self,i, id, removed):
         # returns true if a room is isolated from all other vertices
@@ -224,12 +235,6 @@ class GoalAnalyzer:
         # computes a plan on how to order to goals in order to complete them, operates under the assumption that
         # every box is mobile and currently assumes every room has infinite space and goal cells are empty
 
-        # TODO use different metric? perhaps use distance from largest room?
-        #eccentricities = self.compute_goal_eccentricity()
-        #eccentricity_order = [(eccentricities[i], pos) for i, pos in enumerate(self.state.goal_positions)]
-        #eccentricity_order = sorted(eccentricity_order,key=lambda x: -x[0])
-        #eccentricity_order = [x[1] for x in eccentricity_order]
-
         # TODO: find space left  and use as metric as well
 
         removed = set()
@@ -275,16 +280,21 @@ class GoalAnalyzer:
 
         return plan
 
-    def get_viable_goals(self, completed):
+    def get_viable_goals(self, completed=set()) -> List[GoalMetric]:
         incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions) if i not in completed}
         available = []
 
         for i in incomplete_goals:
             cutsafe, cycle = self.check_cutsafe_cycle(i, completed, False)
             if cutsafe:
-                available.append(i)
+                available.append(GoalMetric(i, self.compute_loss(i, completed), not cycle, self.state.goal_agent[i]))
 
+        # TODO: sort them by some metric before returning?
         return available
+
+    def update_viability(self, completed, old_viability, removed):
+        # TODO: we dont have to recompute the whole thing if we know which goal has jsut been completed
+        pass
 
     def get_isolated_by_goal_completion(self, goal, completed):
         """ computes which adjacent rooms will be isolated after given goal is completed given previously completed goals """

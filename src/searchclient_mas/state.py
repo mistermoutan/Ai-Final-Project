@@ -328,7 +328,7 @@ class StateMA:
 
         self.goal_types = [g[0] for g in goals]
         self.goal_positions = [g[1] for g in goals]
-        # self.goal_agent = [g[2] for g in goals]
+        self.goal_agent = [g[2] for g in goals]
         self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
 
         self.parent = None
@@ -369,7 +369,7 @@ class StateMA:
         # TODO make a shallow copy solution
         maze = self.maze
         boxes = [(i,j,k) for i,j,k in zip(self.box_types ,self.box_positions, self.box_colors)]
-        goals = [(i,j) for i,j in zip(self.goal_types ,self.goal_positions)]
+        goals = [(i,j,k) for i,j,k in zip(self.goal_types ,self.goal_positions, self.goal_agent)]
         agents = [(i,j) for i,j in zip(self.agent_positions ,self.agent_colors)]
 
         return StateMA(maze, boxes, goals, agents)
