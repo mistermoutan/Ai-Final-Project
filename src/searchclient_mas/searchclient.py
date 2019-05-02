@@ -3,8 +3,8 @@
 import sys
 import traceback
 from state import StateSA,StateMA,StateBuilder
-from problemDecomposer import problemDecomposer,Task,HTN
-from coordinator import Coordinator
+#from problemDecomposer import problemDecomposer,Task,HTN
+#from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
 from parallel_planner import ParallelPlanner
 import os
@@ -68,9 +68,7 @@ class SearchClient:
 
         cols = max([len(line) for line in init])
         maze = [[True for _ in range(cols)] for _ in range(len(init))]
-        agent = []
-        boxes = []
-        goals = []
+        builder = StateBuilder()
         type_count = 0
         seen_types = {}
         row = 0
@@ -81,8 +79,7 @@ class SearchClient:
 
                 elif char in "0123456789":
                     agent_id = int(char)
-                    agent_spec = ((row, col),colors[char])
-                    agent.insert(agent_id, agent_spec)
+                    builder.add_agent(agent_id, (row, col), colors[char])
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -90,7 +87,7 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    boxes.append((type, (row, col),colors[char]))
+                    builder.add_box(type, (row, col),colors[char])
                 elif char == ' ':
                     # Free cell.
                     pass
@@ -103,15 +100,20 @@ class SearchClient:
             for col, char in enumerate(line):
                 if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
+                    agent_goal = False
+                    if char in "0123456789":
+                        agent_goal = True
                     if char.lower() in seen_types.keys():
                         type = seen_types[char.lower()]
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    goals.append((type, (row, col)))
+
+                    builder.add_goal(type, (row, col), agent_goal)
             row += 1
 
-        self.initial_state = StateMA(maze,boxes,goals,agent)
+        builder.set_maze(maze)
+        self.initial_state = builder.build_StateMA()
 
         self.sendComment("Initialized SearchClient")
 
@@ -177,32 +179,30 @@ def main():
     #If you supply a hard coded file name, it will run that hard coded level instead of
     #reading from the server. I can't find out how to pass command line arguments when
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
-    hard_coded_file_name = None
+    #hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-    #hard_coded_file_name = "../levels/chokepoint.lvl"
+    hard_coded_file_name = "../levels/chokepoint.lvl"
+    server_messages = sys.stdin
+    if os.path.isfile(hard_coded_file_name):
+        server_messages = open(hard_coded_file_name)
 
     #If a filename is passed as argument, we read directly from file instead of
     #using the server. Allows us to run debugger at the same time
     if len(sys.argv) >= 2:
         arg1 = sys.argv[1]
         if  os.path.isfile(arg1):
-            server_messages = open(sys.argv[1])
             client = SearchClient(server_messages)
             server_messages.close()
         elif arg1=='-htn':
-            server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('htn')
         elif arg1=='-htn_seq':
-            server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('htn_seq')
         elif arg1=='-greedy_decomposition':
-            server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('greedy_decomposition')
         elif arg1=='-par':
-            server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('par')
         else:
@@ -218,7 +218,6 @@ def main():
 
 
     elif hard_coded_file_name:
-        server_messages = open(hard_coded_file_name)
         client = SearchClient(server_messages)
         server_messages.close()
         #Follow this to get where the planning happens
