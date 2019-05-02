@@ -617,7 +617,6 @@ def compute_plan_test():
     print("result:\n", result)
     print("solution_length:", len(action_plan))
 
-from state import StateBuilder
 
 if __name__ == '__main__':
     #prepare_storage_test()

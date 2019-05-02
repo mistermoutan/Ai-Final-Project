@@ -6,7 +6,9 @@ from state import StateSA,StateMA,StateBuilder
 from problemDecomposer import problemDecomposer,Task,HTN
 from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
+from parallel_planner import ParallelPlanner
 import os
+
 
 
 class SearchClient:
@@ -134,6 +136,12 @@ class SearchClient:
             master_plan = coordinator.solve_greedy_decomposition()
             for action_vector in master_plan:
                 self.sendJointAction(action_vector)
+        elif solver=="par":
+            planner = ParallelPlanner(self.initial_state)
+            master_plan = planner.solve()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
+
 
 
     '''
@@ -193,6 +201,10 @@ def main():
             server_messages = sys.stdin
             client = SearchClient(server_messages)
             client.solve_the_problem('greedy_decomposition')
+        elif arg1=='-par':
+            server_messages = sys.stdin
+            client = SearchClient(server_messages)
+            client.solve_the_problem('par')
         else:
             raise ValueError("argument is not a solver")
 
