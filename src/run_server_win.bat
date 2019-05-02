@@ -1,0 +1,1 @@
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp17/MABeliebers.lvl" -g
