@@ -507,7 +507,10 @@ class ParallelPlanner:
 
         return complete_plan
 
-
+    def solve(self):
+        plan = self.compute_plan()
+        realizer = ParallelRealizer(self.initial_state)
+        return realizer.realize_plan(plan)
 
 
 def prepare_storage_test():
@@ -593,9 +596,7 @@ def compute_plan_test():
     planner = ParallelPlanner(state)
     #planner.goal_analyzer.print_storage_spaces()
 
-    plan = planner.compute_plan()
-    realizer = ParallelRealizer(state)
-    action_plan = realizer.realize_plan(plan)
+    action_plan = planner.solve()
     print("Initial:")
     print(state)
     result = state
