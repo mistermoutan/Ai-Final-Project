@@ -12,9 +12,10 @@ import os
 
 
 class SearchClient:
-    def __init__(self, server_messages,):
+    def __init__(self, server_messages, serverless=False):
         if not server_messages:
             return
+        self.serverless=serverless
         #Adapt to data structure and split msg in parts.
         self.domain = None
         self.levelname = None
@@ -160,11 +161,14 @@ class SearchClient:
     def sendJointAction(self,actions):
         #print(actions,file=sys.stderr,flush=True)
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
-        sys.stdout.write(jointAction+"\n")
-        sys.stdout.flush()
-
-
-        success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
+        success = None
+        if not self.serverless:
+            sys.stdout.write(jointAction+"\n")
+            sys.stdout.flush()
+            success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
+        else:
+            self.initial_state = self.initial_state.get_child(actions)
+            success = self.initial_state is not None
         return success
 
     def sendComment(self,comment):
@@ -181,29 +185,33 @@ def main():
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
     #hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-    hard_coded_file_name = "../comp17/MAAIoliMAsh.lvl"
+    file_name = None
     server_messages = sys.stdin
-    if os.path.isfile(hard_coded_file_name):
-        server_messages = open(hard_coded_file_name)
+    serverless = False
+    if len(sys.argv) > 2:
+        file_name = sys.argv[2]
+        if os.path.isfile(file_name):
+            server_messages = open(file_name)
+            serverless = True
 
     #If a filename is passed as argument, we read directly from file instead of
     #using the server. Allows us to run debugger at the same time
     if len(sys.argv) >= 2:
         arg1 = sys.argv[1]
         if  os.path.isfile(arg1):
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             server_messages.close()
         elif arg1=='-htn':
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('htn')
         elif arg1=='-htn_seq':
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('htn_seq')
         elif arg1=='-greedy_decomposition':
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('greedy_decomposition')
         elif arg1=='-par':
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('par')
         else:
             raise ValueError("argument is not a solver")
@@ -217,12 +225,12 @@ def main():
 
 
 
-    elif hard_coded_file_name:
-        client = SearchClient(server_messages)
-        server_messages.close()
-        #Follow this to get where the planning happens
-        client.solve_the_problem()
-
+    # elif hard_coded_file_name:
+    #     client = SearchClient(server_messages)
+    #     server_messages.close()
+    #     #Follow this to get where the planning happens
+    #     client.solve_the_problem()
+    #
     else:
         server_messages = sys.stdin
         client = SearchClient(server_messages)

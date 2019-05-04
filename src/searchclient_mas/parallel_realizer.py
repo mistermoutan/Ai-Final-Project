@@ -207,13 +207,13 @@ class ParallelRealizer:
                 changes += 1
 
             if state.box is None or manhattan_dist(state.box, box_target) == 0:
-                return steps + manhattan_dist(agent_target, state.agent) + changes
+                return steps + 5*manhattan_dist(agent_target, state.agent) + changes
             else:
                 dist_to_box = manhattan_dist(state.agent, state.box) - 1
                 box_to_goal = manhattan_dist(state.box, box_target) + changes
 
                 # TODO: find some coefficients for the different metrics
-                return steps + 2*dist_to_box + 2*box_to_goal + goal_diff
+                return steps + 5*dist_to_box + 5*box_to_goal + goal_diff
 
         def get_children(state: PlanState):
             timestep = state.time
