@@ -5,6 +5,7 @@ from state import StateMA
 from parallel_realizer import ParallelRealizer
 from collections import defaultdict
 from typing import List
+from parallel_realizer import manhattan_dist
 import test_utilities as tu
 import heapq
 
@@ -36,6 +37,7 @@ class ParallelPlanner:
         self.current_plan = []
         self.blocked = set()
         self.completed = set()
+        self.agent_business = [0 for _ in state.agent_positions]
         self.unusable_boxes = set()
         self.unusable_agents = set()
 
@@ -411,8 +413,6 @@ class ParallelPlanner:
 
             return viable > 2
 
-
-
         if box is None:
             path = self.find_path_to_condition(agent_pos, state, is_goal)
             if path is None:
@@ -461,10 +461,19 @@ class ParallelPlanner:
         self.state = state
         return plan
 
+    def get_agent_order(self, box, agents: List[int]):
+        box_pos = self.state.box_positions[box]
+        agent_positions = self.state.agent_positions
+        agent_costs = [self.agent_business[i] + manhattan_dist(agent_positions[i], box_pos) for i in agents]
+        agent_temp = [(i,j) for i,j in zip(agent_costs, agents)]
+        return [j for i, j in sorted(agent_temp, key=lambda x: x[0])]
+
+
     def complete_goal(self, goal):
         boxes, agents = self.find_boxes_and_agents_for_goal(goal)
         for box in boxes:
             # TODO: sort agents by business and distance
+            agents = self.get_agent_order(box, agents)
             for agent in agents:
                 goal_plan = self.find_goal_plan(goal, agent, box)
                 if goal_plan is not None:
@@ -492,6 +501,15 @@ class ParallelPlanner:
                 # TODO: by moving some stuff to storage first we may also be able to solve it
                 assert False, "no solution could be found"
             else:
+                for p in goal_plan:
+                    business = 0
+                    if p.box_pos_end is None:
+                        business += manhattan_dist(p.agent_origin, p.agent_end)
+                    else:
+                        business += manhattan_dist(p.agent_origin, p.box_pos_origin)
+                        business += manhattan_dist(p.box_pos_origin, p.box_pos_end)
+                        business += manhattan_dist(p.box_pos_end, p.agent_end)
+                    self.agent_business[p.agent_id] += business
                 complete_plan.extend(goal_plan)
                 blocked_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
                 for room in blocked_rooms:
