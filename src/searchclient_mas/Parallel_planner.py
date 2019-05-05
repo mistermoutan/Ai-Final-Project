@@ -9,6 +9,8 @@ from parallel_realizer import manhattan_dist
 import test_utilities as tu
 import heapq
 
+
+
 class PathNode:
     def __init__(self, pos, parent=None, value=0):
         self.parent = parent
