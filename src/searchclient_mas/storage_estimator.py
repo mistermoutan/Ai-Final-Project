@@ -59,7 +59,7 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
     if n_free == 8:
         return value - 1
     elif n_free == 7:
-        return value - 10
+        return value - 5
     elif n_free == 6:
         p1, p2 = occupied
 
@@ -67,7 +67,7 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
         dy = abs(p1[1] - p2[1])
 
         if dx < 2 and dy < 2:
-            return value - 15
+            return value - 10
 
         if adj_map[p1] == wall and adj_map[p2] == wall:
             return 30
@@ -97,12 +97,23 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
         elif type == goal:
             goals += 1
 
-    if n_blocked > 2:
+    # TODO: check if we are blocking stuff off
+    # ex: * is being blocked off from the rest
+    #
+    # #0#
+    # #*
+    if n_blocked == 3:
         return value - 10 - 5*same - 10*diff - 15*goals
 
     splits = 0
 
     seen = set()
+
+    # here we check if it is the
+    #
+    # *0* or *0
+    #        **
+    # case
 
     for i in imm_neighbors:
         if (adj_map[i] == free or adj_map[i] == goal)and i not in seen:
@@ -123,6 +134,7 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
     penalty = 0
     if splits > 0:
         penalty = 50
+
     return value - penalty - splits*20 - 5*same - 10*diff - 15*goals
 
 def print_state_storage_values(state: StateMA):

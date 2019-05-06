@@ -6,6 +6,7 @@ from parallel_realizer import ParallelRealizer
 from collections import defaultdict
 from typing import List
 from parallel_realizer import manhattan_dist
+from storage_estimator import storage_value
 import test_utilities as tu
 import heapq
 
@@ -72,10 +73,10 @@ class ParallelPlanner:
     def move_box_to_storage(self, pos, state, forbidden=set(), custom_agent_func=None):
         box_id = state.box_by_cords[pos]
         color = state.box_colors[box_id]
-
+        ignore = {pos}
         # returns true if position is a free storage space
         def check_storage(x):
-            return state.is_free(x) and self.goal_analyzer.is_storage(x) and x not in forbidden
+            return state.is_free(x) and x not in forbidden and storage_value(x, state, ignore, self.blocked) > 80
 
         # returns true if position is agent at the position is same color as the box
         def check_agent(x):
@@ -129,6 +130,7 @@ class ParallelPlanner:
         # Temporarily remove agent from the board before deciding where to put him around the box
         state.set_agent_position(agent_origin, box_final_pos)
 
+        ignore = {agent_origin}
         agent_node_finished = self.find_path_to_condition(box_final_pos, state, check_storage)
         if agent_node_finished is None:
             # TODO: this should be a very rare case, we could return the agent back to his origin if we want instead
@@ -146,9 +148,10 @@ class ParallelPlanner:
                                                       box_id, pos, box_final_pos)
 
     def move_agent_to_storage(self, pos, state, forbidden=set()):
+        ignore = {pos}
 
         def check_storage(x):
-            return state.is_free(x) and self.goal_analyzer.is_storage(x) and x not in forbidden
+            return state.is_free(x) and x not in forbidden and storage_value(x, state, ignore, self.blocked) > 80
 
         # move box to storage may affect agents which is why we must ensure that agent is still present ingiven position
         if pos not in state.agent_by_cords:
@@ -427,10 +430,12 @@ class ParallelPlanner:
             agent_to_box = self.find_path_to_condition(agent_pos,state, is_box)
             if agent_to_box is None:
                 return None
-
             box_to_goal = self.find_path_to_condition(box_pos, state, is_goal)
             if box_to_goal is None:
-                return None
+                # if the box is unable to reach the goal the agent may be able to reach it
+                agent_to_goal = self.find_path_to_condition(agent_pos, state, is_goal)
+                if agent_to_goal is None:
+                    return None
 
             can_turn = self.find_path_to_condition(goal_pos, state, check_turning)
             if can_turn is None:
@@ -464,6 +469,8 @@ class ParallelPlanner:
         return plan
 
     def get_agent_order(self, box, agents: List[int]):
+        if box is None:
+            return agents
         box_pos = self.state.box_positions[box]
         agent_positions = self.state.agent_positions
         agent_costs = [self.agent_business[i] + manhattan_dist(agent_positions[i], box_pos) for i in agents]
