@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import List
 from parallel_realizer import manhattan_dist
 from storage_estimator import storage_value
+from level_analyser import LevelAnalyser
 import test_utilities as tu
 import heapq
 
@@ -43,9 +44,11 @@ class ParallelPlanner:
         self.agent_business = [0 for _ in state.agent_positions]
         self.unusable_boxes = set()
         self.unusable_agents = set()
+        self.level_analyzer = LevelAnalyser(state)
 
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
+        relevant_boxes, relevant_agents = self.level_analyzer.get_relevant_elements_to_goals(goal_id)
         if self.state.goal_agent[goal_id]:
             return ([None], [int(g_type)])
         else:
@@ -53,12 +56,12 @@ class ParallelPlanner:
             viable_agents = []
             b_color = None
             for i, b_type in enumerate(self.state.box_types):
-                if g_type == b_type and i not in self.unusable_boxes:
+                if g_type == b_type and i not in self.unusable_boxes and i in relevant_boxes:
                     viable_boxes.append(i)
                     b_color = self.state.box_colors[i]
 
             for i, a_color in enumerate(self.state.agent_colors):
-                if a_color == b_color and i not in self.unusable_agents:
+                if a_color == b_color and i not in self.unusable_agents and i in relevant_agents:
                     viable_agents.append(i)
 
             return viable_boxes, viable_agents

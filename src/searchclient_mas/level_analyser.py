@@ -29,7 +29,7 @@ class LevelAnalyser:
         self.boxes_per_room = None
         self.agents_per_room = None
         self.safe_storage = None
-        
+        self.goal_relevant = None
         row,col = np.asarray(state.maze).shape
         for i in range(row):
              for j in range(col):
@@ -128,7 +128,9 @@ class LevelAnalyser:
             boxes_in_room = {box_pos for box_pos in self.box_positions if box_pos in self.rooms[room_index]}
             self.boxes_per_room[room_index] = boxes_in_room or None        
 
-    def get_relevant_elements_to_goals(self):
+    def get_relevant_elements_to_goals(self, goal_id):
+        if self.goal_relevant is not None:
+            return self.goal_relevant[goal_id]
 
         self.locate_separate_rooms()
         self.get_goals_distribution_per_room()
@@ -144,10 +146,14 @@ class LevelAnalyser:
             agents_in_room = self.agents_per_room[room_id]
 
             for goal in goals_in_room:
-                relevant_elements_to_goals[goal] = (boxes_id_in_room,agents_in_room)
+                g = self.state.goal_by_cords[goal]
+                relevant_elements_to_goals[g] = (boxes_id_in_room,agents_in_room)
 
         print(relevant_elements_to_goals)
-        return relevant_elements_to_goals
+        self.goal_relevant = relevant_elements_to_goals
+
+        return self.goal_relevant[goal_id]
+
 
 
 
