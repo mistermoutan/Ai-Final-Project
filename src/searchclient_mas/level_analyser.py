@@ -19,13 +19,16 @@ class LevelAnalyser:
         self.bfs_trees = {}
         self.vertices = set()
         self.walls = set()
-        self.goal_positions = {goal_pos for goal_pos in state.goal_positions}
+        self.goal_positions = state.goal_positions
         self.box_positions = {box_pos for box_pos in state.box_positions}
         self.agent_positions = [agent_pos for agent_pos in state.agent_positions] #agents are identified by the order their positions appear in the array
         self.rooms = None #list
         self.corridors = None
         self.open_areas = None
+
         self.goals_per_room = None
+        self.room_of_goal = None
+
         self.boxes_per_room = None
         self.agents_per_room = None
         self.safe_storage = None
@@ -43,30 +46,44 @@ class LevelAnalyser:
         '''True if there are separate rooms (isolated parts of the level), False otherwise'''
         return self.is_connected_component(self.vertices)
 
-    def locate_separate_rooms(self):
-        '''Creates self.rooms: list containing each separate room as sets, this sets are all the vertices that correspond to a room'''
+    def locate_separate_rooms(self,old):
+        '''Creates self.rooms: list containing each separate room as sets, this sets are all the vertices that correspond to a room, only rooms with goals are built'''
 
-        #assert self.separate_rooms_exist(), "There are no isolated rooms"
         if self.rooms: #rooms already built
             return
-        initial_vertex = self.vertices.pop()
-        self.vertices.add(initial_vertex)
-        tree = self.bfs_tree(initial_vertex)
-        vertices_list = list(self.vertices) #will need to iterate
+            
         rooms = []
-
-        #initialize first room
+        self.goals_per_room = defaultdict(set)
+        self.room_of_goal = {}
+        
+        initial_goal = self.goal_positions[0]
+        explored_goals = {0} # we'll explore the first goal first
+        tree = self.bfs_tree(initial_goal)
         initial_room = {(i,j) for i,j in tree.keys()}
         rooms.append(initial_room)
 
-        #while we haven't accounted for all vertices to be in their room
-        while self.sum_len_elements_of_list(rooms) != len(self.vertices):
-            vertex_not_in_initial_room = self.from_not_in(vertices_list,rooms)
-            tree = self.bfs_tree(vertex_not_in_initial_room)
-            new_room = []
-            new_room = {(i,j) for i,j in tree.keys()}
-            rooms.append(new_room)
-            new_room = {}
+        self.room_of_goal[0] = 0 
+        self.goals_per_room[0].add(0)
+
+        #first goal is accounted for, so we check the rest
+        for goal_index, goal_pos in enumerate(self.goal_positions[1:]):
+            was_in_built_room = False
+            #check if goal is in any of pre-built rooms
+            for room_id, room in enumerate(rooms):
+                if goal_pos in room:
+                    self.goals_per_room[room_id].add(goal_index+1) #room 0 has the goal_index
+                    self.room_of_goal[goal_index+1] = room_id  #the goal index belongs to room 0
+                    explored_goals.add(goal_index+1)
+                    was_in_built_room = True
+                    break
+            #if the room was not in any of the pre built rooms
+            if not was_in_built_room:
+                tree = self.bfs_tree(goal_pos)
+                new_room = {(i,j) for i,j in tree.keys()}
+                rooms.append(new_room)
+                self.goals_per_room[len(rooms)-1].add(goal_index +1)
+                self.room_of_goal[goal_index +1] = len(rooms) - 1
+                explored_goals.add(goal_index +1)  
 
         self.rooms = rooms
 
@@ -140,6 +157,7 @@ class LevelAnalyser:
 
         relevant_elements_to_goals = {} #goal_id : (boxes_ids,agents_in_room)
 
+
         for room_id in range(len(self.rooms)):
             goals_in_room = self.goals_per_room[room_id]
             boxes_id_in_room = self.boxes_indices_per_room[room_id]
@@ -149,12 +167,9 @@ class LevelAnalyser:
                 g = self.state.goal_by_cords[goal]
                 relevant_elements_to_goals[g] = (boxes_id_in_room,agents_in_room)
 
-        print(relevant_elements_to_goals)
         self.goal_relevant = relevant_elements_to_goals
 
         return self.goal_relevant[goal_id]
-
-
 
 
     def detect_useless_elements(self,delete = True):
@@ -757,7 +772,8 @@ if __name__ == '__main__':
     builder.add_agent(2,(5,8),2)
 
     box_list = [(1,(3,7),1),(1,(3,9),1),(1,(1,2),0),(1,(5,7),2),(1,(2,2),0)]
-    goal_list = [(1,(1,8)),(1,(4,7)),(2,(3,2))]
+    goal_list = [(1,(1,8)),(1,(4,7))]#,(2,(3,2))]
+
     for t,pos,color in box_list:
         builder.add_box(t,pos,color)
     for t,pos in goal_list:
@@ -768,8 +784,9 @@ if __name__ == '__main__':
 
     print("FINISHED")
     L = LevelAnalyser(state)
-    L.get_relevant_elements_to_goals()
-    L.boxes_indices_per_room
+    L.locate_separate_rooms(False)
+    #L.get_relevant_elements_to_goals()
+    #L.boxes_indices_per_room
 
 
     #L.locate_safe_storage()

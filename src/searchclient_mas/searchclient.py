@@ -6,7 +6,7 @@ from state import StateSA,StateMA,StateBuilder
 #from problemDecomposer import problemDecomposer,Task,HTN
 #from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
-from parallel_planner import ParallelPlanner
+from Parallel_planner import ParallelPlanner
 import os
 
 

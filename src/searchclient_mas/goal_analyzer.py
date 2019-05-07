@@ -20,7 +20,6 @@ class GoalMetric:
     def __repr__(self):
         return "{}: (loss:{}, leaf:{}, agent:{})".format(self.id, self.loss, self.leaf, self.agent_goal)
 
-
 class GoalAnalyzer:
     def __init__(self, state: StateMA):
         self.vertices = set()
