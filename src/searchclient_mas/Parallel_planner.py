@@ -446,8 +446,8 @@ class ParallelPlanner:
             if can_turn is None:
                 can_turn = self.find_path_to_condition(agent_pos, state, check_turning)
                 if can_turn is None:
-                    if not check_turning(box_pos):
-                        # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
+                    can_turn = self.find_path_to_condition(box_pos, state, check_turning)
+                    if can_turn is None:
                         return None
 
             # TODO: check if agent will be useful after goal is complete
