@@ -14,6 +14,7 @@ import time
 class LevelAnalyser:
 
     def __init__(self,state: StateMA):
+        
         self.state = state #had to add this (Tom)
         self.bfs_trees = {}
         self.vertices = set()
@@ -88,6 +89,7 @@ class LevelAnalyser:
                         agents_in_room.add(agent)
                         accounted_for_agents.add(agent)
                 self.agents_per_room[room_index] = agents_in_room or None
+        print(self.agents_per_room)
 
         assert len(self.agent_positions) == len(accounted_for_agents), "Not all agents were accounted for"
 
@@ -126,10 +128,31 @@ class LevelAnalyser:
             boxes_in_room = {box_pos for box_pos in self.box_positions if box_pos in self.rooms[room_index]}
             self.boxes_per_room[room_index] = boxes_in_room or None        
 
-    def detect_useless_elements(self,delete = True):
+    def get_relevant_elements_to_goals(self):
+
+        self.locate_separate_rooms()
         self.get_goals_distribution_per_room()
         self.get_agent_distribution_per_room()
         self.get_box_distribution_per_room()
+        self.get_box_indices_per_room()
+
+        relevant_elements_to_goals = {} #goal_id : (boxes_ids,agents_in_room)
+
+        for room_id in range(len(self.rooms)):
+            goals_in_room = self.goals_per_room[room_id]
+            boxes_id_in_room = self.boxes_indices_per_room[room_id]
+            agents_in_room = self.agents_per_room[room_id]
+
+            for goal in goals_in_room:
+                relevant_elements_to_goals[goal] = (boxes_id_in_room,agents_in_room)
+
+        print(relevant_elements_to_goals)
+        return relevant_elements_to_goals
+
+
+
+    def detect_useless_elements(self,delete = True):
+
         if self.useless_rooms:
             return
         self.useless_rooms = [] #indexes of useless rooms
@@ -148,20 +171,20 @@ class LevelAnalyser:
                     pass
 
             # no agents in room
-            if not self.agents_per_room[room_index]
+            if not self.agents_per_room[room_index]:
+                pass
         
-       # self.delete_useless_elements
-
- 
-            self.boxes_per_room[room_index] =   boxes_in_room or None
+        #self.delete_useless_elements
+        #self.boxes_per_room[room_index] =   boxes_in_room or None
 
     def get_box_indices_per_room(self): #had to add this (Tom)
         '''get list of box_indices per room'''
         self.locate_separate_rooms()
-        self.boxes_per_room = []
+        self.boxes_indices_per_room = {}
         for room_index in range(len(self.rooms)):
-            boxes_in_room = [i for i,box_pos in enumerate(self.state.box_positions) if box_pos in self.rooms[room_index]]
-            self.boxes_per_room.append(boxes_in_room)
+            boxes_in_room = {i for i,box_pos in enumerate(self.state.box_positions) if box_pos in self.rooms[room_index]}
+            self.boxes_indices_per_room[room_index] = boxes_in_room
+
 
     def locate_corridors(self):
         '''Finds corridors for each room and stores them in self.corridors -> {room:list_of_corridors}  '''
@@ -234,19 +257,19 @@ class LevelAnalyser:
             else:
                 list_sets_illegal_vertices = [goals_of_room]
 
-            print("\nROOM %s" %(room_index))
-            print("GOALS OF ROOM")
-            print(self.goals_per_room[room_index])
-            print("NUMBER BOXES IN ROOM")
-            print(number_of_boxes_in_room)
-            print("List set illegal vertices")
-            print(list_sets_illegal_vertices)
+            #print("\nROOM %s" %(room_index))
+            #print("GOALS OF ROOM")
+            #print(self.goals_per_room[room_index])
+            #print("NUMBER BOXES IN ROOM")
+            #print(number_of_boxes_in_room)
+            #print("List set illegal vertices")
+            #print(list_sets_illegal_vertices)
             illegal_vertices = self.union_of_sets(list_sets_illegal_vertices)
-            print("illegal vertices")
-            print(illegal_vertices)
+            #print("illegal vertices")
+            #print(illegal_vertices)
             safe_storage_candidates = {v for v in self.rooms[room_index] if v not in illegal_vertices}  # safe storage can't be on goals or choke points
-            print("safe storage candidates")
-            print(safe_storage_candidates)
+            #print("safe storage candidates")
+            #print(safe_storage_candidates)
             vertices_to_add_again = set()
 
             while len(safe_storage_of_room) < number_of_boxes_in_room and safe_storage_candidates: # we either exhaust the candidates or reach a satisfying number of storage
@@ -265,8 +288,8 @@ class LevelAnalyser:
                     else:
                         room.add(safe_storage_candidate)  # if not, it remains part of the room as a normal vertex and not a wall 
 
-            print("safe storage of room")
-            print(safe_storage_of_room)
+            #print("safe storage of room")
+            #print(safe_storage_of_room)
             self.safe_storage[room_index] = safe_storage_of_room or None
             # add the vertices that were removed to both data sructures
             if safe_storage_of_room:
@@ -704,45 +727,51 @@ class LevelAnalyser:
 # in choke points : see if they connect different rooms
 
 
+if __name__ == '__main__':
+
+    print("STARTED")
+    agt0 = util.agent(0,"red")
+    agt1 = util.agent(1,"blue")
+    box0  = util.box("A", "blue")
+    maze = [                                        #6            #8
+            [False,False, False,False, False,False, False, False, False, False,False],
+            [False,True, True, False, False, False, False, False, True,  False, False],#1
+            [False,True, True, False, False, False, False, False,  True,  False, False],
+            [False,True, True, False, False, False, False, True,  True,  True, False], #3
+            [False,True, True, False, False, False, False, True,  True,  True, False],
+            [False,False,True,False, False, False,  False, True,  True,  True, False],
+            [False,False, False,False, False,False, False, False, False, False,False]
+                                #3
+        ]
+
+    builder = StateBuilder()
+    builder.set_maze(maze)
+    builder.add_agent(0,(1,1),0)
+    builder.add_agent(1,(3,7),1)
+    builder.add_agent(2,(5,8),2)
+
+    box_list = [(1,(3,7),1),(1,(3,9),1),(1,(1,2),0),(1,(5,7),2),(1,(2,2),0)]
+    goal_list = [(1,(1,8)),(1,(4,7)),(2,(3,2))]
+    for t,pos,color in box_list:
+        builder.add_box(t,pos,color)
+    for t,pos in goal_list:
+        builder.add_goal(t,pos)
+
+    state = builder.build_StateMA()
+    start = time.time()
+
+    print("FINISHED")
+    L = LevelAnalyser(state)
+    L.get_relevant_elements_to_goals()
+    L.boxes_indices_per_room
 
 
-agt0 = util.agent(0,"red")
-agt1 = util.agent(1,"blue")
-box0  = util.box("A", "blue")
-maze = [                                        #6            #8
-        [False,False, False,False, False,False, False, False, False, False,False],
-        [False,True, True, False, False, False, False, False, True,  False, False],#1
-        [False,True, True, False, False, False, False, False,  True,  False, False],
-        [False,True, True, False, False, False, False, True,  True,  True, False], #3
-        [False,True, True, False, False, False, False, True,  True,  True, False],
-        [False,False,True,False, False, False,  False, True,  True,  True, False],
-        [False,False, False,False, False,False, False, False, False, False,False]
-                             #3
-    ]
-
-builder = StateBuilder()
-builder.set_maze(maze)
-builder.add_agent(0,(1,1),0)
-builder.add_agent(1,(2,7),1)
-builder.add_agent(2,(5,8),2)
-
-box_list = [(1,(3,7),1),(1,(3,9),1),(1,(1,2),0),(1,(5,7),2),(1,(2,2),0)]
-goal_list = [(1,(1,8)),(1,(4,7)),(2,(3,2))]
-for t,pos,color in box_list:
-    builder.add_box(t,pos,color)
-for t,pos in goal_list:
-    builder.add_goal(t,pos)
-
-state = builder.build_StateMA()
-start = time.time()
-
-L = LevelAnalyser(state)
-L.locate_safe_storage()
-#print(L.corridors)
-#print(L.boxes_per_room)
-#print()
-#L.locate_safe_storage()
+    #L.locate_safe_storage()
+    #print(L.corridors)
+    #print(L.boxes_per_room)
+    #print()
+    #L.locate_safe_storage()
 
 
-end = time.time()
-print(end-start)
+    end = time.time()
+    print(end-start)
