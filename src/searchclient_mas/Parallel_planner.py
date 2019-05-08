@@ -301,6 +301,8 @@ class ParallelPlanner:
     def clear_rooms(self, path: set, state: StateMA, room_ids: List[int]):
         # TODO: remove stuff that you need from this room
         # TODO: put useless stuff in this room?
+
+
         return state, []
 
     def required(self, item, is_box=True):
