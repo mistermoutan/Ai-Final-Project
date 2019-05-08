@@ -6,7 +6,7 @@ from parallel_realizer import ParallelRealizer
 from collections import defaultdict
 from typing import List
 from parallel_realizer import manhattan_dist
-from storage_estimator import storage_value
+from storage_estimator import storage_value, print_state_storage_values
 from level_analyser import LevelAnalyser
 import test_utilities as tu
 import heapq
@@ -73,13 +73,10 @@ class ParallelPlanner:
                 return curr.pos
             curr = curr.parent
 
-    def move_box_to_storage(self, pos, state, forbidden=set(), custom_agent_func=None):
+    def move_box_to_storage(self, pos, state, forbidden=set()):
         box_id = state.box_by_cords[pos]
         color = state.box_colors[box_id]
         ignore = {pos}
-        # returns true if position is a free storage space
-        def check_storage(x):
-            return state.is_free(x) and x not in forbidden and storage_value(x, state, ignore, self.blocked) > 80
 
         # returns true if position is agent at the position is same color as the box
         def check_agent(x):
@@ -99,15 +96,22 @@ class ParallelPlanner:
 
             return viable > 2
 
-        # find nearest storage possible
-        storage_node = self.find_path_to_condition(pos,state, check_storage)
-        if storage_node is None:
-            return None
+        def is_free(x):
+            return x in ignore or state.is_free(x)
 
         # find nearest available agent
         agent_node = self.find_path_to_condition(pos, state, check_agent)
         if agent_node is None:
             return None
+
+        agent_origin = agent_node.pos
+        ignore.add(agent_origin)
+
+        # find nearest storage possible
+        storage_node = self.find_path_to_storage(pos, state, True, ignore, forbidden,cutoff=80)
+        if storage_node is None:
+            return None
+
 
         agent_pre_box = self.get_node_before_position(agent_node, pos)
 
@@ -118,23 +122,23 @@ class ParallelPlanner:
         # where x is a node with 3 or more neighbors
         # so we do 3 checks 1 search from the agent, 1 search from the goal and
         # finally we do 1 simple check at the box position
-        can_turn = self.find_path_to_condition(pos, state, check_turning)
+        can_turn = self.find_path_to_condition(pos, state, check_turning, is_free)
         if can_turn is None:
-            can_turn = self.find_path_to_condition(storage_node.pos, state, check_turning)
-            if can_turn is None:
-                if not check_turning(pos):
-                    # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
-                    return None
+            # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
+            return None
 
         box_final_pos = storage_node.pos
-        agent_origin = agent_node.pos
 
         state.set_box_position(pos, box_final_pos)
         # Temporarily remove agent from the board before deciding where to put him around the box
         state.set_agent_position(agent_origin, box_final_pos)
 
         ignore = {agent_origin}
-        agent_node_finished = self.find_path_to_condition(box_final_pos, state, check_storage)
+        # box may have been placed where agent is currently in which case we cannot ignore it
+        if box_final_pos in ignore:
+            ignore.remove(box_final_pos)
+
+        agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, forbidden, cutoff=80)
         if agent_node_finished is None:
             # TODO: this should be a very rare case, we could return the agent back to his origin if we want instead
 
@@ -153,14 +157,11 @@ class ParallelPlanner:
     def move_agent_to_storage(self, pos, state, forbidden=set()):
         ignore = {pos}
 
-        def check_storage(x):
-            return state.is_free(x) and x not in forbidden and storage_value(x, state, ignore, self.blocked) > 80
-
         # move box to storage may affect agents which is why we must ensure that agent is still present ingiven position
         if pos not in state.agent_by_cords:
             return None
 
-        storage_node = self.find_path_to_condition(pos,state, check_storage)
+        storage_node = self.find_path_to_storage(pos, state, False, ignore, forbidden)
         if storage_node is None:
             return None
 
@@ -170,8 +171,46 @@ class ParallelPlanner:
 
         return HighLevelPartialPlan(state.agent_by_cords[final_pos], pos, final_pos)
 
+    def find_path_to_storage(self, pos, state, is_box=True, empty=set(), forbidden=set(), cutoff=80):
+        seen = set()
+        seen.add(pos)
+        start_node = PathNode(pos, None)
+
+        q = Queue()
+        q.put(start_node)
+        best_val = -100
+        best_node = None
+
+        # use BFS to find nearest/best available storage node
+        while not q.empty():
+            curr = q.get()
+            neighbors = get_neighbours(curr.pos)
+            for n in neighbors:
+                if n in seen:
+                    continue
+                if state.is_free(n) or n in empty:
+                    node = PathNode(n, curr)
+                    if n not in forbidden:
+                        # TODO: what if we are sitting ontop of a goal?
+                        # TODO: balance this with distance somehow?
+                        value = storage_value(n, state, empty, self.blocked, is_box)
+                        if value >= cutoff:
+                            return node
+                        if value > best_val:
+                            best_val = value
+                            best_node = node
+
+                    seen.add(n)
+                    q.put(node)
+
+        return best_node
+
+
+
     # finds shortest path from pos to a square given by the condition function using BFS
-    def find_path_to_condition(self, pos, state, condition) -> PathNode:
+    def find_path_to_condition(self, pos, state, condition, is_free=None) -> PathNode:
+        if is_free is None:
+            is_free = state.is_free
         seen = set()
         seen.add(pos)
         start_node = PathNode(pos, None)
@@ -186,7 +225,7 @@ class ParallelPlanner:
             for n in neighbors:
                 if state.in_bounds(n) and condition(n):
                     return PathNode(n, curr)
-                if n not in seen and state.is_free(n):
+                if n not in seen and is_free(n):
                     seen.add(n)
                     q.put(PathNode(n, curr))
 
@@ -341,14 +380,11 @@ class ParallelPlanner:
                 if partial_plan is not None:
                     changed = True
                     current_plan.append(partial_plan)
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    # TODO: agent assigned to the box may be used to move the undesired box, we must insure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the goal box may be used to move the undesired box, we must ensure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the goal box may be used to move the undesired box, we must ensure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the goal box may be used to move the undesired box, we must ensure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the goal box may be used to move the undesired box, we must ensure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    # TODO: agent assigned to the goal box may be used to move the undesired box, we must ensure that he can return to his path!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     # TODO: we also want to try to ensure that other agents used to move the boxes can return to the path for more work
             if changed:
                 # we wanna retry some boxes before we start trying to move the agents
@@ -363,7 +399,6 @@ class ParallelPlanner:
 
             if not changed:
                 return None
-
         return state, current_plan
 
 
@@ -498,6 +533,7 @@ class ParallelPlanner:
         color_agents_left, color_goals_left, type_color_map = self.get_state_color_info()
         complete_plan = []
         while len(self.completed) < len(self.state.goal_positions):
+
             goal_order = self.goal_analyzer.get_viable_goals(self.completed)
             goal_order = sorted(goal_order, key=self.goal_value)
             goal_order = [g.id for g in goal_order]
@@ -511,7 +547,12 @@ class ParallelPlanner:
             if goal_plan is None:
                 # TODO: by setting some stuff as immovable we may be able to change path choice to one that is solvable
                 # TODO: by moving some stuff to storage first we may also be able to solve it
-                assert False, "no solution could be found"
+                import sys
+                #sys.stdout.write("# " + self.state.unsolved_goals_to_string())
+                sys.stdout.write("# could not finish the plan :(, realizing current plan with {} goals completed\n".format(len(self.completed)))
+                sys.stdout.flush()
+                return complete_plan
+                #assert False, "no solution could be found"
             else:
                 for p in goal_plan:
                     business = 0
