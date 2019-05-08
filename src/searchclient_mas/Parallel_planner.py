@@ -74,6 +74,12 @@ class ParallelPlanner:
             curr = curr.parent
 
     def move_box_to_storage(self, pos, state, forbidden=set()):
+        """
+        :param pos: current position of the box
+        :param state: the current state (will get changed if we successfully store the box)
+        :param forbidden: set of vertices that should not be considered for storage
+        :return: High level partial plan storing the box if it is possible in current position
+        """
         box_id = state.box_by_cords[pos]
         color = state.box_colors[box_id]
         ignore = {pos}
@@ -140,7 +146,6 @@ class ParallelPlanner:
 
         agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, forbidden, cutoff=80)
         if agent_node_finished is None:
-            # TODO: this should be a very rare case, we could return the agent back to his origin if we want instead
 
             # undo state changes made for search
             state.set_agent_position(box_final_pos, agent_origin)
@@ -191,8 +196,9 @@ class ParallelPlanner:
                 if state.is_free(n) or n in empty:
                     node = PathNode(n, curr)
                     if n not in forbidden:
-                        # TODO: what if we are sitting ontop of a goal?
+                        # TODO: what if we are sitting on top of a goal?
                         # TODO: balance this with distance somehow?
+                        # TODO: reduce value if going to be blocked and is needed
                         value = storage_value(n, state, empty, self.blocked, is_box)
                         if value >= cutoff:
                             return node
@@ -244,8 +250,6 @@ class ParallelPlanner:
         return not_stored
 
     def prepare_storage(self):
-
-
         plan = []
         state = self.state.copy()
         not_stored = self.get_not_stored_objects(state)
@@ -339,7 +343,6 @@ class ParallelPlanner:
                 heapq.heappush(pq, (pn.value, pn))
         # This can only happen if the given coordinates are not in the same connected component
         assert False, "agent, goal, box combination was invalid and should never have been considered"
-        return None
 
     def clear_path(self, path, agent, box):
         boxes_in_path = set()
