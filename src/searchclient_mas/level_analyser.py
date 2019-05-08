@@ -20,8 +20,8 @@ class LevelAnalyser:
         self.vertices = set()
         self.walls = set()
         self.goal_positions = state.goal_positions
-        self.box_positions = {box_pos for box_pos in state.box_positions}
-        self.agent_positions = [agent_pos for agent_pos in state.agent_positions] #agents are identified by the order their positions appear in the array
+        self.box_positions = state.box_positions
+        self.agent_positions = state.agent_positions #agents are identified by the order their positions appear in the array
         self.rooms = None #list
         self.corridors = None
         self.open_areas = None
@@ -30,9 +30,12 @@ class LevelAnalyser:
         self.room_of_goal = None
 
         self.boxes_per_room = None
+        self.room_of_box = None
+        self.useless_boxes = None 
 
         self.agents_per_room = None
         self.room_of_agent = None
+        self.useless_agents = None
 
         self.safe_storage = None
         self.goal_relevant = None
@@ -56,7 +59,6 @@ class LevelAnalyser:
         Builds also:
             self.goals_per_room -> {room_id: {goals_id's in room}} 
             self.room_of_goal -> {goal_id: room_id it belongs to}
-
         '''
 
         if self.rooms: #rooms already built
@@ -103,11 +105,11 @@ class LevelAnalyser:
         Builds:
             -   self.agents_per_room dictionary ->  {room: agent_ids of agents in room}
             -   self.room_of_agent -> {agent_id : room it is in}
-            -   self.useless_agents ->  [agent id's of useless agents]
+            -   self.useless_agents ->  [agent id's of useless agents], which are in rooms with no goals
 
         Choice: iterate over rooms or agents?  right now doing over rooms
         '''
-
+        
         self.locate_separate_rooms()
         if self.agents_per_room or self.room_of_agent:
             return
@@ -119,7 +121,6 @@ class LevelAnalyser:
         for room_index,room in enumerate(self.rooms):
             agents_in_room = set()
             unnacounted_for_agents = {agent for agent in range(len(self.agent_positions)) if agent not in accounted_for_agents}
-
             #iterate over agents that have not been accounted for
             for agent in unnacounted_for_agents: 
                 if self.agent_positions[agent] in room:
@@ -132,28 +133,55 @@ class LevelAnalyser:
         unnacounted_for_agents = {agent for agent in range(len(self.agent_positions)) if agent not in accounted_for_agents}
         
         assert None not in self.agents_per_room.values() , "There should not be rooms with no agents since all rooms have goals"
+        
+        #agents in rooms with no goals are useless
         if unnacounted_for_agents:
             self.useless_agents = unnacounted_for_agents
 
     def get_box_distribution_per_room(self):
-        """get dict of box distribution in each room;
-        self.boxes_per_room dictionary->  room:box_positions"""
+        """
+        Builds:
+            - self.boxes_per_room -> {room_id : id's of boxes in that room}
+            - self.room_of_box -> {box_id: room id that box is in}
+            - self.boxes_with_no_goal: [id of boxes with no goals] there do not get put into useless because they have an agent in the room that can move them
+            - self.useless_boxes -> [id of useless boxes], these do not make it into the above data structures
+        """
 
         self.locate_separate_rooms()
-        if self.boxes_per_room:
+        if self.boxes_per_room or self.room_of_box:
             return        
         self.boxes_per_room = {}
-        for room_index in range(len(self.rooms)):
-            boxes_in_room = {box_pos for box_pos in self.box_positions if box_pos in self.rooms[room_index]}
-            self.boxes_per_room[room_index] = boxes_in_room or None        
-        
-    def get_box_indices_per_room(self): #had to add this (Tom)
-        '''get list of box_indices per room'''
-        self.locate_separate_rooms()
-        self.boxes_indices_per_room = {}
-        for room_index in range(len(self.rooms)):
-            boxes_in_room = {i for i,box_pos in enumerate(self.state.box_positions) if box_pos in self.rooms[room_index]}
-            self.boxes_indices_per_room[room_index] = boxes_in_room
+        self.room_of_box = {}
+        accounted_for_boxes = set()
+        self.useless_boxes = []
+        self.boxes_with_no_goal = []
+
+        for room_index, room in enumerate(self.rooms):
+            boxes_in_room = set()
+            unnaunnacounted_for_boxes = {box_id for box_id in range(len(self.box_positions)) if box_id not in accounted_for_boxes}
+            for box_id in unnaunnacounted_for_boxes:
+                has_relevant_goal = self.room_has_goals_of_type_of_box(room_index,box_id) #there is an agent in the room that can move that box
+                has_relevant_agent = self.room_has_agents_of_color_of_box(room_index,box_id) #there is a goal in the room of the type of the box
+                if self.box_positions[box_id] in room:
+                    accounted_for_boxes.add(box_id)
+                    if has_relevant_agent and has_relevant_goal:
+                        self.room_of_box[box_id] = room_index
+                        boxes_in_room.add(box_id)
+                    elif has_relevant_agent and not has_relevant_goal:
+                        self.boxes_with_no_goal.append(box_id)
+                        self.room_of_box[box_id] = room_index
+                        boxes_in_room.add(box_id)
+                    elif not has_relevant_agent:
+                        self.useless_boxes.append(box_id)
+
+            self.boxes_per_room[room_index] = boxes_in_room or None
+        assert None not in self.boxes_per_room.values() , "There should not be rooms with no boxes since all rooms have goals"
+        # if there are no useless boxes
+        if not self.useless_boxes:
+            self.useless_boxes = None
+
+    def get_agents_with_no_goals(self):
+        pass
 
     def get_relevant_elements_to_goals(self, goal_id):
         if self.goal_relevant is not None:
@@ -162,22 +190,32 @@ class LevelAnalyser:
         self.locate_separate_rooms()
         self.get_agent_distribution_per_room()
         self.get_box_distribution_per_room()
-        self.get_box_indices_per_room()
 
         relevant_elements_to_goals = {} #goal_id : (boxes_ids,agents_in_room)
 
         for room_id in range(len(self.rooms)):
             goals_in_room = self.goals_per_room[room_id]
-            boxes_id_in_room = self.boxes_indices_per_room[room_id]
+            boxes_id_in_room = self.boxes_per_room[room_id]
             agents_in_room = self.agents_per_room[room_id]
 
             for goal in goals_in_room:
-                g = self.state.goal_by_cords[goal]
-                relevant_elements_to_goals[g] = (boxes_id_in_room,agents_in_room)
+                relevant_elements_to_goals[goal] = (boxes_id_in_room,agents_in_room)
 
         self.goal_relevant = relevant_elements_to_goals
 
         return self.goal_relevant[goal_id]
+
+    def detect_possible_useless_elements(self,):
+        #redundant in quantity
+        pass
+
+    def room_must_have (self,room):
+        '''
+        Room is a 
+        
+        '''
+        
+        
 
 
     def detect_useless_elements(self,delete = True):
@@ -202,6 +240,32 @@ class LevelAnalyser:
         
         #self.delete_useless_elements
         #self.boxes_per_room[room_index] =   boxes_in_room or None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def locate_corridors(self):
@@ -312,6 +376,16 @@ class LevelAnalyser:
                 room.update(safe_storage_of_room) 
             if vertices_to_add_again:
                 self.vertices.update(vertices_to_add_again) 
+
+    """
+    def get_box_indices_per_room(self): #had to add this (Tom)
+        '''get list of box_indices per room'''
+        self.locate_separate_rooms()
+        self.boxes_indices_per_room = {}
+        for room_index in range(len(self.rooms)):
+            boxes_in_room = {i for i,box_pos in enumerate(self.state.box_positions) if box_pos in self.rooms[room_index]}
+            self.boxes_indices_per_room[room_index] = boxes_in_room
+"""
 
 
     #def room_is_corridor(self):
@@ -433,6 +507,24 @@ class LevelAnalyser:
     ##########################################################
     ###############           UTILS               ############
     ##########################################################
+
+    def room_has_goals_of_type_of_box(self,room_id,box_id):
+        #goal id's of goals in room
+        for goal_id in self.goals_per_room[room_id]:
+            if self.state.goal_types[goal_id] == self.state.box_types[box_id]:
+                return True
+        return False
+
+    def room_has_agents_of_color_of_box(self,room_id,box_id):
+
+        self.get_agent_distribution_per_room()
+        for agent_id in self.agents_per_room[room_id]:
+            if self.state.agent_colors[agent_id] == self.state.box_colors[box_id]:
+                return True
+        return False
+
+
+
 
     def corridor_vertices_of_room(self,room):
         '''Returns all vertices in a room which are part of corridors'''
@@ -762,7 +854,7 @@ if __name__ == '__main__':
 
     builder = StateBuilder()
     builder.set_maze(maze)
-    builder.add_agent(0,(1,1),0)
+    builder.add_agent(0,(1,1),1) # (id,pos,color)
     builder.add_agent(1,(3,7),1)
     builder.add_agent(2,(5,8),2)
 
@@ -779,8 +871,11 @@ if __name__ == '__main__':
 
     print("FINISHED")
     L = LevelAnalyser(state)
-    L.locate_separate_rooms()
+    #L.locate_separate_rooms()
     L.get_agent_distribution_per_room()
+    L.get_box_distribution_per_room()
+
+    print(L.boxes_per_room)
     #L.get_relevant_elements_to_goals()
     #L.boxes_indices_per_room
 
