@@ -552,7 +552,7 @@ class ParallelPlanner:
                     return goal_plan
 
         # we could not complete the goal but we might after we unblock some agents
-        unblocking_plan = self.shitty_unblock_agents(goal)
+        unblocking_plan = self.mediocre_unblock_agents(goal)
 
         if unblocking_plan is None:
             # we are fucked here
@@ -571,7 +571,7 @@ class ParallelPlanner:
 
         # TODO: finish
 
-    def shitty_unblock_agents(self, goal):
+    def mediocre_unblock_agents(self, goal):
         room_id = 0
         # this is just so that the level analyzer is initialized
         _ = self.level_analyzer.get_relevant_elements_to_goals(goal)
@@ -593,11 +593,14 @@ class ParallelPlanner:
         og_state = self.state
         cleared = set()
         changed = True
+        agent_set_dict = dict()
+        for i in room_agents:
+            agent_set_dict[i] = {i}
         while changed and max_count > 0:
             changed = False
             for a1 in room_agents:
                 for a2 in room_agents:
-                    if a1 == a2 or (a1, a2) in cleared:
+                    if a1 in agent_set_dict[a2]:
                         continue
                     a1_pos = self.state.agent_positions[a1]
                     a2_pos = self.state.agent_positions[a2]
@@ -610,7 +613,9 @@ class ParallelPlanner:
                         clearing_plan.extend(plan)
                         self.state = state
                         changed = True
-                        cleared.add((a1,a2))
+                        union = agent_set_dict[a2].union(agent_set_dict[a1])
+                        for i in union:
+                            agent_set_dict[i] = union
             max_count -= 1
 
         if len(clearing_plan) == 0:
