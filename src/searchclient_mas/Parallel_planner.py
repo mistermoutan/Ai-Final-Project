@@ -409,7 +409,6 @@ class ParallelPlanner:
 
 
     def find_goal_plan(self, goal, agent, box):
-        print(self.state)
         plan = []
         path = set()
         agent_pos = self.state.agent_positions[agent]
