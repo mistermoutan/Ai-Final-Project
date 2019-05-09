@@ -9,8 +9,6 @@ from action import north,south,west,east,move,push,pull
 from Parallel_planner import ParallelPlanner
 import os
 
-
-
 class SearchClient:
     def __init__(self, server_messages, serverless=False):
         if not server_messages:

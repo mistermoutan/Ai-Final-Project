@@ -114,7 +114,7 @@ class ParallelPlanner:
         ignore.add(agent_origin)
 
         # find nearest storage possible
-        storage_node = self.find_path_to_storage(pos, state, True, ignore, forbidden,cutoff=80)
+        storage_node = self.find_path_to_storage(pos, state, True, ignore, forbidden,cutoff=90)
         if storage_node is None:
             return None
 
@@ -344,7 +344,7 @@ class ParallelPlanner:
         # This can only happen if the given coordinates are not in the same connected component
         assert False, "agent, goal, box combination was invalid and should never have been considered"
 
-    def clear_path(self, path, agent, box):
+    def clear_path(self, path, agent, box=None):
         boxes_in_path = set()
         agents_in_path = set()
 
@@ -403,11 +403,13 @@ class ParallelPlanner:
                     current_plan.append(partial_plan)
 
             if not changed:
+                # TODO: maybe the box/agent itself is blocking the path so we should move it out of the way
                 return None
         return state, current_plan
 
 
     def find_goal_plan(self, goal, agent, box):
+        print(self.state)
         plan = []
         path = set()
         agent_pos = self.state.agent_positions[agent]
@@ -474,8 +476,10 @@ class ParallelPlanner:
             if agent_to_box is None:
                 return None
             box_to_goal = self.find_path_to_condition(box_pos, state, is_goal)
+            pushable = True
             if box_to_goal is None:
                 # if the box is unable to reach the goal the agent may be able to reach it
+                pushable = False
                 agent_to_goal = self.find_path_to_condition(agent_pos, state, is_goal)
                 if agent_to_goal is None:
                     return None
@@ -485,23 +489,31 @@ class ParallelPlanner:
                 can_turn = self.find_path_to_condition(agent_pos, state, check_turning)
                 if can_turn is None:
                     can_turn = self.find_path_to_condition(box_pos, state, check_turning)
-                    if can_turn is None:
-                        return None
-
-            # TODO: check if agent will be useful after goal is complete
 
             agent_final = None
-            for n in get_neighbours(goal_pos):
-                if state.is_free(n):
-                    agent_final = n
+
+            if can_turn is None:
+                if pushable:
+                    agent_final = box_to_goal.parent.pos
                 else:
-                    continue
-                good = True
-                for room in isolated_rooms:
-                    if n in self.goal_analyzer.rooms[room]:
-                        good = False
-                if good:
-                    break
+                    # TODO: we may still be able to solve the goal even if we pull, wem ust jsut insure that there is 1
+                    # extra space left
+                    return None
+
+            # TODO: check if agent will be useful after goal is complete
+            if agent_final is None:
+                for n in get_neighbours(goal_pos):
+                    if state.is_free(n) or n == box_pos or n == agent_pos:
+                        agent_final = n
+                    else:
+                        continue
+                    good = True
+                    for room in isolated_rooms:
+                        if n in self.goal_analyzer.rooms[room]:
+                            good = False
+                    if good:
+                        break
+
             assert agent_final is not None, "something fucky happened when choosing final position for agent after delivering box"
             partial = HighLevelPartialPlan(agent, agent_pos, agent_final, box, box_pos, goal_pos)
             state.set_agent_position(agent_pos, agent_final)
@@ -524,16 +536,174 @@ class ParallelPlanner:
     def complete_goal(self, goal):
         boxes, agents = self.find_boxes_and_agents_for_goal(goal)
         for box in boxes:
-            # TODO: sort agents by business and distance
             agents = self.get_agent_order(box, agents)
             for agent in agents:
                 goal_plan = self.find_goal_plan(goal, agent, box)
                 if goal_plan is not None:
                     return goal_plan
+        return self.complete_goal_aggressive(goal)
+
+    def complete_goal_aggressive(self, goal):
+        boxes, agents = self.find_boxes_and_agents_for_goal(goal)
+        for box in boxes:
+            agents = self.get_agent_order(box, agents)
+            for agent in agents:
+                goal_plan = self.find_goal_plan(goal, agent, box)
+                if goal_plan is not None:
+                    return goal_plan
+
+        # we could not complete the goal but we might after we unblock some agents
+        unblocking_plan = self.shitty_unblock_agents(goal)
+
+        if unblocking_plan is None:
+            # we are fucked here
+            return None
+
+        for box in boxes:
+            agents = self.get_agent_order(box, agents)
+            for agent in agents:
+                goal_plan = self.find_goal_plan(goal, agent, box)
+                if goal_plan is not None:
+                    unblocking_plan.extend(goal_plan)
+                    return unblocking_plan
+
+        # we are fucked here
         return None
 
-    def compute_plan(self):
+        # TODO: finish
 
+    def shitty_unblock_agents(self, goal):
+        room_id = 0
+        # this is just so that the level analyzer is initialized
+        _ = self.level_analyzer.get_relevant_elements_to_goals(goal)
+        goal_pos = self.state.goal_positions[goal]
+        for i, spaces in enumerate(self.level_analyzer.rooms):
+            if goal_pos in spaces:
+                room_id = i
+                break
+
+        room_agents = list(self.level_analyzer.agents_per_room[room_id])
+        if len(room_agents) <= 1:
+            # nothing to be done
+            return None
+
+        # TODO: is this the ideal number?
+        max_count = 10
+        clearing_plan = []
+        #TODO: maybe we wanna restore this state?
+        og_state = self.state
+        cleared = set()
+        changed = True
+        while changed and max_count > 0:
+            changed = False
+            for a1 in room_agents:
+                for a2 in room_agents:
+                    if a1 == a2 or (a1, a2) in cleared:
+                        continue
+                    a1_pos = self.state.agent_positions[a1]
+                    a2_pos = self.state.agent_positions[a2]
+                    path = self.find_easiest_path(a1_pos, a2_pos)
+                    # we don't really wanna clear the agent itself
+                    path = path.parent
+                    res = self.clear_path(path.to_set(), a1_pos)
+                    if res is not None:
+                        state, plan = res
+                        clearing_plan.extend(plan)
+                        self.state = state
+                        changed = True
+                        cleared.add((a1,a2))
+            max_count -= 1
+
+        if len(clearing_plan) == 0:
+            return None
+        return clearing_plan
+
+    def unblock_agents(self, goal):
+        room_id = 0
+        # this is just so that the level analyzer is initialized
+        _ = self.level_analyzer.get_relevant_elements_to_goals(goal)
+        goal_pos = self.state.goal_positions[goal]
+        for i, spaces in enumerate(self.level_analyzer.rooms):
+            if goal_pos in spaces:
+                room_id = i
+                break
+
+        room_agents = list(self.level_analyzer.agents_per_room[room_id])
+        if len(room_agents) <= 1:
+            # nothing to be done
+            return None
+
+        component = 0
+        component_dict = defaultdict(set)
+        component_edges = defaultdict(set)
+        pos_comp = dict()
+        agent_comp = [None for i in room_agents]
+        state = self.state.copy()
+
+        for i, a in enumerate(room_agents):
+            a_pos = self.state.agent_positions[a]
+            if a_pos in pos_comp:
+                agent_comp[i] = pos_comp[a_pos]
+                continue
+
+            agent_comp[i] = component
+
+            q = Queue()
+            pos_comp[a_pos] = component
+            q.put(a_pos)
+
+            # use BFS to find nearest available storage node
+            while not q.empty():
+                curr = q.get()
+                neighbors = get_neighbours(curr)
+                for n in neighbors:
+                    if n in pos_comp:
+                        continue
+                    if state.in_bounds(n):
+                        if state.is_free(n) or n in state.agent_by_cords:
+                            pos_comp[n] = component
+                            component_dict[component].add(n)
+                            q.put(n)
+                        else:
+                            # if it is not free and not agent space must have a box
+                            component_edges[component].add(n)
+            component += 1
+            # TODO: finish
+
+
+
+
+    def tidy_up(self, goal):
+        room_id = 0
+        goal_pos = self.state.goal_positions[goal]
+        for i, spaces in self.level_analyzer.rooms:
+            if goal_pos in spaces:
+                room_id = i
+                break
+
+        room_agents = self.level_analyzer.agents_per_room[room_id]
+        changed = False
+
+        for agent in room_agents:
+            reachable = set()
+
+        # desired_agents = set()
+        # if self.state.goal_agent[goal]:
+        #     desired_agents.add(self.state.goal_types[goal])
+        # else:
+        #     g_type = self.state.goal_types[goal]
+        #     color = None
+        #     for b in room_boxes:
+        #         if self.state.box_types[b] == g_type:
+        #             color = self.state.box_colors[b]
+        #             break
+        #     for a in room_agents:
+        #         if self.state.agent_colors[a] == color:
+        #             desired_agents.add(a)
+        pass
+
+
+    def compute_plan(self):
         # TODO: make use of this info and maybe add one for boxes?
         color_agents_left, color_goals_left, type_color_map = self.get_state_color_info()
         complete_plan = []
@@ -545,7 +715,9 @@ class ParallelPlanner:
             goal_plan = None
             goal = None
             for goal in goal_order:
-                goal_plan = self.complete_goal(goal)
+                #unblock_plan = self.unblock_agents(goal)
+                #assert False, "delete the line above to run properly, this is jsut for debu"
+                goal_plan = self.complete_goal_aggressive(goal)
                 if goal_plan is not None:
                     break
 

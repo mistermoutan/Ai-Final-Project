@@ -172,8 +172,7 @@ class LevelAnalyser:
             agents_in_room = self.agents_per_room[room_id]
 
             for goal in goals_in_room:
-                g = self.state.goal_by_cords[goal]
-                relevant_elements_to_goals[g] = (boxes_id_in_room,agents_in_room)
+                relevant_elements_to_goals[goal] = (boxes_id_in_room,agents_in_room)
 
         self.goal_relevant = relevant_elements_to_goals
 
