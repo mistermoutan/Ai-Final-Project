@@ -46,6 +46,13 @@ class ParallelPlanner:
         self.unusable_agents = set()
         self.level_analyzer = LevelAnalyser(state)
 
+        vertexes_from_ccs = []
+
+        for cc in   self.goal_analyzer.rooms:
+            vertex = extract_a_vertex_from_cc
+            vertexes_from_ccs.append(vertex)
+
+        
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
         relevant_boxes, relevant_agents = self.level_analyzer.get_relevant_elements_to_goals(goal_id)
@@ -260,11 +267,20 @@ class ParallelPlanner:
         return val
 
     def clear_rooms(self, path: set, state: StateMA, room_ids: List[int]):
+        #rooms that will be blocked off
+
+        rooms_to_be_deleted = [self.goal_analyzer.rooms[room] for room in room_ids]
+        must_salvage_elements = self.level_analyzer.salvage_elements(rooms_to_be_deleted,state)        
+        return state, must_salvage_elements
+                
         # TODO: remove stuff that you need from this room
         # TODO: put useless stuff in this room?
 
 
-        return state, []
+    
+
+    
+
 
     def required(self, item, is_box=True):
         # TODO: determine if we will need this to be accessible after goal is completed
@@ -528,8 +544,12 @@ class ParallelPlanner:
                 blocked_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
                 for room in blocked_rooms:
                     room_verts = self.goal_analyzer.rooms[room]
-                    self.blocked = self.blocked.union(room_verts)
+                    self.blocked = self.blocked.union(room_verts) #cells that are being blocked
                 self.completed.add(goal)
+
+                ##LA: stuff is blocked
+
+
                 self.blocked.add(self.state.goal_positions[goal])
                 goal_pos = self.state.goal_positions[goal]
                 if self.state.goal_agent[goal]:

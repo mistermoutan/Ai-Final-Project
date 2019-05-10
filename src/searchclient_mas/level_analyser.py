@@ -48,6 +48,8 @@ class LevelAnalyser:
                 else:
                     self.walls.add((i,j))
 
+        self.inventory = self.get_inventory()
+
 
     def separate_rooms_exist(self):
         '''True if there are separate rooms (isolated parts of the level), False otherwise'''
@@ -59,6 +61,7 @@ class LevelAnalyser:
         Builds also:
             self.goals_per_room -> {room_id: {goals_id's in room}} 
             self.room_of_goal -> {goal_id: room_id it belongs to}
+            self.room_of_vertex {vertex: room it is in}
         '''
 
         if self.rooms: #rooms already built
@@ -67,11 +70,17 @@ class LevelAnalyser:
         rooms = []
         self.goals_per_room = defaultdict(set)
         self.room_of_goal = {}
+        self.room_of_vertex = {} #keep track of in which room is each vertex of the level
         
         initial_goal = self.goal_positions[0]
         explored_goals = {0} # we'll explore the first goal first
         tree = self.bfs_tree(initial_goal)
-        initial_room = {(i,j) for i,j in tree.keys()}
+        #initial_room = {(i,j) for i,j in tree.keys()}
+        initial_room = set()
+        for i,j in tree.keys():
+            initial_room.add((i,j)) 
+            self.room_of_vertex[(i,j)] = 0
+
         rooms.append(initial_room)
 
         self.room_of_goal[0] = 0 
@@ -91,11 +100,16 @@ class LevelAnalyser:
             #if the goal was not in any of the pre built rooms
             if not was_in_built_room:
                 tree = self.bfs_tree(goal_pos)
-                new_room = {(i,j) for i,j in tree.keys()}
-                rooms.append(new_room)
-                self.goals_per_room[len(rooms)-1].add(goal_index +1)
-                self.room_of_goal[goal_index +1] = len(rooms) - 1
+                new_room = set()
+                #new_room = {(i,j) for i,j in tree.keys()}
+                for i,j in tree.keys():
+                    new_room.add((i,j))
+                    self.room_of_vertex[(i,j)] = len(rooms)
+                self.goals_per_room[len(rooms)].add(goal_index +1)
+                self.room_of_goal[goal_index +1] = len(rooms) 
                 explored_goals.add(goal_index +1)  
+                rooms.append(new_room)
+
 
         self.rooms = rooms
 
@@ -183,6 +197,10 @@ class LevelAnalyser:
     def get_agents_with_no_goals(self):
         pass
 
+    ###########################################################################################################
+
+    ###########################################################################################################
+
     def get_relevant_elements_to_goals(self, goal_id):
         if self.goal_relevant is not None:
             return self.goal_relevant[goal_id]
@@ -205,15 +223,245 @@ class LevelAnalyser:
 
         return self.goal_relevant[goal_id]
 
+    def get_inventory(self):
+
+        #initial inventory from each connected component
+
+        self.locate_separate_rooms()
+        self.get_agent_distribution_per_room()
+        self.get_box_distribution_per_room()
+        inventory = {} #{room_id: ()}
+
+        for room_id, room in enumerate(self.rooms):
+
+            box_inventory = defaultdict(int)
+            for box_id in self.boxes_per_room[room_id]:
+                box_inventory[self.state.box_types[box_id]] += 1
+
+            agent_inventory = defaultdict(int)
+            for agent_id in self.agents_per_room[room_id]:
+                agent_inventory[self.state.agent_colors[agent_id]] +=1
+
+            goal_inventory_boxes = defaultdict(int)
+            goal_inventory_agents = defaultdict(int)
+            for goal_id in self.goals_per_room[room_id]:
+                if self.state.goal_agent[goal_id]: #is this the current way of accessing it?
+                    goal_inventory_agents[self.state.goal_types[goal_id]] += 1
+                else:
+                    goal_inventory_boxes[self.state.goal_types[goal_id]] += 1
+
+            inventory_of_room = (box_inventory or None,agent_inventory or None,goal_inventory_boxes or None,goal_inventory_agents or None)
+
+            assert None not in inventory_of_room , "if is room, needs to have goals and therefore also boxes and agents"
+
+            inventory[room_id] = inventory_of_room
+
+        return inventory
+
+    def inventory_of_rooms(self, rooms, state):
+        
+        """inventory for a given set of vertices or list of sets of vertices"""
+
+        box_inventory = defaultdict(int)
+        agent_inventory = defaultdict(int)
+        goal_inventory_boxes = defaultdict(int)
+        goal_inventory_agents = defaultdict(int)
+
+        if isinstance(rooms,list): #list of sets (rooms)
+            for room in rooms:
+                for vertex in room:     
+                    #agent_by_cords -> {cords:agent_id}     
+                    if vertex in state.agent_by_cords:
+                        #get color from agent id
+                        agent_color = state.agent_colors[state.agent_by_cords[vertex]]
+                        agent_inventory[agent_color] += 1
+
+                    elif vertex in state.box_by_cords:
+                        box_type = state.box_types[state.box_by_cords[vertex]]
+                        box_inventory[box_type] += 1
+                    
+                    elif vertex in state.goal_by_cords:
+                        goal_id = state.goal_by_cords[vertex]
+                        goal_type = state.goal_types[goal_id]
+
+                        if state.goal_agent[goal_id]: #is this the current way of accessing it ????????????
+                            goal_inventory_agents[goal_type] += 1
+                        else:
+                            goal_inventory_boxes[goal_type] += 1
+        
+        elif isinstance(rooms,set): #set represeting room
+            for vertex in room:     
+                    #agent_by_cords -> {cords:agent_id}     
+                    if vertex in state.agent_by_cords:
+                        #get color from agent id
+                        agent_color = state.agent_colors[state.agent_by_cords[vertex]]
+                        agent_inventory[agent_color] += 1
+
+                    elif vertex in state.box_by_cords:
+                        box_type = state.box_types[state.box_by_cords[vertex]]
+                        box_inventory[box_type] += 1
+                    
+                    elif vertex in state.goal_by_cords:
+                        goal_id = state.goal_by_cords[vertex]
+                        goal_type = state.goal_types[goal_id]
+
+                        if state.goal_agent[goal_id]: #is this the current way of accessing it ????????????
+                            goal_inventory_agents[goal_type] += 1
+                        else:
+                            goal_inventory_boxes[goal_type] += 1
+        else:
+            raise TypeError("Did not pass list of sets (multiple rooms) nor set (one room)")
+
+
+        vertex = room.pop()
+        room.add(vertex)   
+        room_id = self.room_of_vertex[vertex]
+
+        return (box_inventory or None,agent_inventory or None,goal_inventory_boxes or None, goal_inventory_agents ) , room_id 
+
+    def not_in_rooms(self,inventory_of_rooms,room_id):
+        """
+        gives overview of the difference between what will remain if the rooms are deleted
+        """
+
+        box_inventory = defaultdict(int)
+        agent_inventory = defaultdict(int)
+        goal_inventory_boxes = defaultdict(int)
+        goal_inventory_agents = defaultdict(int)
+
+        not_in_rooms = (box_inventory,agent_inventory,goal_inventory_boxes,goal_inventory_agents)
+
+        for i in range(len(self.inventory[room_id])):
+            element = inventory_to_subtract[i] # a dictionary
+            if element:
+                for key in element:
+                    not_in_rooms[i][key] = self.inventory[room_id][i][key] - element[key]
+                    assert not_in_rooms[i][key] >= 0 , "can't have a negative element"
+            
+            
+        return not_in_rooms # the inventory of what is not in the rooms that will be deleted
+
+
+    def salvage_elements(self,rooms_to_be_deleted,state):
+
+        ivt_rooms_to_de_deleted, room_id = self.inventory_of_rooms(rooms_to_be_deleted,state) # check what is in it cell by cell
+        ivt_that_will_remain = self.not_in_rooms(ivt_rooms_to_de_deleted,room_id) #inventory of what is not in room
+
+        vertexes_to_be_deleted = self.union_of_sets(rooms_to_be_deleted)
+        vertexes_which_remain = self.rooms[room_id].difference(vertexes_to_be_deleted)
+
+        needed_box_types = defaultdict(int)
+        #needed_box_colors = defaultdict(int) #TODO
+        needed_agents_colors = defaultdict(int) #TODO
+        needed_agent_ids = [] # that have goals in the room
+
+        #what we will we need to solve the goals in the room that will stay
+        for goal_id in self.goals_per_room[room_id]:
+            if goal_id in vertexes_which_remain:
+                goal_type = state.goal_types[goal_id]
+                if state.goal_agent[goal_id]: #is this the current way of accessing it ??
+                    # how to access agent id?
+                    needed_agent_ids.append(goal_type)
+                else:
+                    needed_box_types[goal_type] += 1
+        
+        boxes_that_will_remain = {box_id for box_id,pos in enumerate(state.box_positions) if pos in vertexes_which_remain}
+
+        for type in needed_box_types:
+            if needed_box_types[type] > ivt_that_will_remain[0][type]:
+                needed_box_types[type] -= ivt_that_will_remain[0][type]
+            else:
+                del needed_box_types[type] # this box type won't need to be brought 
+        
+        
+
+        
+
+            
+            
+
+
+
+            
+            
+                
+
+        agents_that_will_remain = {agent_id for agent_if, pos in enumerate(state.agent_positions) if pos in vertexes_which_remain}
+
+        agents_that_must_come = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain}
+        agents_that_should_come = {} # the ones that can move boxes that no one else can
+        
+        boxes_type 
+
+        for goal_type in needed_box_types:
+            if goal ot_in_rooms[0][goal_type]:
+
+            if needed_box_types[goal_type] > not_in_rooms[0][goal_type]
+
+
+
+
+        
+
+        if needed_agents[goal_type] > not_in_rooms[...]
+
+
+        if needed_boxes > 
+
+        """
+        We're going to need: 
+            - agents:
+                    - that have goals in the non deleted room
+
+                    - that can move boxes in the non deleted room if there are no other agents there that can do it
+            - boxes:
+                    - that can be used to solve goals in the non deleted room, just types
+
+        We shouls aim to be able to move all boxes thar remain the in the non deleted room
+
+        """
+
+
+
+    def subtract_from_inventory(self,inventory_to_subtract,room_id):
+    """room is just a set of vertexes, not exactly a room as defined normally
+    vertex is used to locate in which room (in the traditional connectec component sense this sub room is)
+    """
+
+    for i in range(len(self.inventory[room_id])):
+        #if the inventory_to_subract is not None
+        element = inventory_to_subtract[i] # a dictionary
+        if element:
+            for key in element:
+                self.inventory[room_id][i][key] -= element[key]
+                assert self.inventory[room_id][i][key] >= 0 , "can't have a negative element in the inventory"
+
+
+    #if self.inventory_is_legal(updated_inventory):
+    #    return updated_inventory
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
+
     def detect_possible_useless_elements(self,):
         #redundant in quantity
         pass
 
-    def room_must_have (self,room):
-        '''
-        Room is a 
-        
-        '''
+
         
         
 
@@ -636,7 +884,7 @@ class LevelAnalyser:
                 del self.agents_per_room[room_index]
 
         
-    def union_of_sets(self,list_of_sets):
+    def union_of_sets(self,list_of_sets: list):
 
         assert list_of_sets
         set_union = set()
