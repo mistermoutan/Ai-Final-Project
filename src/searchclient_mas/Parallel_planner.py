@@ -569,7 +569,29 @@ class ParallelPlanner:
         # we are fucked here
         return None
 
-        # TODO: finish
+    def reachable(self, frm, to, state: StateMA=None, ignore_boxes=False, ignore_agents=False):
+        if state is None:
+            state = self.state
+        # TODO: use A* instead of bfs
+        q = Queue()
+        seen = set()
+        q.put(frm)
+
+        # use BFS to find nearest available storage node
+        while not q.empty():
+            curr = q.get()
+            neighbors = get_neighbours(curr)
+            for n in neighbors:
+                if n == to:
+                    return True
+                if state.in_bounds(n) and n not in seen:
+                    seen.add(n)
+                    if not ignore_boxes and n in state.box_by_cords:
+                        continue
+                    elif not ignore_agents and n in state.agent_by_cords:
+                        continue
+                    else:
+                        q.put(n)
 
     def mediocre_unblock_agents(self, goal):
         room_id = 0
@@ -591,7 +613,6 @@ class ParallelPlanner:
         clearing_plan = []
         #TODO: maybe we wanna restore this state?
         og_state = self.state
-        cleared = set()
         changed = True
         agent_set_dict = dict()
         for i in room_agents:
@@ -604,10 +625,13 @@ class ParallelPlanner:
                         continue
                     a1_pos = self.state.agent_positions[a1]
                     a2_pos = self.state.agent_positions[a2]
-                    path = self.find_easiest_path(a1_pos, a2_pos)
-                    # we don't really wanna clear the agent itself
-                    path = path.parent
-                    res = self.clear_path(path.to_set(), a1_pos)
+                    if self.reachable(a1_pos, a2_pos, self.state, ignore_agents=True):
+                        res = (self.state, [])
+                    else:
+                        path = self.find_easiest_path(a1_pos, a2_pos)
+                        # we don't really wanna clear the agent itself
+                        path = path.parent
+                        res = self.clear_path(path.to_set(), a1_pos)
                     if res is not None:
                         state, plan = res
                         clearing_plan.extend(plan)
@@ -674,37 +698,6 @@ class ParallelPlanner:
             component += 1
             # TODO: finish
 
-
-
-
-    def tidy_up(self, goal):
-        room_id = 0
-        goal_pos = self.state.goal_positions[goal]
-        for i, spaces in self.level_analyzer.rooms:
-            if goal_pos in spaces:
-                room_id = i
-                break
-
-        room_agents = self.level_analyzer.agents_per_room[room_id]
-        changed = False
-
-        for agent in room_agents:
-            reachable = set()
-
-        # desired_agents = set()
-        # if self.state.goal_agent[goal]:
-        #     desired_agents.add(self.state.goal_types[goal])
-        # else:
-        #     g_type = self.state.goal_types[goal]
-        #     color = None
-        #     for b in room_boxes:
-        #         if self.state.box_types[b] == g_type:
-        #             color = self.state.box_colors[b]
-        #             break
-        #     for a in room_agents:
-        #         if self.state.agent_colors[a] == color:
-        #             desired_agents.add(a)
-        pass
 
 
     def compute_plan(self):
