@@ -10,6 +10,7 @@ from itertools import groupby
 from collections import Counter
 from state import StateMA,StateBuilder
 import time
+import sys
 
 class LevelAnalyser:
 
@@ -224,7 +225,6 @@ class LevelAnalyser:
         return self.goal_relevant[goal_id]
 
     def get_inventory(self):
-
         #initial inventory from each connected component
 
         self.locate_separate_rooms()
@@ -252,79 +252,55 @@ class LevelAnalyser:
                 else:
                     goal_inventory_boxes[self.state.goal_types[goal_id]] += 1
 
-            inventory_of_room = (box_inventory_types or None,box_inventory_colors or None ,agent_inventory or None,goal_inventory_boxes or None,goal_inventory_agents or None)
+            inventory_of_room = (box_inventory_types ,box_inventory_colors,agent_inventory,goal_inventory_boxes,goal_inventory_agents)
 
-            assert None not in inventory_of_room , "if is room, needs to have goals and therefore also boxes and agents"
+            #for dictio in inventory_of_room:
+            #    print(dictio,file=sys.stderr, flush=True)
 
             inventory[room_id] = inventory_of_room
 
         return inventory
 
-    def inventory_of_rooms(self, rooms, state):
+    def inventory_of_rooms(self, room: set, state):
         
         """inventory for a given set of vertices or list of sets of vertices"""
 
         box_inventory_types = defaultdict(int)
         box_inventory_colors = defaultdict(int)
+        box_ids = []
         agent_inventory = defaultdict(int)
         goal_inventory_boxes = defaultdict(int)
         goal_inventory_agents = defaultdict(int)
 
-        if isinstance(rooms,list): #list of sets (rooms)
-            for room in rooms:
-                for vertex in room:     
-                    #agent_by_cords -> {cords:agent_id}     
-                    if vertex in state.agent_by_cords:
-                        #get color from agent id
-                        agent_color = state.agent_colors[state.agent_by_cords[vertex]]
-                        agent_inventory[agent_color] += 1
+        for vertex in room:     
+            #agent_by_cords -> {cords:agent_id}     
+            if vertex in state.agent_by_cords:
+                #get color from agent id
+                agent_color = state.agent_colors[state.agent_by_cords[vertex]]
+                agent_inventory[agent_color] += 1
 
-                    elif vertex in state.box_by_cords:
-                        box_type = state.box_types[state.box_by_cords[vertex]]
-                        box_color = state.box_colors[state.box_by_cords[vertex]]
-                        box_inventory_types[box_type] += 1
-                        box_inventory_colors[box_color] += 1
-                    
-                    elif vertex in state.goal_by_cords:
-                        goal_id = state.goal_by_cords[vertex]
-                        goal_type = state.goal_types[goal_id]
+            if vertex in state.box_by_cords:
+                box_type = state.box_types[state.box_by_cords[vertex]]
+                box_color = state.box_colors[state.box_by_cords[vertex]]
+                box_inventory_types[box_type] += 1
+                box_inventory_colors[box_color] += 1
 
-                        if state.goal_agent[goal_id]: #is this the current way of accessing it ????????????
-                            goal_inventory_agents[goal_type] += 1
-                        else:
-                            goal_inventory_boxes[goal_type] += 1
-        
-        elif isinstance(rooms,set): #set represeting room
-            for vertex in room:     
-                    #agent_by_cords -> {cords:agent_id}     
-                    if vertex in state.agent_by_cords:
-                        #get color from agent id
-                        agent_color = state.agent_colors[state.agent_by_cords[vertex]]
-                        agent_inventory[agent_color] += 1
+            if vertex in state.goal_by_cords:
+                goal_id = state.goal_by_cords[vertex]
+                goal_type = state.goal_types[goal_id]
+                if state.goal_agent[goal_id]: 
+                    goal_inventory_agents[goal_type] += 1
+                else:
+                    goal_inventory_boxes[goal_type] += 1
 
-                    elif vertex in state.box_by_cords:
-                        box_type = state.box_types[state.box_by_cords[vertex]]
-                        box_color = state.box_colors[state.box_by_cords[vertex]]
-                        box_inventory_types[box_type] += 1
-                        box_inventory_colors[box_color] += 1
-
-                    elif vertex in state.goal_by_cords:
-                        goal_id = state.goal_by_cords[vertex]
-                        goal_type = state.goal_types[goal_id]
-
-                        if state.goal_agent[goal_id]: #is this the current way of accessing it ????????????
-                            goal_inventory_agents[goal_type] += 1
-                        else:
-                            goal_inventory_boxes[goal_type] += 1
-        else:
-            raise TypeError("Did not pass list of sets (multiple rooms) nor set (one room)")
-
+                        
 
         vertex = room.pop()
         room.add(vertex)   
         room_id = self.room_of_vertex[vertex]
 
-        return (box_inventory_types or None,box_inventory_colors or None, agent_inventory or None,goal_inventory_boxes or None, goal_inventory_agents) , room_id 
+        #print(box_inventory_types , box_inventory_colors , agent_inventory, goal_inventory_boxes , goal_inventory_agents,file=sys.stderr,flush = True)
+        return (box_inventory_types , box_inventory_colors , agent_inventory, goal_inventory_boxes , goal_inventory_agents) , room_id 
 
     def not_in_rooms(self,inventory_of_rooms,room_id):
         """
@@ -340,7 +316,7 @@ class LevelAnalyser:
         not_in_rooms = (box_inventory_types,box_inventory_colors,agent_inventory,goal_inventory_boxes,goal_inventory_agents)
 
         for i in range(len(self.inventory[room_id])):
-            element = inventory_to_subtract[i] # a dictionary
+            element = inventory_of_rooms[i] # a dictionary
             if element:
                 for key in element:
                     not_in_rooms[i][key] = self.inventory[room_id][i][key] - element[key]
@@ -352,11 +328,14 @@ class LevelAnalyser:
 
     def salvage_elements(self,rooms_to_be_deleted,state):
 
+
+        #print(rooms_to_be_deleted,file=sys.stderr, flush=True)
         ivt_rooms_to_de_deleted, room_id = self.inventory_of_rooms(rooms_to_be_deleted,state) # check what is in it cell by cell
         ivt_that_will_remain = self.not_in_rooms(ivt_rooms_to_de_deleted,room_id) #inventory of what is not in room
-
-        vertexes_to_be_deleted = self.union_of_sets(rooms_to_be_deleted)
-        vertexes_which_remain = self.rooms[room_id].difference(vertexes_to_be_deleted)
+        #print(rooms_to_be_deleted,file=sys.stderr, flush=True)
+        #print(ivt_that_will_remain,file=sys.stderr, flush=True)
+        vertexes_to_be_deleted = rooms_to_be_deleted
+        vertexes_which_remain = self.rooms[room_id] - vertexes_to_be_deleted 
 
         needed_box_types = defaultdict(int) #quantity of types of boxes necessary
         needed_agent_ids = {} # that have goals in the room
@@ -374,28 +353,27 @@ class LevelAnalyser:
         for type in needed_box_types:
             if needed_box_types[type] > ivt_that_will_remain[0][type]:
                 needed_box_types[type] -= ivt_that_will_remain[0][type]
-                assert needed_box_types[type] >= 0
+                assert needed_box_types[type] > 0
             else:
                 del needed_box_types[type] # this box type won't need to be brought 
 
 
         agents_that_will_remain = {agent_id for agent_id, pos in enumerate(state.agent_positions) if pos in vertexes_which_remain}
         all_agents_that_will_remain = agents_that_will_remain.union(needed_agent_ids) # so all that will be there at the end
-
+        
         needed_agent_colors = set(ivt_that_will_remain[1].keys()) or None #this are the box colors that will remain in the room
-        assert needed_agent_colors, "no box colors will remain"
-
-        for box_color in needed_agent_colors:
-            for agent_id in all_agents_that_will_remain:
-                if box_color == state.agent_colors[agent_id]:
-                    needed_agent_colors.remove(box_color)
-                    break
+        #assert needed_agent_colors, "no box colors will remain"
+        
+        if needed_agent_colors:
+            for box_color in needed_agent_colors:
+                for agent_id in all_agents_that_will_remain:
+                    if box_color == state.agent_colors[agent_id]:
+                        needed_agent_colors.remove(box_color)
+                        break
             
         needed_agent_ids = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain} #so agents that would be left behind
-        if not needed_agent_ids:
-            needed_agent_ids = None
 
-        return needed_box_types, needed_agent_ids, needed_agents_colors
+        return needed_box_types, needed_agent_ids, needed_agent_colors
 
         
         """
@@ -412,18 +390,25 @@ class LevelAnalyser:
 
 
 
-    def subtract_from_inventory(self,inventory_to_subtract,room_id):
-    """room is just a set of vertexes, not exactly a room as defined normally
-    vertex is used to locate in which room (in the traditional connectec component sense this sub room is)
-    """
+    def subtract_from_inventory(self,vertexes,state):
+        """
+        room is just a set of vertexes, not exactly a room as defined normally
+        vertex is used to locate in which room (in the traditional connectec component sense this sub room is)
+        """
 
-    for i in range(len(self.inventory[room_id])):
-        #if the inventory_to_subract is not None
-        element = inventory_to_subtract[i] # a dictionary
-        if element:
-            for key in element:
-                self.inventory[room_id][i][key] -= element[key]
-                assert self.inventory[room_id][i][key] >= 0 , "can't have a negative element in the inventory"
+        inventory_to_subtract,room_id = self.inventory_of_rooms(vertexes,state)
+        #print('\n',self.inventory[room_id],file=sys.stderr,flush = True)
+
+        for i in range(len(self.inventory[room_id])):
+            #if the inventory_to_subract is not None
+            element = inventory_to_subtract[i] # a dictionary
+            if element:
+                for key in element:
+                    self.inventory[room_id][i][key] -= element[key]
+                    assert self.inventory[room_id][i][key] >= 0 , "can't have a negative element in the inventory"
+                
+        #print(self.inventory[room_id],'\n',file=sys.stderr,flush = True)
+
 
 
     #if self.inventory_is_legal(updated_inventory):

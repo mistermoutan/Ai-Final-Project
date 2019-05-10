@@ -10,6 +10,7 @@ from storage_estimator import storage_value, print_state_storage_values
 from level_analyser import LevelAnalyser
 import test_utilities as tu
 import heapq
+import sys
 
 
 
@@ -46,13 +47,6 @@ class ParallelPlanner:
         self.unusable_agents = set()
         self.level_analyzer = LevelAnalyser(state)
 
-        vertexes_from_ccs = []
-
-        for cc in   self.goal_analyzer.rooms:
-            vertex = extract_a_vertex_from_cc
-            vertexes_from_ccs.append(vertex)
-
-        
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
         relevant_boxes, relevant_agents = self.level_analyzer.get_relevant_elements_to_goals(goal_id)
@@ -309,11 +303,71 @@ class ParallelPlanner:
             val += 5000
         return val
 
-    def clear_rooms(self, path: set, state: StateMA, room_ids: List[int]):
+    def clear_rooms(self, path: set, state: StateMA, room_ids: List[int],goal,agent,box):
         #rooms that will be blocked off
 
-        rooms_to_be_deleted = [self.goal_analyzer.rooms[room] for room in room_ids]
-        must_salvage_elements = self.level_analyzer.salvage_elements(rooms_to_be_deleted,state)        
+        if len (room_ids) == 0:
+            return state, []
+
+        rooms_to_be_deleted = [self.goal_analyzer.rooms[room_id] for room_id in room_ids]
+        rooms_to_be_deleted = set.union(*rooms_to_be_deleted) 
+
+        needed_box_types, needed_agent_ids, needed_agents_colors = self.level_analyzer.salvage_elements(rooms_to_be_deleted,state) 
+        all_agent_ids, all_box_ids = set(), set() # of rooms to be deleted
+        total_boxes_needed = sum([value for value in needed_box_types.values()])
+        #print('\n',needed_box_types, needed_agent_ids, needed_agents_colors,'\n',file=sys.stderr, flush=True)
+
+        for vertex in rooms_to_be_deleted:
+            if vertex in state.agent_by_cords:
+                all_agent_ids.add(state.agent_by_cords[vertex])
+            elif vertex in state.box_by_cords:
+                all_box_ids.add(state.box_by_cords[vertex])
+    
+        color_changed =  True
+        illegal = path.union(rooms_to_be_deleted)
+        done_boxes = {}
+        current_plan = []
+
+        while total_boxes_needed > 0 and color_changed:
+            color_changed = False
+            for box_id in all_box_ids:
+                box_type = state.box_types[box_id]
+                if needed_box_types[box_type] > 0:
+                    pos = state.box_positions[box_id]
+                    partial_plan = self.move_box_to_storage(pos,state,illegal)
+                    if partial_plan:
+                        needed_box_types[box_type] -= 1
+                        total_boxes_needed -= 1
+                        color_changed = True
+                        current_plan.append(partial_plan)
+                        done_boxes.add(box_id)
+                else:
+                    done_boxes.add(box_id)
+
+            all_box_ids -= done_boxes
+            done_boxes = {}
+            if not color_changed:
+            #TODO: fall back strategy when can't move boxes
+                return None
+
+        assert sum([value for value in needed_box_types.values()]) == 0, "Did  not get all neded boxes"
+        return state, current_plan
+
+            
+
+        
+
+                
+                    
+
+
+
+
+
+
+
+
+
         return state, must_salvage_elements
                 
         # TODO: remove stuff that you need from this room
@@ -358,6 +412,7 @@ class ParallelPlanner:
                     continue
                 heapq.heappush(pq, (pn.value, pn))
         # This can only happen if the given coordinates are not in the same connected component
+        #print(self.state,file=sys.stderr, flush=True)
         assert False, "agent, goal, box combination was invalid and should never have been considered"
 
     def get_items_in_path(self,path, agent=None, box=None):
@@ -503,10 +558,16 @@ class ParallelPlanner:
         # TODO: if the path has changed during clearing we need to recompute it here
         # TODO: if the path has changed during clearing we need to recompute it here
         # TODO: if the path has changed during clearing we need to recompute it here
-        state, room_clearing_plan = self.clear_rooms(path, state, isolated_rooms)
+        
+        res = self.clear_rooms(path, state, isolated_rooms,goal,agent,box)
+
+        if res is None:
+            return None
+
+        state, room_clearing_plan = res
 
         plan.extend(room_clearing_plan)
-
+        
         # these positions may have changed so we need them updated
         agent_pos = state.agent_positions[agent]
         if box_pos is not None:
@@ -788,7 +849,6 @@ class ParallelPlanner:
             if goal_plan is None:
                 # TODO: by setting some stuff as immovable we may be able to change path choice to one that is solvable
                 # TODO: by moving some stuff to storage first we may also be able to solve it
-                import sys
                 #sys.stdout.write("# " + self.state.unsolved_goals_to_string())
                 sys.stdout.write("# could not finish the plan :(, realizing current plan with {} goals completed\n".format(len(self.completed)))
                 sys.stdout.flush()
@@ -806,16 +866,25 @@ class ParallelPlanner:
                     self.agent_business[p.agent_id] += business
                 complete_plan.extend(goal_plan)
                 blocked_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
-                for room in blocked_rooms:
-                    room_verts = self.goal_analyzer.rooms[room]
-                    self.blocked = self.blocked.union(room_verts) #cells that are being blocked
+                if len(blocked_rooms) == 0:
+                    blocked_rooms = set()
+                else:
+                    blocked_rooms = set.union(*[self.goal_analyzer.rooms[room] for room in blocked_rooms])
+
+                blocked_rooms.add(self.state.goal_positions[goal])
+                #print(self.state.goal_types[goal],file=sys.stderr,flush = True)
+                #print(self.level_analyzer.inventory,file=sys.stderr,flush = True)
+
+                self.level_analyzer.subtract_from_inventory(blocked_rooms,self.state)
+                
+
+                self.blocked = self.blocked.union(blocked_rooms) #cells that are being blocked
                 #self.level_analyzer.subtract_from_inventory
                 self.completed.add(goal)
 
                 ##LA: stuff is blocked
 
 
-                self.blocked.add(self.state.goal_positions[goal])
                 goal_pos = self.state.goal_positions[goal]
                 if self.state.goal_agent[goal]:
                     self.unusable_agents.add(self.state.agent_by_cords[goal_pos])
