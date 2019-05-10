@@ -765,6 +765,7 @@ class ParallelPlanner:
                 for room in blocked_rooms:
                     room_verts = self.goal_analyzer.rooms[room]
                     self.blocked = self.blocked.union(room_verts) #cells that are being blocked
+                #self.level_analyzer.subtract_from_inventory
                 self.completed.add(goal)
 
                 ##LA: stuff is blocked

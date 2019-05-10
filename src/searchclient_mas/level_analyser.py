@@ -234,9 +234,11 @@ class LevelAnalyser:
 
         for room_id, room in enumerate(self.rooms):
 
-            box_inventory = defaultdict(int)
+            box_inventory_types = defaultdict(int)
+            box_inventory_colors = defaultdict(int)
             for box_id in self.boxes_per_room[room_id]:
-                box_inventory[self.state.box_types[box_id]] += 1
+                box_inventory_types[self.state.box_types[box_id]] += 1
+                box_inventory_colors[self.state.box_colors[box_id]] += 1
 
             agent_inventory = defaultdict(int)
             for agent_id in self.agents_per_room[room_id]:
@@ -250,7 +252,7 @@ class LevelAnalyser:
                 else:
                     goal_inventory_boxes[self.state.goal_types[goal_id]] += 1
 
-            inventory_of_room = (box_inventory or None,agent_inventory or None,goal_inventory_boxes or None,goal_inventory_agents or None)
+            inventory_of_room = (box_inventory_types or None,box_inventory_colors or None ,agent_inventory or None,goal_inventory_boxes or None,goal_inventory_agents or None)
 
             assert None not in inventory_of_room , "if is room, needs to have goals and therefore also boxes and agents"
 
@@ -262,7 +264,8 @@ class LevelAnalyser:
         
         """inventory for a given set of vertices or list of sets of vertices"""
 
-        box_inventory = defaultdict(int)
+        box_inventory_types = defaultdict(int)
+        box_inventory_colors = defaultdict(int)
         agent_inventory = defaultdict(int)
         goal_inventory_boxes = defaultdict(int)
         goal_inventory_agents = defaultdict(int)
@@ -278,7 +281,9 @@ class LevelAnalyser:
 
                     elif vertex in state.box_by_cords:
                         box_type = state.box_types[state.box_by_cords[vertex]]
-                        box_inventory[box_type] += 1
+                        box_color = state.box_colors[state.box_by_cords[vertex]]
+                        box_inventory_types[box_type] += 1
+                        box_inventory_colors[box_color] += 1
                     
                     elif vertex in state.goal_by_cords:
                         goal_id = state.goal_by_cords[vertex]
@@ -299,8 +304,10 @@ class LevelAnalyser:
 
                     elif vertex in state.box_by_cords:
                         box_type = state.box_types[state.box_by_cords[vertex]]
-                        box_inventory[box_type] += 1
-                    
+                        box_color = state.box_colors[state.box_by_cords[vertex]]
+                        box_inventory_types[box_type] += 1
+                        box_inventory_colors[box_color] += 1
+
                     elif vertex in state.goal_by_cords:
                         goal_id = state.goal_by_cords[vertex]
                         goal_type = state.goal_types[goal_id]
@@ -317,19 +324,20 @@ class LevelAnalyser:
         room.add(vertex)   
         room_id = self.room_of_vertex[vertex]
 
-        return (box_inventory or None,agent_inventory or None,goal_inventory_boxes or None, goal_inventory_agents ) , room_id 
+        return (box_inventory_types or None,box_inventory_colors or None, agent_inventory or None,goal_inventory_boxes or None, goal_inventory_agents) , room_id 
 
     def not_in_rooms(self,inventory_of_rooms,room_id):
         """
         gives overview of the difference between what will remain if the rooms are deleted
         """
 
-        box_inventory = defaultdict(int)
+        box_inventory_types = defaultdict(int)
+        box_inventory_colors = defaultdict(int)
         agent_inventory = defaultdict(int)
         goal_inventory_boxes = defaultdict(int)
         goal_inventory_agents = defaultdict(int)
 
-        not_in_rooms = (box_inventory,agent_inventory,goal_inventory_boxes,goal_inventory_agents)
+        not_in_rooms = (box_inventory_types,box_inventory_colors,agent_inventory,goal_inventory_boxes,goal_inventory_agents)
 
         for i in range(len(self.inventory[room_id])):
             element = inventory_to_subtract[i] # a dictionary
@@ -350,64 +358,46 @@ class LevelAnalyser:
         vertexes_to_be_deleted = self.union_of_sets(rooms_to_be_deleted)
         vertexes_which_remain = self.rooms[room_id].difference(vertexes_to_be_deleted)
 
-        needed_box_types = defaultdict(int)
-        #needed_box_colors = defaultdict(int) #TODO
-        needed_agents_colors = defaultdict(int) #TODO
-        needed_agent_ids = [] # that have goals in the room
+        needed_box_types = defaultdict(int) #quantity of types of boxes necessary
+        needed_agent_ids = {} # that have goals in the room
 
         #what we will we need to solve the goals in the room that will stay
+
         for goal_id in self.goals_per_room[room_id]:
             if goal_id in vertexes_which_remain:
                 goal_type = state.goal_types[goal_id]
-                if state.goal_agent[goal_id]: #is this the current way of accessing it ??
-                    # how to access agent id?
-                    needed_agent_ids.append(goal_type)
+                if state.goal_agent[goal_id]:
+                    needed_agent_ids.add(goal_type) #goal_type will be agent_id
                 else:
                     needed_box_types[goal_type] += 1
         
-        boxes_that_will_remain = {box_id for box_id,pos in enumerate(state.box_positions) if pos in vertexes_which_remain}
-
         for type in needed_box_types:
             if needed_box_types[type] > ivt_that_will_remain[0][type]:
                 needed_box_types[type] -= ivt_that_will_remain[0][type]
+                assert needed_box_types[type] >= 0
             else:
                 del needed_box_types[type] # this box type won't need to be brought 
-        
-        
 
-        
 
+        agents_that_will_remain = {agent_id for agent_id, pos in enumerate(state.agent_positions) if pos in vertexes_which_remain}
+        all_agents_that_will_remain = agents_that_will_remain.union(needed_agent_ids) # so all that will be there at the end
+
+        needed_agent_colors = set(ivt_that_will_remain[1].keys()) or None #this are the box colors that will remain in the room
+        assert needed_agent_colors, "no box colors will remain"
+
+        for box_color in needed_agent_colors:
+            for agent_id in all_agents_that_will_remain:
+                if box_color == state.agent_colors[agent_id]:
+                    needed_agent_colors.remove(box_color)
+                    break
             
-            
+        needed_agent_ids = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain} #so agents that would be left behind
+        if not needed_agent_ids:
+            needed_agent_ids = None
 
-
-
-            
-            
-                
-
-        agents_that_will_remain = {agent_id for agent_if, pos in enumerate(state.agent_positions) if pos in vertexes_which_remain}
-
-        agents_that_must_come = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain}
-        agents_that_should_come = {} # the ones that can move boxes that no one else can
-        
-        boxes_type 
-
-        for goal_type in needed_box_types:
-            if goal ot_in_rooms[0][goal_type]:
-
-            if needed_box_types[goal_type] > not_in_rooms[0][goal_type]
-
-
-
+        return needed_box_types, needed_agent_ids, needed_agents_colors
 
         
-
-        if needed_agents[goal_type] > not_in_rooms[...]
-
-
-        if needed_boxes > 
-
         """
         We're going to need: 
             - agents:
@@ -418,7 +408,6 @@ class LevelAnalyser:
                     - that can be used to solve goals in the non deleted room, just types
 
         We shouls aim to be able to move all boxes thar remain the in the non deleted room
-
         """
 
 
