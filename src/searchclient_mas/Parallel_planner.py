@@ -360,17 +360,13 @@ class ParallelPlanner:
         # This can only happen if the given coordinates are not in the same connected component
         assert False, "agent, goal, box combination was invalid and should never have been considered"
 
-    def clear_path(self, path, agent, box=None):
+    def get_items_in_path(self,path, agent=None, box=None):
         boxes_in_path = set()
         agents_in_path = set()
 
         for pos in path:
             if pos in self.state.box_by_cords:
                 box_id = self.state.box_by_cords[pos]
-                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
-                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
-                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
-                # TODO: in some cases this box may be blocking other agenst from clearing the path so we actually have to move it
                 if box_id != box:
                     boxes_in_path.add(box_id)
             elif pos in self.state.agent_by_cords:
@@ -378,14 +374,26 @@ class ParallelPlanner:
                 if agent_id != agent:
                     agents_in_path.add(agent_id)
 
+        return boxes_in_path, agents_in_path
+
+    def clear_path(self, path, agent=None, box=None, goal_pos=None):
+
+        boxes_in_path, agents_in_path = self.get_items_in_path(path, agent, box)
         plan_index = 0
         current_plan = []
         state = self.state.copy()
+
+        agent_moved = agent is None
+        box_moved = box is None
+        agent_target = goal_pos
+        if not box_moved:
+            agent_target = state.box_positions[box]
+
         while len(boxes_in_path) > 0 or len(agents_in_path) > 0:
             # update what needs to be done
             while plan_index < len(current_plan):
                 pln = current_plan[plan_index]
-                if pln.box_id is not None:
+                if pln.box_id is not None and pln.box_id in boxes_in_path:
                     boxes_in_path.remove(pln.box_id)
                 if pln.agent_id in agents_in_path:
                     agents_in_path.remove(pln.agent_id)
@@ -419,6 +427,43 @@ class ParallelPlanner:
                     current_plan.append(partial_plan)
 
             if not changed:
+                if goal_pos is None:
+                    #TODO: figure out what to do here if anything
+                    return None
+                if agent is not None:
+                    agent_pos = state.agent_positions[agent]
+                    agent_reach = self.reachable(agent_pos, agent_target)
+                    if not agent_reach:
+                        if agent_moved:
+                            return None
+                        agent_moved = True
+                        res = self.move_agent_to_storage(agent_pos, state)
+                        if res is None:
+                            return None
+                        changed = True
+                        current_plan.append(res)
+                    else:
+                        if box_moved:
+                            return None
+                        box_moved = True
+                        # TODO: this may actually pick a different agent to do the work which would be more suitable
+                        # for solving the goal and might fuck us up
+                        res = self.move_box_to_storage(state.box_positions[box], state)
+                        if res is None:
+                            return None
+                        changed = True
+                        current_plan.append(res)
+
+                    # now the agent and/or the box has been moved so we must recompute the path
+                    path = self.find_easiest_path(agent_pos, agent_target).to_set()
+                    if box is not None:
+                        box_pos = state.box_positions[box]
+                        path = path.union(self.find_easiest_path(box_pos, goal_pos).to_set())
+                    boxes_in_path, agents_in_path = self.get_items_in_path(path, agent, box)
+
+
+                    continue
+
                 # TODO: maybe the box/agent itself is blocking the path so we should move it out of the way
                 return None
         return state, current_plan
@@ -443,7 +488,7 @@ class ParallelPlanner:
         else:
             path = self.find_easiest_path(agent_pos, goal_pos).to_set()
 
-        res = self.clear_path(path, agent, box)
+        res = self.clear_path(path, agent, box, goal_pos)
 
         if res is None:
             return None
@@ -452,6 +497,12 @@ class ParallelPlanner:
 
         isolated_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
 
+        # TODO: if the path has changed during clearing we need to recompute it here
+        # TODO: if the path has changed during clearing we need to recompute it here
+        # TODO: if the path has changed during clearing we need to recompute it here
+        # TODO: if the path has changed during clearing we need to recompute it here
+        # TODO: if the path has changed during clearing we need to recompute it here
+        # TODO: if the path has changed during clearing we need to recompute it here
         state, room_clearing_plan = self.clear_rooms(path, state, isolated_rooms)
 
         plan.extend(room_clearing_plan)
@@ -511,7 +562,7 @@ class ParallelPlanner:
                 if pushable:
                     agent_final = box_to_goal.parent.pos
                 else:
-                    # TODO: we may still be able to solve the goal even if we pull, wem ust jsut insure that there is 1
+                    # TODO: we may still be able to solve the goal even if we pull, we must just insure that there is 1
                     # extra space left
                     return None
 
@@ -585,7 +636,29 @@ class ParallelPlanner:
         # we are fucked here
         return None
 
-        # TODO: finish
+    def reachable(self, frm, to, state: StateMA=None, ignore_boxes=False, ignore_agents=False):
+        if state is None:
+            state = self.state
+        # TODO: use A* instead of bfs
+        q = Queue()
+        seen = set()
+        q.put(frm)
+
+        # use BFS to find nearest available storage node
+        while not q.empty():
+            curr = q.get()
+            neighbors = get_neighbours(curr)
+            for n in neighbors:
+                if n == to:
+                    return True
+                if state.in_bounds(n) and n not in seen:
+                    seen.add(n)
+                    if not ignore_boxes and n in state.box_by_cords:
+                        continue
+                    elif not ignore_agents and n in state.agent_by_cords:
+                        continue
+                    else:
+                        q.put(n)
 
     def mediocre_unblock_agents(self, goal):
         room_id = 0
@@ -607,7 +680,6 @@ class ParallelPlanner:
         clearing_plan = []
         #TODO: maybe we wanna restore this state?
         og_state = self.state
-        cleared = set()
         changed = True
         agent_set_dict = dict()
         for i in room_agents:
@@ -620,10 +692,13 @@ class ParallelPlanner:
                         continue
                     a1_pos = self.state.agent_positions[a1]
                     a2_pos = self.state.agent_positions[a2]
-                    path = self.find_easiest_path(a1_pos, a2_pos)
-                    # we don't really wanna clear the agent itself
-                    path = path.parent
-                    res = self.clear_path(path.to_set(), a1_pos)
+                    if self.reachable(a1_pos, a2_pos, self.state, ignore_agents=True):
+                        res = (self.state, [])
+                    else:
+                        path = self.find_easiest_path(a1_pos, a2_pos)
+                        # we don't really wanna clear the agent itself
+                        path = path.parent
+                        res = self.clear_path(path.to_set(), a1_pos)
                     if res is not None:
                         state, plan = res
                         clearing_plan.extend(plan)
@@ -690,37 +765,6 @@ class ParallelPlanner:
             component += 1
             # TODO: finish
 
-
-
-
-    def tidy_up(self, goal):
-        room_id = 0
-        goal_pos = self.state.goal_positions[goal]
-        for i, spaces in self.level_analyzer.rooms:
-            if goal_pos in spaces:
-                room_id = i
-                break
-
-        room_agents = self.level_analyzer.agents_per_room[room_id]
-        changed = False
-
-        for agent in room_agents:
-            reachable = set()
-
-        # desired_agents = set()
-        # if self.state.goal_agent[goal]:
-        #     desired_agents.add(self.state.goal_types[goal])
-        # else:
-        #     g_type = self.state.goal_types[goal]
-        #     color = None
-        #     for b in room_boxes:
-        #         if self.state.box_types[b] == g_type:
-        #             color = self.state.box_colors[b]
-        #             break
-        #     for a in room_agents:
-        #         if self.state.agent_colors[a] == color:
-        #             desired_agents.add(a)
-        pass
 
 
     def compute_plan(self):
