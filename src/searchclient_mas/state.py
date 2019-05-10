@@ -657,6 +657,41 @@ class StateMA:
 
         return StateSA(maze, boxes, goals, self.agent_positions[agentID])
 
+    def unsolved_goals_to_string(self):
+        lines = []
+        chars = "abcdefghijklmnopqrstuvwxyz"
+        for row in range(self.rows):
+            line = []
+            for col in range(self.cols):
+                pos = (row, col)
+                agent = self.agent_by_cords.get(pos, None)
+                box = self.box_by_cords.get(pos, None)
+                goal = self.goal_by_cords.get(pos, None)
+                wall = ' ' if self.maze[row][col] else '+'
+                if goal is not None:
+                    if self.goal_agent[goal]:
+                        if agent is None or self.goal_types[goal] != agent:
+                            if isinstance(self.goal_types[goal], int):
+                                line.append(chars[self.goal_types[goal]].lower())
+                            else:
+                                line.append(self.goal_types[goal].lower())
+                        else:
+                            line.append(" ")
+                    else:
+
+                        if box is None or self.goal_types[goal] != self.box_types[box]:
+                            if isinstance(self.goal_types[goal], int):
+                                line.append(chars[self.goal_types[goal]].lower())
+                            else:
+                                line.append(self.goal_types[goal].lower())
+                        else:
+                            line.append(" ")
+                else:
+                    line.append(wall)
+            lines.append("".join(line))
+        x = "\n".join(lines)
+        return x
+
 
     def __repr__(self):
         lines = []
