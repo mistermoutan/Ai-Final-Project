@@ -49,8 +49,15 @@ class ParallelPlanner:
         self.unusable_agents = set()
         self.dist = DistanceComputer(self.state)
         self.level_analyzer = LevelAnalyser(state)
+
+        if self.level_analyzer.immovable_boxes:
+            print(self.level_analyzer.immovable_boxes,file = sys.stderr,flush = True)
+        else:
+            print("jdnjief",file = sys.stderr,flush = True)
+
         
         while self.level_analyzer.immovable_boxes:
+            print(self.level_analyzer.immovable_boxes,file = sys.stderr,flush = True)
             self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
             self.level_analyzer = LevelAnalyser(self.state)
 
