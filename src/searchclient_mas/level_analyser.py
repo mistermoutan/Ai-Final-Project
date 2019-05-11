@@ -146,11 +146,10 @@ class LevelAnalyser:
                     agents_in_room.add(agent)
                     accounted_for_agents.add(agent)
              #add tracker for agent not to be checked if he is room that we know he is not in?
-            self.agents_per_room[room_index] = agents_in_room or None
+            self.agents_per_room[room_index] = agents_in_room
         
         unnacounted_for_agents = {agent for agent in range(len(self.agent_positions)) if agent not in accounted_for_agents}
         
-
         #assert None not in self.agents_per_room.values() , "There should not be rooms with no agents since all rooms have goals"
         
         #agents in rooms with no goals are useless
@@ -193,8 +192,8 @@ class LevelAnalyser:
                     elif not has_relevant_agent:
                         self.useless_boxes.add(box_id)
 
-            self.boxes_per_room[room_index] = boxes_in_room or None
-        assert None not in self.boxes_per_room.values() , "There should not be rooms with no boxes since all rooms have goals"
+            self.boxes_per_room[room_index] = boxes_in_room
+        #assert None not in self.boxes_per_room.values() , "There should not be rooms with no boxes since all rooms have goals"
         # if there are no useless boxes
         if not self.useless_boxes:
             self.useless_boxes = None
@@ -204,17 +203,8 @@ class LevelAnalyser:
         self.locate_separate_rooms()
         self.get_agent_distribution_per_room()
         self.get_box_distribution_per_room()
-        boxes_to_be_walls = {}
-        
-        for room_id, room in enumerate(self.rooms):
-            for box_id in self.boxes_per_room[room_id]:
-                add_box = True
-                if self.room_has_agents_of_color_of_box(room_id,box_id):
-                    break
-                else:
-                    boxes_to_be_walls.add(box_id)
 
-        return boxes_to_be_walls
+        return self.useless_boxes
 
     ###########################################################################################################
 
