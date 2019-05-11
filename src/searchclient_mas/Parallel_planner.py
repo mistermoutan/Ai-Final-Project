@@ -54,6 +54,11 @@ class ParallelPlanner:
         self.unusable_boxes = set()
         self.unusable_agents = set()
         self.dist = DistanceComputer(self.state)
+        self.level_analyzer = LevelAnalyser(state)
+        while self.level_analyzer.useless_boxes:
+            print(self.level_analyzer.useless_boxes,file = sys.stderr,flush = True)
+            self.state.remove_immovable_boxes(self.level_analyzer.useless_boxes)
+            self.level_analyzer = LevelAnalyser(self.state)
 
 
     def find_boxes_and_agents_for_goal(self, goal_id):
