@@ -171,8 +171,8 @@ class LevelAnalyser:
         self.boxes_per_room = {}
         self.room_of_box = {}
         accounted_for_boxes = set()
-        self.useless_boxes = {}
-        self.boxes_with_no_goal = {}
+        self.useless_boxes = set()
+        self.boxes_with_no_goal = set()
 
         for room_index, room in enumerate(self.rooms):
             boxes_in_room = set()
@@ -186,7 +186,7 @@ class LevelAnalyser:
                         self.room_of_box[box_id] = room_index
                         boxes_in_room.add(box_id)
                     elif has_relevant_agent and not has_relevant_goal:
-                        self.boxes_with_no_goal.append(box_id)
+                        self.boxes_with_no_goal.add(box_id)
                         self.room_of_box[box_id] = room_index
                         boxes_in_room.add(box_id)
                     elif not has_relevant_agent:
@@ -195,8 +195,7 @@ class LevelAnalyser:
             self.boxes_per_room[room_index] = boxes_in_room
         #assert None not in self.boxes_per_room.values() , "There should not be rooms with no boxes since all rooms have goals"
         # if there are no useless boxes
-        if not self.useless_boxes:
-            self.useless_boxes = None
+
 
     def boxes_to_walls(self):
 
