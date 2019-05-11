@@ -56,9 +56,9 @@ class ParallelPlanner:
             print("jdnjief",file = sys.stderr,flush = True)
 
         
-        while self.level_analyzer.immovable_boxes:
-            print(self.level_analyzer.immovable_boxes,file = sys.stderr,flush = True)
-            self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
+        while self.level_analyzer.useless_boxes:
+            print(self.level_analyzer.useless_boxes,file = sys.stderr,flush = True)
+            self.state.remove_immovable_boxes(self.level_analyzer.useless_boxes)
             self.level_analyzer = LevelAnalyser(self.state)
 
 
