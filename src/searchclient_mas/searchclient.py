@@ -97,11 +97,12 @@ class SearchClient:
         row = 0
         for line in goal:
             for col, char in enumerate(line):
-                if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789":
                     type = type_count
                     agent_goal = False
                     if char in "0123456789":
                         agent_goal = True
+                        type = int(char)
                     if char.lower() in seen_types.keys():
                         type = seen_types[char.lower()]
                     else:
