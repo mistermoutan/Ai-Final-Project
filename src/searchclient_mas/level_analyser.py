@@ -50,6 +50,7 @@ class LevelAnalyser:
                     self.walls.add((i,j))
 
         self.inventory = self.get_inventory()
+        self.boxes_to_be_walls = self.boxes_to_walls()
 
 
     def separate_rooms_exist(self):
@@ -115,7 +116,6 @@ class LevelAnalyser:
         self.rooms = rooms
 
     def get_agent_distribution_per_room(self):
-        # COME BACK HERE
         '''
         Builds:
             -   self.agents_per_room dictionary ->  {room: agent_ids of agents in room}
@@ -410,15 +410,12 @@ class LevelAnalyser:
         We're going to need: 
             - agents:
                     - that have goals in the non deleted room
-
                     - that can move boxes in the non deleted room if there are no other agents there that can do it
             - boxes:
                     - that can be used to solve goals in the non deleted room, just types
 
         We shouls aim to be able to move all boxes thar remain the in the non deleted room
         """
-
-
 
     def subtract_from_inventory(self,vertexes,state):
         """
