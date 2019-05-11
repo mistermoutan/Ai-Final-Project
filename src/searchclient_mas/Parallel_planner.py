@@ -68,6 +68,8 @@ class ParallelPlanner:
                 if a_color == b_color and i not in self.unusable_agents and i in relevant_agents:
                     viable_agents.append(i)
 
+            g_pos = self.state.goal_positions[goal_id]
+            viable_boxes.sort(key=lambda x: self.dist.dist(g_pos, self.state.box_positions[x]))
             return viable_boxes, viable_agents
 
     def get_node_before_position(self, node: PathNode, pos):
@@ -406,7 +408,7 @@ class ParallelPlanner:
                     continue
                 heapq.heappush(pq, (pn.value, pn))
         # This can only happen if the given coordinates are not in the same connected component
-        #print(self.state,file=sys.stderr, flush=True)
+        print(self.state, file=sys.stderr, flush=True)
         assert False, "agent, goal, box combination was invalid and should never have been considered"
 
     def get_items_in_path(self,path, agent=None, box=None):
@@ -662,6 +664,7 @@ class ParallelPlanner:
                 goal_plan = self.find_goal_plan(goal, agent, box)
                 if goal_plan is not None:
                     return goal_plan
+
         return self.complete_goal_aggressive(goal)
 
     def complete_goal_aggressive(self, goal):
@@ -672,6 +675,7 @@ class ParallelPlanner:
                 goal_plan = self.find_goal_plan(goal, agent, box)
                 if goal_plan is not None:
                     return goal_plan
+
 
         # we could not complete the goal but we might after we unblock some agents
         unblocking_plan = self.mediocre_unblock_agents(goal)
