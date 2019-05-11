@@ -1,1 +1,1 @@
-java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "levels/edge_case_test.lvl" -g
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp17/SABlinky.lvl" -g

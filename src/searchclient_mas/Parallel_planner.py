@@ -68,6 +68,8 @@ class ParallelPlanner:
                 if a_color == b_color and i not in self.unusable_agents and i in relevant_agents:
                     viable_agents.append(i)
 
+            g_pos = self.state.goal_positions[goal_id]
+            viable_boxes.sort(key=lambda x: self.dist.dist(g_pos, self.state.box_positions[x]))
             return viable_boxes, viable_agents
 
     def get_node_before_position(self, node: PathNode, pos):
