@@ -228,6 +228,8 @@ class ParallelPlanner:
     def find_path_to_condition(self, pos, state, condition, is_free=None) -> PathNode:
         if is_free is None:
             is_free = state.is_free
+        if condition(pos):
+            return PathNode(pos, None)
         seen = set()
         seen.add(pos)
         start_node = PathNode(pos, None)
