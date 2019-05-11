@@ -4,10 +4,8 @@ from action import Action,ActionType,Dir
 from typing import List
 import heapq
 import copy
+from distance_comp import DistanceComputer
 
-
-def manhattan_dist(p1, p2):
-    return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
 dir_dict = {
     (-1,0) : Dir.N,
@@ -175,7 +173,8 @@ class SpaceTracker:
 
 
 class ParallelRealizer:
-    def __init__(self, state: StateMA):
+    def __init__(self, state: StateMA, dist_comp:DistanceComputer):
+        self.dist = dist_comp
         self.state = state
 
 
@@ -192,7 +191,7 @@ class ParallelRealizer:
 
         goal_diff = 0
         if box_target is not None:
-            goal_diff = manhattan_dist(agent_target, box_target)
+            goal_diff = self.dist.dist(agent_target, box_target)
 
         def heuristic(state: PlanState):
 
@@ -206,11 +205,11 @@ class ParallelRealizer:
             if state.box is not None and spaces.changes(state.time, state.box):
                 changes += 1
 
-            if state.box is None or manhattan_dist(state.box, box_target) == 0:
-                return steps + 5*manhattan_dist(agent_target, state.agent) + changes
+            if state.box is None or self.dist.dist(state.box, box_target) == 0:
+                return steps + 5*self.dist.dist(agent_target, state.agent) + changes
             else:
-                dist_to_box = manhattan_dist(state.agent, state.box) - 1
-                box_to_goal = manhattan_dist(state.box, box_target) + changes
+                dist_to_box = self.dist.dist(state.box, state.agent) - 1
+                box_to_goal = self.dist.dist(box_target, state.box) + changes
 
                 # TODO: find some coefficients for the different metrics
                 return steps + 5*dist_to_box + 5*box_to_goal + goal_diff

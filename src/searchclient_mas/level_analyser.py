@@ -293,8 +293,6 @@ class LevelAnalyser:
                 else:
                     goal_inventory_boxes[goal_type] += 1
 
-                        
-
         vertex = room.pop()
         room.add(vertex)   
         room_id = self.room_of_vertex[vertex]
@@ -351,7 +349,7 @@ class LevelAnalyser:
                     needed_box_types[goal_type] += 1
         # if we have one goal or less to fulfill we dont care about the rest
         if n_goals <= 1:
-            return {},{},{}
+            return defaultdict(int), defaultdict(int), defaultdict(int)
         
         for type in needed_box_types:
             if needed_box_types[type] > ivt_that_will_remain[0][type]:

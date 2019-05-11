@@ -5,9 +5,11 @@ from state import StateMA
 from parallel_realizer import ParallelRealizer
 from collections import defaultdict
 from typing import List
-from parallel_realizer import manhattan_dist
+import time
+#from parallel_realizer import manhattan_dist
 from storage_estimator import storage_value, print_state_storage_values
 from level_analyser import LevelAnalyser
+from distance_comp import DistanceComputer
 import test_utilities as tu
 import heapq
 import sys
@@ -46,6 +48,7 @@ class ParallelPlanner:
         self.unusable_boxes = set()
         self.unusable_agents = set()
         self.level_analyzer = LevelAnalyser(state)
+        self.dist = DistanceComputer(self.state)
 
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
@@ -321,7 +324,15 @@ class ParallelPlanner:
                 all_agent_ids.add(state.agent_by_cords[vertex])
             elif vertex in state.box_by_cords:
                 all_box_ids.add(state.box_by_cords[vertex])
-    
+
+        # if our goal box is in here we dont wanna move it out of the room
+        if box in all_box_ids:
+            all_box_ids.remove(box)
+            b_type = state.box_types[box]
+            if needed_box_types[b_type] > 0:
+                needed_box_types[b_type] -= 1
+                total_boxes_needed -= 1
+
         color_changed = True
         illegal = path.union(rooms_to_be_deleted)
         done_boxes = set()
@@ -638,7 +649,7 @@ class ParallelPlanner:
             return agents
         box_pos = self.state.box_positions[box]
         agent_positions = self.state.agent_positions
-        agent_costs = [self.agent_business[i] + manhattan_dist(agent_positions[i], box_pos) for i in agents]
+        agent_costs = [self.agent_business[i] + self.dist.dist(agent_positions[i], box_pos) for i in agents]
         agent_temp = [(i,j) for i,j in zip(agent_costs, agents)]
         return [j for i, j in sorted(agent_temp, key=lambda x: x[0])]
 
@@ -841,11 +852,11 @@ class ParallelPlanner:
                 for p in goal_plan:
                     business = 0
                     if p.box_pos_end is None:
-                        business += manhattan_dist(p.agent_origin, p.agent_end)
+                        business += self.dist.dist(p.agent_origin, p.agent_end)
                     else:
-                        business += manhattan_dist(p.agent_origin, p.box_pos_origin)
-                        business += manhattan_dist(p.box_pos_origin, p.box_pos_end)
-                        business += manhattan_dist(p.box_pos_end, p.agent_end)
+                        business += self.dist.dist(p.agent_origin, p.box_pos_origin)
+                        business += self.dist.dist(p.box_pos_origin, p.box_pos_end)
+                        business += self.dist.dist(p.box_pos_end, p.agent_end)
                     self.agent_business[p.agent_id] += business
                 complete_plan.extend(goal_plan)
                 blocked_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
@@ -878,9 +889,18 @@ class ParallelPlanner:
         return complete_plan
 
     def solve(self):
+        print("planning starting:", file=sys.stderr, flush=True)
+        start = time.time()
         plan = self.compute_plan()
-        realizer = ParallelRealizer(self.initial_state)
-        return realizer.realize_plan(plan)
+        end = time.time()
+        print("plan computed in:", end - start, "realizing", file=sys.stderr, flush=True)
+        start = end
+        realizer = ParallelRealizer(self.initial_state, self.dist)
+        master_plan = realizer.realize_plan(plan)
+        end = time.time()
+        print("plan realized in:", end - start, file=sys.stderr, flush=True)
+
+        return master_plan
 
 
 def prepare_storage_test():
