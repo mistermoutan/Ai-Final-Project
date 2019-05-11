@@ -125,11 +125,11 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
             n = i
             p = prev_dict[i]
 
-            while n not in seen and adj_map[n] == free or adj_map[n] == goal:
+            while n not in seen and (adj_map[n] == free or adj_map[n] == goal):
                 seen.add(n)
                 n = next_dict[n]
 
-            while p not in seen and adj_map[p] == free or adj_map[n] == goal:
+            while p not in seen and (adj_map[p] == free or adj_map[n] == goal):
                 seen.add(p)
                 p = prev_dict[p]
 

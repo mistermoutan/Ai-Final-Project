@@ -186,7 +186,6 @@ class ParallelPlanner:
         q.put(start_node)
         best_val = -100
         best_node = None
-
         # use BFS to find nearest/best available storage node
         while not q.empty():
             curr = q.get()
@@ -323,9 +322,9 @@ class ParallelPlanner:
             elif vertex in state.box_by_cords:
                 all_box_ids.add(state.box_by_cords[vertex])
     
-        color_changed =  True
+        color_changed = True
         illegal = path.union(rooms_to_be_deleted)
-        done_boxes = {}
+        done_boxes = set()
         current_plan = []
 
         while total_boxes_needed > 0 and color_changed:
@@ -350,24 +349,8 @@ class ParallelPlanner:
             #TODO: fall back strategy when can't move boxes
                 return None
 
-        assert sum([value for value in needed_box_types.values()]) == 0, "Did  not get all neded boxes"
+        assert sum([value for value in needed_box_types.values()]) == 0, "Did  not get all needed boxes"
         return state, current_plan
-
-            
-
-        
-
-                
-                    
-
-
-
-
-
-
-
-
-
         return state, must_salvage_elements
                 
         # TODO: remove stuff that you need from this room
@@ -875,7 +858,7 @@ class ParallelPlanner:
                 #print(self.state.goal_types[goal],file=sys.stderr,flush = True)
                 #print(self.level_analyzer.inventory,file=sys.stderr,flush = True)
 
-                self.level_analyzer.subtract_from_inventory(blocked_rooms,self.state)
+                self.level_analyzer.subtract_from_inventory(blocked_rooms, self.state)
                 
 
                 self.blocked = self.blocked.union(blocked_rooms) #cells that are being blocked

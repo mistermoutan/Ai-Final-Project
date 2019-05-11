@@ -317,10 +317,9 @@ class LevelAnalyser:
 
         for i in range(len(self.inventory[room_id])):
             element = inventory_of_rooms[i] # a dictionary
-            if element:
-                for key in element:
-                    not_in_rooms[i][key] = self.inventory[room_id][i][key] - element[key]
-                    assert not_in_rooms[i][key] >= 0 , "can't have a negative element"
+            for key in self.inventory[room_id][i]:
+                not_in_rooms[i][key] = self.inventory[room_id][i][key] - element[key]
+                assert not_in_rooms[i][key] >= 0 , "can't have a negative element"
             
             
         return not_in_rooms # the inventory of what is not in the rooms that will be deleted
@@ -335,27 +334,31 @@ class LevelAnalyser:
         #print(rooms_to_be_deleted,file=sys.stderr, flush=True)
         #print(ivt_that_will_remain,file=sys.stderr, flush=True)
         vertexes_to_be_deleted = rooms_to_be_deleted
-        vertexes_which_remain = self.rooms[room_id] - vertexes_to_be_deleted 
-
+        vertexes_which_remain = self.rooms[room_id] - vertexes_to_be_deleted
         needed_box_types = defaultdict(int) #quantity of types of boxes necessary
-        needed_agent_ids = {} # that have goals in the room
+        needed_agent_ids = set()# that have goals in the room
 
         #what we will we need to solve the goals in the room that will stay
-
+        n_goals = 0
         for goal_id in self.goals_per_room[room_id]:
-            if goal_id in vertexes_which_remain:
+            goal_pos = state.goal_positions[goal_id]
+            if goal_pos in vertexes_which_remain:
+                n_goals += 1
                 goal_type = state.goal_types[goal_id]
                 if state.goal_agent[goal_id]:
                     needed_agent_ids.add(goal_type) #goal_type will be agent_id
                 else:
                     needed_box_types[goal_type] += 1
+        # if we have one goal or less to fulfill we dont care about the rest
+        if n_goals <= 1:
+            return {},{},{}
         
         for type in needed_box_types:
             if needed_box_types[type] > ivt_that_will_remain[0][type]:
                 needed_box_types[type] -= ivt_that_will_remain[0][type]
                 assert needed_box_types[type] > 0
             else:
-                del needed_box_types[type] # this box type won't need to be brought 
+                needed_box_types[type] = 0
 
 
         agents_that_will_remain = {agent_id for agent_id, pos in enumerate(state.agent_positions) if pos in vertexes_which_remain}
@@ -365,11 +368,14 @@ class LevelAnalyser:
         #assert needed_agent_colors, "no box colors will remain"
         
         if needed_agent_colors:
+            removal_list = []
             for box_color in needed_agent_colors:
                 for agent_id in all_agents_that_will_remain:
                     if box_color == state.agent_colors[agent_id]:
-                        needed_agent_colors.remove(box_color)
+                        removal_list.append(box_color)
                         break
+            for i in removal_list:
+                needed_agent_colors.remove(i)
             
         needed_agent_ids = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain} #so agents that would be left behind
 
@@ -395,7 +401,6 @@ class LevelAnalyser:
         room is just a set of vertexes, not exactly a room as defined normally
         vertex is used to locate in which room (in the traditional connectec component sense this sub room is)
         """
-
         inventory_to_subtract,room_id = self.inventory_of_rooms(vertexes,state)
         #print('\n',self.inventory[room_id],file=sys.stderr,flush = True)
 
@@ -406,7 +411,7 @@ class LevelAnalyser:
                 for key in element:
                     self.inventory[room_id][i][key] -= element[key]
                     assert self.inventory[room_id][i][key] >= 0 , "can't have a negative element in the inventory"
-                
+        self.rooms[room_id] -= vertexes
         #print(self.inventory[room_id],'\n',file=sys.stderr,flush = True)
 
 
