@@ -47,8 +47,13 @@ class ParallelPlanner:
         self.agent_business = [0 for _ in state.agent_positions]
         self.unusable_boxes = set()
         self.unusable_agents = set()
-        self.level_analyzer = LevelAnalyser(state)
         self.dist = DistanceComputer(self.state)
+        self.level_analyzer = LevelAnalyser(state)
+        
+        while self.level_analyzer.immovable_boxes:
+            self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
+            self.level_analyzer = LevelAnalyser(self.state)
+
 
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]

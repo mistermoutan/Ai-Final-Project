@@ -12,11 +12,12 @@ from state import StateMA,StateBuilder
 import time
 import sys
 
+
 class LevelAnalyser:
 
     def __init__(self,state: StateMA):
-        
-        self.state = state #had to add this (Tom)
+
+        self.state = state
         self.bfs_trees = {}
         self.vertices = set()
         self.walls = set()
@@ -26,18 +27,14 @@ class LevelAnalyser:
         self.rooms = None #list
         self.corridors = None
         self.open_areas = None
-
         self.goals_per_room = None
         self.room_of_goal = None
-
         self.boxes_per_room = None
         self.room_of_box = None
         self.useless_boxes = None 
-
         self.agents_per_room = None
         self.room_of_agent = None
         self.useless_agents = None
-
         self.safe_storage = None
         self.goal_relevant = None
 
@@ -49,8 +46,14 @@ class LevelAnalyser:
                 else:
                     self.walls.add((i,j))
 
+        self.immovable_boxes = self.boxes_to_walls()
         self.inventory = self.get_inventory()
-        self.boxes_to_be_walls = self.boxes_to_walls()
+
+
+
+
+            
+
 
 
     def separate_rooms_exist(self):
@@ -195,7 +198,7 @@ class LevelAnalyser:
         if not self.useless_boxes:
             self.useless_boxes = None
 
-    def boxes_to_be_walls(self):
+    def boxes_to_walls(self):
 
         self.locate_separate_rooms()
         self.get_agent_distribution_per_room()
@@ -204,10 +207,11 @@ class LevelAnalyser:
         
         for room_id, room in enumerate(self.rooms):
             for box_id in self.boxes_per_room[room_id]:
-                for agent_id in self.agents_per_room[room_id]:
-                    if self.state.box_colors[box_id] == self.state.agent_colors:
-                        break
-                boxes_to_be_walls.add(box_id)
+                add_box = True
+                if self.room_has_agents_of_color_of_box(room_id,box_id):
+                    break
+                else:
+                    boxes_to_be_walls.add(box_id)
 
         return boxes_to_be_walls
 
@@ -400,6 +404,8 @@ class LevelAnalyser:
                         break
             for i in removal_list:
                 needed_agent_colors.remove(i)
+
+       
             
         needed_agent_ids = {agent_id for agent_id in needed_agent_ids if agent_id not in agents_that_will_remain} #so agents that would be left behind
 

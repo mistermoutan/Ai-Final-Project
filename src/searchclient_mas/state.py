@@ -360,8 +360,6 @@ class StateMA:
         self.box_types = new_types
         self.box_colors = new_colors
 
-
-
         invalid_goals = {self.goal_by_cords[i] for i in invalid_positions if i in self.goal_by_cords}
         if len(invalid_goals) == 0:
             return
