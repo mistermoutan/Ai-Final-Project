@@ -42,7 +42,6 @@ class ParallelPlanner:
         self.level_analyzer = LevelAnalyser(state)
 
         while self.level_analyzer.immovable_boxes:
-            print(state)
             self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
             self.level_analyzer = LevelAnalyser(self.state)
 
@@ -285,27 +284,8 @@ class ParallelPlanner:
             not_stored = self.get_not_stored_objects(state)
         return plan, state
 
-    def get_state_color_info(self):
-        color_agents = defaultdict(int)
-        for color in self.state.agent_colors:
-            color_agents[color] += 1
-        color_goals = defaultdict(int)
-        type_color_map = {}
-
-        for i in range(len(self.state.box_types)):
-            type = self.state.box_types[i]
-            color = self.state.box_colors[i]
-            type_color_map[type] = color
-
-        for type, agent_goal in zip(self.state.goal_types, self.state.goal_agent):
-            if not agent_goal:
-                color = type_color_map[type]
-                color_goals[color] += 1
-
-        return color_agents, color_goals, type_color_map
-
     def goal_value(self, gm: GoalMetric):
-        val = gm.loss
+        val = gm.storage_loss
         if not gm.leaf:
             val += 5
         if gm.agent_goal:
@@ -834,8 +814,6 @@ class ParallelPlanner:
 
 
     def compute_plan(self):
-        # TODO: make use of this info and maybe add one for boxes?
-        color_agents_left, color_goals_left, type_color_map = self.get_state_color_info()
         complete_plan = []
         while len(self.completed) < len(self.state.goal_positions):
 
