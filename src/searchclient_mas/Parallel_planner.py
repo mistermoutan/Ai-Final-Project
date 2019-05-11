@@ -42,10 +42,10 @@ class ParallelPlanner:
         self.level_analyzer = LevelAnalyser(state)
 
         while self.level_analyzer.immovable_boxes:
+            print(state)
             self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
             self.level_analyzer = LevelAnalyser(self.state)
 
-        print(state)
         self.initial_state = state.copy()
         self.goal_analyzer = GoalAnalyzer(state)
         self.current_plan = []
