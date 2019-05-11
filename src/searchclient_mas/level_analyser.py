@@ -195,8 +195,21 @@ class LevelAnalyser:
         if not self.useless_boxes:
             self.useless_boxes = None
 
-    def get_agents_with_no_goals(self):
-        pass
+    def boxes_to_be_walls(self):
+
+        self.locate_separate_rooms()
+        self.get_agent_distribution_per_room()
+        self.get_box_distribution_per_room()
+        boxes_to_be_walls = {}
+        
+        for room_id, room in enumerate(self.rooms):
+            for box_id in self.boxes_per_room[room_id]:
+                for agent_id in self.agents_per_room[room_id]:
+                    if self.state.box_colors[box_id] == self.state.agent_colors:
+                        break
+                boxes_to_be_walls.add(box_id)
+
+        return boxes_to_be_walls
 
     ###########################################################################################################
 
@@ -363,8 +376,21 @@ class LevelAnalyser:
         all_agents_that_will_remain = agents_that_will_remain.union(needed_agent_ids) # so all that will be there at the end
         
         needed_agent_colors = set(ivt_that_will_remain[1].keys()) or None #this are the box colors that will remain in the room
+
+        #add box colors that are also coming in from deleted rooms to needed agent colors 
+        color_type_dict = {}
+        for c,t in zip(state.box_color, state.box_type):
+            color_type_dict[t] = c
+
+        for type in needed_box_types:
+            if needed_box_types[type] > 0:
+                color_of_box = color_type_dict[type]
+                if color_of_box not in needed_agent_colors:
+                    needed_agent_colors.add(color_of_box)
+
+
         #assert needed_agent_colors, "no box colors will remain"
-        
+
         if needed_agent_colors:
             removal_list = []
             for box_color in needed_agent_colors:
