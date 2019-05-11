@@ -150,7 +150,8 @@ class LevelAnalyser:
         
         unnacounted_for_agents = {agent for agent in range(len(self.agent_positions)) if agent not in accounted_for_agents}
         
-        assert None not in self.agents_per_room.values() , "There should not be rooms with no agents since all rooms have goals"
+
+        #assert None not in self.agents_per_room.values() , "There should not be rooms with no agents since all rooms have goals"
         
         #agents in rooms with no goals are useless
         if unnacounted_for_agents:

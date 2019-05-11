@@ -38,8 +38,15 @@ class PathNode:
 
 class ParallelPlanner:
     def __init__(self, state: StateMA):
-        self.initial_state = state
-        self.state = state.copy()
+        self.state = state
+        self.level_analyzer = LevelAnalyser(state)
+
+        while self.level_analyzer.immovable_boxes:
+            self.state.remove_immovable_boxes(self.level_analyzer.immovable_boxes)
+            self.level_analyzer = LevelAnalyser(self.state)
+
+        print(state)
+        self.initial_state = state.copy()
         self.goal_analyzer = GoalAnalyzer(state)
         self.current_plan = []
         self.blocked = set()
@@ -49,13 +56,6 @@ class ParallelPlanner:
         self.unusable_agents = set()
         self.dist = DistanceComputer(self.state)
         self.level_analyzer = LevelAnalyser(state)
-
-        if self.level_analyzer.immovable_boxes:
-            print(self.level_analyzer.immovable_boxes,file = sys.stderr,flush = True)
-        else:
-            print("jdnjief",file = sys.stderr,flush = True)
-
-        
         while self.level_analyzer.useless_boxes:
             print(self.level_analyzer.useless_boxes,file = sys.stderr,flush = True)
             self.state.remove_immovable_boxes(self.level_analyzer.useless_boxes)
