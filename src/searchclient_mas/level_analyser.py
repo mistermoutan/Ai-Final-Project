@@ -373,7 +373,7 @@ class LevelAnalyser:
 
         #add box colors that are also coming in from deleted rooms to needed agent colors 
         color_type_dict = {}
-        for c,t in zip(state.box_color, state.box_type):
+        for c,t in zip(state.box_colors, state.box_types):
             color_type_dict[t] = c
 
         for type in needed_box_types:
