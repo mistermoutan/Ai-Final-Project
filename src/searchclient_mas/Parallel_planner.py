@@ -360,6 +360,17 @@ class ParallelPlanner:
                 return None
 
         assert sum([value for value in needed_box_types.values()]) == 0, "Did  not get all needed boxes"
+
+        # TODO: improve this:
+        for pos in rooms_to_be_deleted:
+            if pos in state.agent_by_cords:
+                a_id = state.agent_by_cords[pos]
+                if a_id != agent:
+                    partial = self.move_agent_to_storage(pos, state, illegal)
+                    if partial is not None:
+                        current_plan.append(partial)
+
+
         return state, current_plan
         return state, must_salvage_elements
                 
@@ -634,7 +645,7 @@ class ParallelPlanner:
                     # extra space left
                     return None
 
-            # TODO: check if agent will be useful after goal is complete
+            # TODO: check if agent will be useful after goal is complete/ check which space is best storage
             if agent_final is None:
                 for n in get_neighbours(goal_pos):
                     if state.is_free(n) or n == box_pos or n == agent_pos:

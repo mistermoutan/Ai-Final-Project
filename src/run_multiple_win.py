@@ -1,21 +1,32 @@
 import os
 import subprocess
-main_folder = "comp17"
+main_folder = "comp18"
 run_cmd = 'java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "{}" -g'
 
-# TODO: MAGeneralAI
-# TODO: MAGroupOne
-# TODO: MAHALnineK: agent clear
-# TODO: MAOmnics
-# TODO: MATALK ?????, was unsolvable, lol
 
-# TODO: SAEvilCorp     SA levels in general have poor quality solutions
-# TODO:                SA dont waste tiem putting agent in storage
+# Comp17 issues
+# MA
+# TODO: MAGroupOne: hard but maybe possible by doing random stuff and hoping it becomes solved
+# TODO: MAHALnineK: solved, but slow realizer
+
+# SA
+# TODO:                SA dont waste time putting agent in storage
+# TODO: SAEvilCorp     Failure unclear
 # TODO: SAgroupname:   realizer and planner very slow
-# TODO: SAGroupOne
+# TODO: SAFooBar:      unsolved, sometimes solved depending on goal order strategy
+# TODO: SAGroupOne:    unsolved, similar to FooBar
+# TODO: SAHALnineK:    wont be solved by our solution, need new strategy
 # TODO: SALiquorice:   very slow realizer, weird output plan
-# TODO: SAMasters:     stupid failure
-# TODO: SA Omnics:     very slow realizer
+# TODO: SAMasters:     stupid failure, rotation point blocked off (similar to SAFooBar)
+# TODO: SAOmnics:     very slow realizer
+
+# Comp18 issues
+# MA
+# TODO: MAAiMasTers: same as SAHALnineK
+# TODO: MAKarlMarx: same as SAFooBar
+
+# SA
+# no issues except slow realizer and sometimes subpar plans
 if __name__ == '__main__':
     for sub in os.listdir(main_folder):
         if sub[-4:] == ".lvl":

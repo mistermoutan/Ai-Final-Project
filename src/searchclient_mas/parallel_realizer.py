@@ -6,6 +6,7 @@ import heapq
 import copy
 import sys
 from distance_comp import DistanceComputer
+import time
 
 
 dir_dict = {
@@ -217,7 +218,7 @@ class ParallelRealizer:
                 box_to_goal = self.dist.dist(box_target, state.box) + changes
 
                 # TODO: find some coefficients for the different metrics
-                return steps + 5*dist_to_box + 5*box_to_goal + goal_diff
+                return steps + 5*(dist_to_box) + 5*box_to_goal + goal_diff
 
         def get_children(state: PlanState):
             timestep = state.time
@@ -285,6 +286,7 @@ class ParallelRealizer:
             # this piece of code can speed up computation but may degrade solution
             est = estimated_time_to_solve(state)
             if est > 10:
+                print("wait skip estimated:", est,file=sys.stderr,flush=True)
                 t = initial.time
                 while est > 0:
                     t += 1
@@ -295,16 +297,27 @@ class ParallelRealizer:
                 h = heuristic(initial)
                 heapq.heappush(pq, (h, initial))
                 continue
+
             children = get_children(state)
             # curr = (state.agent, state.box)
+            # wait_child = None
             # if curr in seen_unchanged:
             #     unchanged_children = 0
+            #     changing_childern = []
             #     for i in children:
             #         child = (i.agent, i.box)
-            #         if child in seen_unchanged and seen_unchanged[child] >= i.time:
+            #         if child == curr:
+            #             wait_child = i
+            #         if child in seen_unchanged and seen_unchanged[child] <= i.time:
             #             unchanged_children += 1
+            #         else:
+            #             changing_childern.append(i)
             #     if unchanged_children == len(children):
             #         continue
+            #     if wait_child is not None:
+            #         changing_childern.append(wait_child)
+            #     children = changing_childern
+            #
             #
             # if not spaces.changes(state.time, state.agent) and (state.box is None or not spaces.changes(state.time, state.box)):
             #     if curr in seen_unchanged and seen_unchanged[curr] < state.time:
@@ -328,6 +341,7 @@ class ParallelRealizer:
                 break
 
         assert goal is not None, "goal should always be completable here"
+        #print("states seen:", len(seen),file=sys.stderr,flush=True)
 
         return goal
 
@@ -375,20 +389,23 @@ class ParallelRealizer:
         for partial in high_level_plan:
             #spaces.print_tracker()
             #print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
-            #print("plan:", partial)
             counter += 1
             id = partial.agent_id
-            #print("curr:\n", self.state, file=sys.stderr)
-            #self.state.set_agent_position(partial.agent_origin, partial.agent_end)
-            #if partial.box_id is not None:
-            #     self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
-            #print("next:\n", self.state, file=sys.stderr,flush=True)
-
+            # print("curr:\n", self.state, file=sys.stderr)
+            # self.state.set_agent_position(partial.agent_origin, partial.agent_end)
+            # if partial.box_id is not None:
+            #      self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
+            # print("next:\n", self.state, file=sys.stderr,flush=True)
+            start_step = agent_free[id]
+            start = time.time()
             plan = self.realize_partial_plan(partial, spaces, agent_free[id])
+            delta = time.time() - start
+
             spaces.update(agent_free[id], plan)
             actions = self.plan_to_actions(plan)
             start = agent_free[id]
             end = agent_free[id] + len(actions)
+            #print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
             for i in range(start, end):
                 if i == len(action_plan):
                     action_plan.append([None for _ in agent_free])
