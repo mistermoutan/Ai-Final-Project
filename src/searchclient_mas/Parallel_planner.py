@@ -161,9 +161,9 @@ class ParallelPlanner:
             ignore.remove(box_final_pos)
 
         if allowed_agent != state.agent_by_cords[box_final_pos]:
-            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, forbidden, cutoff=75)
+            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, forbidden, cutoff=80)
         else:
-            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, set(), cutoff=75)
+            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, set(), cutoff=80)
 
         if agent_node_finished is None:
 
@@ -548,7 +548,7 @@ class ParallelPlanner:
         res = self.clear_path(path, agent, box, goal_pos)
         if res is None:
             # this is a shitty fixx that might not always work
-            res = self.clear_path(path, -1, box, goal_pos)
+            res = self.clear_path(path, None, box, goal_pos)
             if res is None:
                 return None
 
@@ -841,13 +841,14 @@ class ParallelPlanner:
         if len(freebies) == 0:
             return []
         else:
+            agent_room = self.level_analyzer.room_of_agent
             for g in freebies:
                 g.storage_loss = 99999
                 g_type = self.state.goal_types[g.id]
                 g_pos = self.state.goal_positions[g.id]
                 g_room = self.level_analyzer.room_of_goal[g.id]
                 for i, c in enumerate(self.state.agent_colors):
-                    if g_type in self.color_dict[c] and self.level_analyzer.room_of_agent[i] == g_room:
+                    if g_type in self.color_dict[c] and i in agent_room and agent_room[i] == g_room:
                         a_pos = self.state.agent_positions[i]
                         dist = self.dist.dist(g_pos, a_pos) + self.agent_business[i]
                         if dist < g.storage_loss:
@@ -860,7 +861,7 @@ class ParallelPlanner:
     def compute_plan(self):
         complete_plan = []
         while len(self.completed) < len(self.state.goal_positions):
-            print(len(self.completed), file=sys.stderr,flush=True)
+            # print(len(self.completed), file=sys.stderr,flush=True)
             viable_goals = self.goal_analyzer.get_viable_goals(self.completed)
             freebies = self.rearranged_free_goals(viable_goals)
             if len(freebies) > 0:
@@ -883,7 +884,7 @@ class ParallelPlanner:
                 #sys.stdout.write("# " + self.state.unsolved_goals_to_string())
                 sys.stdout.write("# could not finish the plan :(, realizing current plan with {} goals completed\n".format(len(self.completed)))
                 sys.stdout.flush()
-                print(self.state, file=sys.stderr, flush=True)
+                #print(self.state, file=sys.stderr, flush=True)
                 return complete_plan
                 #assert False, "no solution could be found"
             else:
