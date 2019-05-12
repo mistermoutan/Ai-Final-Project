@@ -85,7 +85,7 @@ class ParallelPlanner:
                 return curr.pos
             curr = curr.parent
 
-    def move_box_to_storage(self, pos, state, forbidden=set()):
+    def move_box_to_storage(self, pos, state, forbidden=set(), allowed_agent=-1):
         """
         :param pos: current position of the box
         :param state: the current state (will get changed if we successfully store the box)
@@ -107,9 +107,10 @@ class ParallelPlanner:
         def check_turning(x):
             neighbors = get_neighbours(x)
             viable = 0
-
+            if not state.is_free(x) and x not in ignore:
+                return False
             for n in neighbors:
-                if state.is_free(n):
+                if state.is_free(n) or n in ignore:
                     viable += 1
 
             return viable > 2
@@ -156,7 +157,11 @@ class ParallelPlanner:
         if box_final_pos in ignore:
             ignore.remove(box_final_pos)
 
-        agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, forbidden, cutoff=80)
+        if allowed_agent != state.agent_by_cords[box_final_pos]:
+            agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, forbidden, cutoff=80)
+        else:
+            agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, set(), cutoff=80)
+
         if agent_node_finished is None:
 
             # undo state changes made for search
@@ -445,7 +450,11 @@ class ParallelPlanner:
             changed = False
             for b in boxes_in_path:
                 box_pos = state.box_positions[b]
-                partial_plan = self.move_box_to_storage(box_pos, state, path)
+                if agent is not None:
+                    partial_plan = self.move_box_to_storage(box_pos, state, path, allowed_agent=agent)
+                else:
+                    partial_plan = self.move_box_to_storage(box_pos, state, path)
+
                 if partial_plan is not None:
                     changed = True
                     current_plan.append(partial_plan)
@@ -563,14 +572,16 @@ class ParallelPlanner:
 
         def is_box(x):
             return x == box_pos
-
+        ignorable = {box_pos, agent_pos}
         # check if it is possible to change the orientation of agent around the box at given position
         def check_turning(x):
             neighbors = get_neighbours(x)
             viable = 0
 
+            if not state.is_free(x) and x not in ignorable:
+                return False
             for n in neighbors:
-                if state.is_free(n):
+                if state.is_free(n) or n in ignorable:
                     viable += 1
 
             return viable > 2
@@ -588,13 +599,14 @@ class ParallelPlanner:
             if agent_to_box is None:
                 return None
             box_to_goal = self.find_path_to_condition(box_pos, state, is_goal)
-            pushable = True
             if box_to_goal is None:
                 # if the box is unable to reach the goal the agent may be able to reach it
                 pushable = False
                 agent_to_goal = self.find_path_to_condition(agent_pos, state, is_goal)
                 if agent_to_goal is None:
                     return None
+            else:
+                pushable = state.is_free(box_to_goal.pos) or box_pos == goal_pos
 
             can_turn = self.find_path_to_condition(goal_pos, state, check_turning)
             if can_turn is None:
@@ -837,6 +849,7 @@ class ParallelPlanner:
                 #sys.stdout.write("# " + self.state.unsolved_goals_to_string())
                 sys.stdout.write("# could not finish the plan :(, realizing current plan with {} goals completed\n".format(len(self.completed)))
                 sys.stdout.flush()
+                print(self.state, file=sys.stderr, flush=True)
                 return complete_plan
                 #assert False, "no solution could be found"
             else:

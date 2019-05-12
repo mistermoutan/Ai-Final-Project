@@ -253,6 +253,7 @@ class ParallelRealizer:
         initial = PlanState(initial_time, agent_curr, box_curr, None)
         pq = []
         seen = set()
+        seen_unchanged = {}
         # TODO: all stuff at time_step > spaces is the same in terms of seen
 
         heapq.heappush(pq, (heuristic(initial), initial))
@@ -263,6 +264,22 @@ class ParallelRealizer:
             _, state = heapq.heappop(pq)
 
             children = get_children(state)
+            # curr = (state.agent, state.box)
+            # if curr in seen_unchanged:
+            #     unchanged_children = 0
+            #     for i in children:
+            #         child = (i.agent, i.box)
+            #         if child in seen_unchanged and seen_unchanged[child] >= i.time:
+            #             unchanged_children += 1
+            #     if unchanged_children == len(children):
+            #         continue
+            #
+            # if not spaces.changes(state.time, state.agent) and (state.box is None or not spaces.changes(state.time, state.box)):
+            #     if curr in seen_unchanged and seen_unchanged[curr] < state.time:
+            #         seen_unchanged[curr] = state.time
+            #     elif curr not in seen_unchanged:
+            #         seen_unchanged[curr] = state.time
+
             done = False
             for c in children:
                 if c not in seen:
@@ -270,10 +287,6 @@ class ParallelRealizer:
                     h = heuristic(c)
                     delta = (c.time - initial_time)
                     goal_dist = h - delta
-                    # if goal_dist < best or goal_dist < 0:
-                    #     print(goal_dist,": ",c)
-                    #     h = heuristic(c)
-                    #     best = goal_dist
                     if goal_dist == 0:
                         done = True
                         goal = c
@@ -326,12 +339,19 @@ class ParallelRealizer:
         spaces = SpaceTracker(self.state)
 
         counter = 0
+        print("total_partials:", len(high_level_plan))
         for partial in high_level_plan:
             #spaces.print_tracker()
             #print("step:", counter)
             #print("plan:", partial)
             counter += 1
             id = partial.agent_id
+            # print("curr:\n", self.state)
+            # self.state.set_agent_position(partial.agent_origin, partial.agent_end)
+            # if partial.box_id is not None:
+            #     self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
+            # print("next:\n", self.state)
+
             plan = self.realize_partial_plan(partial, spaces, agent_free[id])
             spaces.update(agent_free[id], plan)
             actions = self.plan_to_actions(plan)
