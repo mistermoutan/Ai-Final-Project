@@ -374,7 +374,7 @@ class ParallelRealizer:
         print("total_partials:", len(high_level_plan), file=sys.stderr)
         for partial in high_level_plan:
             #spaces.print_tracker()
-            print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
+            #print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             #print("plan:", partial)
             counter += 1
             id = partial.agent_id
