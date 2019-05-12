@@ -54,6 +54,9 @@ class ParallelPlanner:
         self.unusable_boxes = set()
         self.unusable_agents = set()
         self.dist = DistanceComputer(self.state)
+        self.color_dict = defaultdict(set)
+        for c,t in zip(self.state.box_colors, self.state.box_types):
+            self.color_dict[c].add(t)
 
 
     def find_boxes_and_agents_for_goal(self, goal_id):
@@ -158,9 +161,9 @@ class ParallelPlanner:
             ignore.remove(box_final_pos)
 
         if allowed_agent != state.agent_by_cords[box_final_pos]:
-            agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, forbidden, cutoff=80)
+            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, forbidden, cutoff=75)
         else:
-            agent_node_finished = self.find_path_to_storage(pos, state, False, ignore, set(), cutoff=80)
+            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, set(), cutoff=75)
 
         if agent_node_finished is None:
 
@@ -351,7 +354,7 @@ class ParallelPlanner:
                     done_boxes.add(box_id)
 
             all_box_ids -= done_boxes
-            done_boxes = {}
+            done_boxes = set()
             if not color_changed:
             #TODO: fall back strategy when can't move boxes
                 return None
@@ -452,6 +455,7 @@ class ParallelPlanner:
                 box_pos = state.box_positions[b]
                 if agent is not None:
                     partial_plan = self.move_box_to_storage(box_pos, state, path, allowed_agent=agent)
+                    #agent_moved = False # after moving box to storage agent may be put in the path again blockign other agents
                 else:
                     partial_plan = self.move_box_to_storage(box_pos, state, path)
 
@@ -524,7 +528,7 @@ class ParallelPlanner:
         agent_pos = self.state.agent_positions[agent]
         goal_pos = self.state.goal_positions[goal]
         box_pos = None
-        
+
         if box is not None:
             box_pos = self.state.box_positions[box]
             if box_pos == goal_pos:
@@ -537,10 +541,16 @@ class ParallelPlanner:
         else:
             path = self.find_easiest_path(agent_pos, goal_pos).to_set()
 
+        # TODO: While clearing path we might have to disallow the agent to return to it by setting the agent parameter as -1
+        # TODO: While clearing path we might have to disallow the agent to return to it by setting the agent parameter as -1
+        # TODO: While clearing path we might have to disallow the agent to return to it by setting the agent parameter as -1
+        # TODO: While clearing path we might have to disallow the agent to return to it by setting the agent parameter as -1
         res = self.clear_path(path, agent, box, goal_pos)
-
         if res is None:
-            return None
+            # this is a shitty fixx that might not always work
+            res = self.clear_path(path, -1, box, goal_pos)
+            if res is None:
+                return None
 
         state, plan = res
 
@@ -758,7 +768,7 @@ class ParallelPlanner:
                         path = self.find_easiest_path(a1_pos, a2_pos)
                         # we don't really wanna clear the agent itself
                         path = path.parent
-                        res = self.clear_path(path.to_set(), a1_pos)
+                        res = self.clear_path(path.to_set(), a1)
                     if res is not None:
                         state, plan = res
                         clearing_plan.extend(plan)
@@ -825,15 +835,39 @@ class ParallelPlanner:
             component += 1
             # TODO: finish
 
+    def rearranged_free_goals(self, goals: List[GoalMetric]):
+        freebies = [g for g in goals if g.true_loss == 0 and not g.agent_goal]
 
+        if len(freebies) == 0:
+            return []
+        else:
+            for g in freebies:
+                g.storage_loss = 99999
+                g_type = self.state.goal_types[g.id]
+                g_pos = self.state.goal_positions[g.id]
+                g_room = self.level_analyzer.room_of_goal[g.id]
+                for i, c in enumerate(self.state.agent_colors):
+                    if g_type in self.color_dict[c] and self.level_analyzer.room_of_agent[i] == g_room:
+                        a_pos = self.state.agent_positions[i]
+                        dist = self.dist.dist(g_pos, a_pos) + self.agent_business[i]
+                        if dist < g.storage_loss:
+                            g.storage_loss = dist
+
+
+            freebies.sort(key=lambda x: x.storage_loss)
+            return [g for g in freebies]
 
     def compute_plan(self):
         complete_plan = []
         while len(self.completed) < len(self.state.goal_positions):
-
-            goal_order = self.goal_analyzer.get_viable_goals(self.completed)
-            goal_order = sorted(goal_order, key=self.goal_value)
-            goal_order = [g.id for g in goal_order]
+            print(len(self.completed), file=sys.stderr,flush=True)
+            viable_goals = self.goal_analyzer.get_viable_goals(self.completed)
+            freebies = self.rearranged_free_goals(viable_goals)
+            if len(freebies) > 0:
+                goal_order = [g.id for g in freebies]
+            else:
+                goal_order = sorted(viable_goals, key=self.goal_value)
+                goal_order = [g.id for g in goal_order]
             goal_plan = None
             goal = None
             for goal in goal_order:

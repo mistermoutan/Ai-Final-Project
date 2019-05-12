@@ -4,6 +4,7 @@ from action import Action,ActionType,Dir
 from typing import List
 import heapq
 import copy
+import sys
 from distance_comp import DistanceComputer
 
 
@@ -100,6 +101,10 @@ class SpaceTracker:
     def changes(self, time_step, pos):
         row, col = pos
         return self.latest_update[row][col] > time_step
+
+    def time_til_change(self, time_step, pos):
+        row, col = pos
+        return self.latest_update[row][col] - time_step
 
     def print_time_step(self, t):
         if t >= len(self.spaces):
@@ -260,9 +265,36 @@ class ParallelRealizer:
         goal = None
         best = 99999
         #print("target: a:", agent_target , " b:", box_target)
+
+        def estimated_time_to_solve(state: PlanState):
+            est = 0
+            if state.box is not None and state.box == box_target:
+                return spaces.time_til_change(state.time, box_target)
+            if state.agent != agent_target:
+                return est
+
+            est = max(spaces.time_til_change(state.time, agent_target), est)
+            return est
+
+
+
+
         while pq:
             _, state = heapq.heappop(pq)
 
+            # this piece of code can speed up computation but may degrade solution
+            est = estimated_time_to_solve(state)
+            if est > 10:
+                t = initial.time
+                while est > 0:
+                    t += 1
+                    initial = PlanState(t, initial.agent, initial.box, initial)
+                    est -= 1
+                pq = []
+                seen = set()
+                h = heuristic(initial)
+                heapq.heappush(pq, (h, initial))
+                continue
             children = get_children(state)
             # curr = (state.agent, state.box)
             # if curr in seen_unchanged:
@@ -339,18 +371,18 @@ class ParallelRealizer:
         spaces = SpaceTracker(self.state)
 
         counter = 0
-        print("total_partials:", len(high_level_plan))
+        print("total_partials:", len(high_level_plan), file=sys.stderr)
         for partial in high_level_plan:
             #spaces.print_tracker()
-            #print("step:", counter)
+            print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             #print("plan:", partial)
             counter += 1
             id = partial.agent_id
-            # print("curr:\n", self.state)
-            # self.state.set_agent_position(partial.agent_origin, partial.agent_end)
-            # if partial.box_id is not None:
+            #print("curr:\n", self.state, file=sys.stderr)
+            #self.state.set_agent_position(partial.agent_origin, partial.agent_end)
+            #if partial.box_id is not None:
             #     self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
-            # print("next:\n", self.state)
+            #print("next:\n", self.state, file=sys.stderr,flush=True)
 
             plan = self.realize_partial_plan(partial, spaces, agent_free[id])
             spaces.update(agent_free[id], plan)
@@ -363,5 +395,9 @@ class ParallelRealizer:
 
                 action_plan[i][id] = actions[i - start]
             agent_free[id] = end
+            # if counter == 180:
+            #     print("breaking early for test in realizer\n", file=sys.stderr,flush=True)
+            #     print("last agent planned for:", id)
+            #     break
 
         return action_plan
