@@ -794,57 +794,6 @@ class ParallelPlanner:
             return None
         return clearing_plan
 
-    def unblock_agents(self, goal):
-        room_id = 0
-        # this is just so that the level analyzer is initialized
-        _ = self.level_analyzer.get_relevant_elements_to_goals(goal)
-        goal_pos = self.state.goal_positions[goal]
-        for i, spaces in enumerate(self.level_analyzer.rooms):
-            if goal_pos in spaces:
-                room_id = i
-                break
-
-        room_agents = list(self.level_analyzer.agents_per_room[room_id])
-        if len(room_agents) <= 1:
-            # nothing to be done
-            return None
-
-        component = 0
-        component_dict = defaultdict(set)
-        component_edges = defaultdict(set)
-        pos_comp = dict()
-        agent_comp = [None for i in room_agents]
-        state = self.state.copy()
-
-        for i, a in enumerate(room_agents):
-            a_pos = self.state.agent_positions[a]
-            if a_pos in pos_comp:
-                agent_comp[i] = pos_comp[a_pos]
-                continue
-
-            agent_comp[i] = component
-
-            q = Queue()
-            pos_comp[a_pos] = component
-            q.put(a_pos)
-
-            # use BFS to find nearest available storage node
-            while not q.empty():
-                curr = q.get()
-                neighbors = get_neighbours(curr)
-                for n in neighbors:
-                    if n in pos_comp:
-                        continue
-                    if state.in_bounds(n):
-                        if state.is_free(n) or n in state.agent_by_cords:
-                            pos_comp[n] = component
-                            component_dict[component].add(n)
-                            q.put(n)
-                        else:
-                            # if it is not free and not agent space must have a box
-                            component_edges[component].add(n)
-            component += 1
-            # TODO: finish
 
     def rearranged_free_goals(self, goals: List[GoalMetric]):
         freebies = [g for g in goals if g.true_loss == 0 and not g.agent_goal]
