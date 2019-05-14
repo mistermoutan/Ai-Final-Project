@@ -232,6 +232,9 @@ class ParallelRealizer:
             if box_pos is not None and not spaces.is_free(timestep, box_pos):
                 return []
 
+            # noop
+            children.append(PlanState(timestep, agent_pos, box_pos, state))
+
             in_range = False
             for a in get_neighbours(agent_pos):
                 if a == box_pos:
@@ -250,9 +253,6 @@ class ParallelRealizer:
                     if spaces.is_free(timestep, a) and a != box_pos:
                         s = PlanState(timestep, a, agent_pos, state)
                         children.append(s)
-
-            # noop
-            children.append(PlanState(timestep, agent_pos, box_pos, state))
             return children
 
 
@@ -388,7 +388,7 @@ class ParallelRealizer:
         print("total_partials:", len(high_level_plan), file=sys.stderr)
         for partial in high_level_plan:
             #spaces.print_tracker()
-            #print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
+            print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             counter += 1
             id = partial.agent_id
             # print("curr:\n", self.state, file=sys.stderr)
@@ -405,7 +405,7 @@ class ParallelRealizer:
             actions = self.plan_to_actions(plan)
             start = agent_free[id]
             end = agent_free[id] + len(actions)
-            #print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
+            print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
             for i in range(start, end):
                 if i == len(action_plan):
                     action_plan.append([None for _ in agent_free])
