@@ -183,6 +183,40 @@ class ParallelRealizer:
         self.dist = dist_comp
         self.state = state
 
+    def get_children(self, state: PlanState, spaces:SpaceTracker):
+        timestep = state.time
+        agent_pos = state.agent
+        box_pos = state.box
+        timestep += 1
+        children = []
+        # if something is just about to occupy spaces that are already occupied now we know this cant happen
+        if not spaces.is_free(timestep, agent_pos):
+            return []
+        if box_pos is not None and not spaces.is_free(timestep, box_pos):
+            return []
+
+        # noop
+        children.append(PlanState(timestep, agent_pos, box_pos, state))
+
+        in_range = False
+        for a in get_neighbours(agent_pos):
+            if a == box_pos:
+                # if a neighbouring space is a box we can perform push and pull actions
+                in_range = True
+                for b in get_neighbours(box_pos):
+                    if b != agent_pos and spaces.is_free(timestep, b):
+                        children.append(PlanState(timestep, a, b, state))
+
+            elif spaces.is_free(timestep, a):
+                children.append(PlanState(timestep, a, box_pos, state))
+
+        # this means we can perform pull actions
+        if in_range:
+            for a in get_neighbours(agent_pos):
+                if spaces.is_free(timestep, a) and a != box_pos:
+                    s = PlanState(timestep, a, agent_pos, state)
+                    children.append(s)
+        return children
 
     def realize_partial_plan(self, partial_plan: HighLevelPartialPlan, spaces: SpaceTracker, time=0):
         agent_curr = partial_plan.agent_origin
@@ -220,41 +254,6 @@ class ParallelRealizer:
                 # TODO: find some coefficients for the different metrics
                 return steps + 5*(dist_to_box) + 5*box_to_goal + goal_diff
 
-        def get_children(state: PlanState):
-            timestep = state.time
-            agent_pos = state.agent
-            box_pos = state.box
-            timestep += 1
-            children = []
-            # if something is just about to occupy spaces that are already occupied now we know this cant happen
-            if not spaces.is_free(timestep, agent_pos):
-                return []
-            if box_pos is not None and not spaces.is_free(timestep, box_pos):
-                return []
-
-            # noop
-            children.append(PlanState(timestep, agent_pos, box_pos, state))
-
-            in_range = False
-            for a in get_neighbours(agent_pos):
-                if a == box_pos:
-                    # if a neighbouring space is a box we can perform push and pull actions
-                    in_range = True
-                    for b in get_neighbours(box_pos):
-                        if b != agent_pos and spaces.is_free(timestep, b):
-                            children.append(PlanState(timestep, a, b, state))
-
-                elif spaces.is_free(timestep, a):
-                    children.append(PlanState(timestep, a, box_pos, state))
-
-            # this means we can perform pull actions
-            if in_range:
-                for a in get_neighbours(agent_pos):
-                    if spaces.is_free(timestep, a) and a != box_pos:
-                        s = PlanState(timestep, a, agent_pos, state)
-                        children.append(s)
-            return children
-
 
         initial = PlanState(initial_time, agent_curr, box_curr, None)
         pq = []
@@ -277,9 +276,6 @@ class ParallelRealizer:
             est = max(spaces.time_til_change(state.time, agent_target), est)
             return est
 
-
-
-
         while pq:
             _, state = heapq.heappop(pq)
 
@@ -298,32 +294,7 @@ class ParallelRealizer:
                 heapq.heappush(pq, (h, initial))
                 continue
 
-            children = get_children(state)
-            # curr = (state.agent, state.box)
-            # wait_child = None
-            # if curr in seen_unchanged:
-            #     unchanged_children = 0
-            #     changing_childern = []
-            #     for i in children:
-            #         child = (i.agent, i.box)
-            #         if child == curr:
-            #             wait_child = i
-            #         if child in seen_unchanged and seen_unchanged[child] <= i.time:
-            #             unchanged_children += 1
-            #         else:
-            #             changing_childern.append(i)
-            #     if unchanged_children == len(children):
-            #         continue
-            #     if wait_child is not None:
-            #         changing_childern.append(wait_child)
-            #     children = changing_childern
-            #
-            #
-            # if not spaces.changes(state.time, state.agent) and (state.box is None or not spaces.changes(state.time, state.box)):
-            #     if curr in seen_unchanged and seen_unchanged[curr] < state.time:
-            #         seen_unchanged[curr] = state.time
-            #     elif curr not in seen_unchanged:
-            #         seen_unchanged[curr] = state.time
+            children = self.get_children(state, spaces)
 
             done = False
             for c in children:
@@ -378,6 +349,10 @@ class ParallelRealizer:
         actions.reverse()
 
         return actions
+
+    def estimate_min_completion_time(self, partial_plan: HighLevelPartialPlan):
+        pass
+
 
     def realize_plan(self, high_level_plan: List[HighLevelPartialPlan]):
         agent_free = [0 for _ in self.state.agent_positions]

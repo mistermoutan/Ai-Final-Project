@@ -29,27 +29,27 @@ green: 7, H, P, X
 +H++++++++++++++++++++++++++++++++++++++++++++++
 +                                              +
 +                                              +
-+   JNIKMLPO                                   +
-+   KOMJPNIL                                   +
-+   IKOPJLNM                                   +
-+   MNLJIKPO                                   +
-+   LNOJIKMP                                   +
-+   PNJKIMLO                                   +
-+   OMKJLIPN                                   +
-+   IOLPJKNM                                   +
++   JNIKMLPO       OMNJLKIP                    +
++   KOMJPNIL       JILKPMON         WUTSXVQR   +
++   IKOPJLNM       MLJOKPIN                    +
++   MNLJIKPO       KINOMLPJ         UXWTVQSR   +
++   LNOJIKMP       KMJPLNIO                    +
++   PNJKIMLO       JONIKLMP         VQTXRSWU   +
++   OMKJLIPN       OJMNPKIL                    +
++   IOLPJKNM       INOLKMJP         SVQRWUTX   +
 +                                              +
-+                                  VQTXRSWU    +
-+ + + + + + + +                    WUTSXVQR    +
-+ + + + + + + +                    SVQRWUTX    +
-+ + + + + + + +                    UXWTVQSR    +
-+ + + + + + + +                    UWXSVQTR    +
-+ + + + + + + +                    SUWVTRQX    +
-+ + + + + + + +                    XWUSVTQR    +
-+ + + + + + + +                    XSVUTWQR    +
-+ + + + + + + +                                +
-+++++++++++++++                                +
-+++++++++++++++                                +
-+++++++++++++++                                +
++                                   UWXSVQTR   +
++ + + + + + + + + + + + + + + + +              +
++ + + + + + + + + + + + + + + + +   SUWVTRQX   +
++ + + + + + + + + + + + + + + + +              +
++ + + + + + + + + + + + + + + + +   XWUSVTQR   +
++ + + + + + + + + + + + + + + + +              +
++ + + + + + + + + + + + + + + + +   XSVUTWQR   +
++ + + + + + + + + + + + + + + + +              +
++ + + + + + + + + + + + + + + + +   TXVSWQRU   +
++++++++++++++++++++++++++++++++++              +
++++++++++++++++++++++++++++++++++              +
++++++++++++++++++++++++++++++++++              +
 ++++++++++++++++++++++++++++++++++++++++++++++++
 ++++++++++++++++++++++++++++++++++++++++++++++++
 #goal
@@ -74,23 +74,23 @@ green: 7, H, P, X
 +                                              +
 +                                              +
 +                                              +
-+                                              +
-+                                              +
-+                                              +
-+                                              +
-+                                              +
-+                                  VRWQUTSX    +
-+I+I+I+I+I+I+I+                    QWVSURXT    +
-+J+J+J+J+J+J+J+                    QRXTWSVU    +
-+K+K+K+K+K+K+K+                    VRXUTQWS    +
-+L+L+L+L+L+L+L+                    TWVXSURQ    +
-+M+M+M+M+M+M+M+                    WSUXQRVT    +
-+N+N+N+N+N+N+N+                    RTVSQXWU    +
-+O+O+O+O+O+O+O+                    WSQXRTVU    +
-+P+P+P+P+P+P+P+                                +
-+++++++++++++++                                +
-+++++++++++++++                                +
-+++++++++++++++                                +
++                                   01234567   +
++                                   VRWQUTSX   +
++                                   QWVSURXT   +
++                                   QRXTWSVU   +
++                                   VRXUTQWS   +
++                                   TWVXSURQ   +
++I+I+I+I+I+I+I+I+K+O+I+M+J+L+N+P+   WSUXQRVT   +
++J+J+J+J+J+J+J+J+N+P+K+M+J+L+O+I+   RTVSQXWU   +
++K+K+K+K+K+K+K+K+N+L+O+I+K+J+P+M+   WSQXRTVU   +
++L+L+L+L+L+L+L+L+P+I+O+M+J+N+L+K+   XTVSUQWR   +
++M+M+M+M+M+M+M+M+L+P+N+I+J+O+M+K+              +
++N+N+N+N+N+N+N+N+J+O+M+N+P+L+I+K+              +
++O+O+O+O+O+O+O+O+L+N+P+J+M+K+O+I+              +
++P+P+P+P+P+P+P+P+I+P+J+L+M+K+N+O+              +
++++++++++++++++++++++++++++++++++              +
++++++++++++++++++++++++++++++++++              +
++++++++++++++++++++++++++++++++++              +
 ++++++++++++++++++++++++++++++++++++++++++++++++
 ++++++++++++++++++++++++++++++++++++++++++++++++
 #end

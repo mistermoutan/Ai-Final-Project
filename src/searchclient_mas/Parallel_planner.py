@@ -810,6 +810,8 @@ class ParallelPlanner:
                 for i, c in enumerate(self.state.agent_colors):
                     if g_type in self.color_dict[c] and i in agent_room and agent_room[i] == g_room:
                         a_pos = self.state.agent_positions[i]
+                        # path = self.find_easiest_path(a_pos, g_pos)
+                        # dist = path.value + self.agent_business[i]
                         dist = self.dist.dist(g_pos, a_pos) + self.agent_business[i]
                         if dist < g.storage_loss:
                             g.storage_loss = dist
