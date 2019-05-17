@@ -37,7 +37,7 @@ class HTN():
         self.state = state
         self.Tasks = []
         self.graph_of_level = Graph(state.maze)
-        self.pd = problemDecomposer(state, graph_of_level)
+        self.pd = problemDecomposer(state)
         self.number_of_agents = len(self.state.agent_positions)
         self.agent_workload = [0] * self.number_of_agents
         self.boxes_used =[]
@@ -379,11 +379,12 @@ This class decomposes a level into high level problems where tasks can be create
 on possible agents that can bring possible boxes to specific goals
 '''
 class problemDecomposer():
-    def __init__(self,state, graph_of_level):
+    def __init__(self,state, graph_of_level=None):
         self.Tasks  = []
         self.Plan = []
         self.state = state
-        self.graph_of_level = graph_of_level
+        if not graph_of_level == None:
+            self.graph_of_level = graph_of_level
         self.level_analyser = LevelAnalyser(self.state)
         self.separated_rooms_exisit = self.level_analyser.separate_rooms_exist()
         if self.separated_rooms_exisit:

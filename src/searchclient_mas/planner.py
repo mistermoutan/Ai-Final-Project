@@ -137,7 +137,7 @@ class Planner(object):
         if self.print_status:
             if not int('%.f' % self.used_time()) % 10 and int('%.f' % self.used_time()) not in self.times_printed:
                 self.times_printed.append(int('%.f' % self.used_time()))
-                print(self.search_status(), file=sys.stderr)
+                print(self.search_status(), file=sys.stderr, flush=True)
 
     #Expands at most n more states from the frontier.
     #Returns the plan if it is found, otherwise returns None
