@@ -379,8 +379,8 @@ This class decomposes a level into high level problems where tasks can be create
 on possible agents that can bring possible boxes to specific goals
 '''
 class problemDecomposer():
-    def __init__(self,state, graph_of_level=None):
-        self.Tasks  = []
+    def __init__(self,state, graph_of_level):
+        self.Tasks = []
         self.Plan = []
         self.state = state
         if not graph_of_level == None:

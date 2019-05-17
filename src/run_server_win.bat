@@ -1,0 +1,1 @@
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "candidatelevels/MAGroupName.lvl" -g

@@ -3,16 +3,17 @@
 import sys
 import traceback
 from state import StateSA,StateMA,StateBuilder
-from problemDecomposer import problemDecomposer,Task,HTN
-from coordinator import Coordinator
+#from problemDecomposer import problemDecomposer,Task,HTN
+#from coordinator import Coordinator
 from action import north,south,west,east,move,push,pull
+from Parallel_planner import ParallelPlanner
 import os
 
-
 class SearchClient:
-    def __init__(self, server_messages,):
+    def __init__(self, server_messages, serverless=False):
         if not server_messages:
             return
+        self.serverless=serverless
         #Adapt to data structure and split msg in parts.
         self.domain = None
         self.levelname = None
@@ -66,9 +67,7 @@ class SearchClient:
 
         cols = max([len(line) for line in init])
         maze = [[True for _ in range(cols)] for _ in range(len(init))]
-        agent = []
-        boxes = []
-        goals = []
+        builder = StateBuilder()
         type_count = 0
         seen_types = {}
         row = 0
@@ -79,8 +78,7 @@ class SearchClient:
 
                 elif char in "0123456789":
                     agent_id = int(char)
-                    agent_spec = ((row, col),colors[char])
-                    agent.insert(agent_id, agent_spec)
+                    builder.add_agent(agent_id, (row, col), colors[char])
                 elif char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     type = type_count
                     if char.lower() in seen_types.keys():
@@ -88,7 +86,7 @@ class SearchClient:
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    boxes.append((type, (row, col),colors[char]))
+                    builder.add_box(type, (row, col),colors[char])
                 elif char == ' ':
                     # Free cell.
                     pass
@@ -99,17 +97,23 @@ class SearchClient:
         row = 0
         for line in goal:
             for col, char in enumerate(line):
-                if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789":
                     type = type_count
+                    agent_goal = False
+                    if char in "0123456789":
+                        agent_goal = True
+                        type = int(char)
                     if char.lower() in seen_types.keys():
                         type = seen_types[char.lower()]
                     else:
                         seen_types[char.lower()] = type
                         type_count += 1
-                    goals.append((type, (row, col)))
+
+                    builder.add_goal(type, (row, col), agent_goal)
             row += 1
 
-        self.initial_state = StateMA(maze,boxes,goals,agent)
+        builder.set_maze(maze)
+        self.initial_state = builder.build_StateMA()
 
         self.sendComment("Initialized SearchClient")
 
@@ -134,6 +138,12 @@ class SearchClient:
             master_plan = coordinator.solve_greedy_decomposition()
             for action_vector in master_plan:
                 self.sendJointAction(action_vector)
+        elif solver=="par":
+            planner = ParallelPlanner(self.initial_state)
+            master_plan = planner.solve()
+            for action_vector in master_plan:
+                self.sendJointAction(action_vector)
+
 
 
     '''
@@ -150,11 +160,14 @@ class SearchClient:
     def sendJointAction(self,actions):
         #print(actions,file=sys.stderr,flush=True)
         jointAction = ";".join([str(action) if action else "NoOp" for action in actions])
-        sys.stdout.write(jointAction+"\n")
-        sys.stdout.flush()
-
-
-        success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
+        success = None
+        if not self.serverless:
+            sys.stdout.write(jointAction+"\n")
+            sys.stdout.flush()
+            success = [i.rstrip() == "true" for i in sys.stdin.readline().rstrip().split(";")]
+        else:
+            self.initial_state = self.initial_state.get_child(actions)
+            success = self.initial_state is not None
         return success
 
     def sendComment(self,comment):
@@ -169,30 +182,36 @@ def main():
     #If you supply a hard coded file name, it will run that hard coded level instead of
     #reading from the server. I can't find out how to pass command line arguments when
     #i use the debugger.... Sorry if this caused you to look around for a while in confusion :D
-    hard_coded_file_name = None
+    #hard_coded_file_name = None
     #hard_coded_file_name = "src/levels/chokepoint.lvl"
-    #hard_coded_file_name = "../levels/chokepoint.lvl"
+    file_name = None
+    server_messages = sys.stdin
+    serverless = False
+    if len(sys.argv) > 2:
+        file_name = sys.argv[2]
+        if os.path.isfile(file_name):
+            server_messages = open(file_name)
+            serverless = True
 
     #If a filename is passed as argument, we read directly from file instead of
     #using the server. Allows us to run debugger at the same time
     if len(sys.argv) >= 2:
         arg1 = sys.argv[1]
         if  os.path.isfile(arg1):
-            server_messages = open(sys.argv[1])
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             server_messages.close()
         elif arg1=='-htn':
-            server_messages = sys.stdin
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('htn')
         elif arg1=='-htn_seq':
-            server_messages = sys.stdin
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('htn_seq')
         elif arg1=='-greedy_decomposition':
-            server_messages = sys.stdin
-            client = SearchClient(server_messages)
+            client = SearchClient(server_messages, serverless)
             client.solve_the_problem('greedy_decomposition')
+        elif arg1=='-par':
+            client = SearchClient(server_messages, serverless)
+            client.solve_the_problem('par')
         else:
             raise ValueError("argument is not a solver")
 
@@ -205,20 +224,17 @@ def main():
 
 
 
-    elif hard_coded_file_name:
-        server_messages = open(hard_coded_file_name)
-        client = SearchClient(server_messages)
-        server_messages.close()
-        #Follow this to get where the planning happens
-        client.solve_the_problem()
-
+    # elif hard_coded_file_name:
+    #     client = SearchClient(server_messages)
+    #     server_messages.close()
+    #     #Follow this to get where the planning happens
+    #     client.solve_the_problem()
+    #
     else:
         server_messages = sys.stdin
         client = SearchClient(server_messages)
         #Follow this to get where the planning happens
         client.solve_the_problem()
-
-
 
 if __name__ == '__main__':
     main()

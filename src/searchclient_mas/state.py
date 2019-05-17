@@ -302,40 +302,89 @@ class StateMA:
             movable_colors.add(color)
 
         curr = 0
-        self.box_types = []
-        self.box_positions = []
-        self.box_colors = []
-        self.box_by_cords = {}
+        self.box_types = [b[0] for b in boxes]
+        self.box_positions = [b[1] for b in boxes]
+        self.box_colors = [b[2] for b in boxes]
+        self.box_by_cords = {pos: i for i, pos in enumerate(self.box_positions)}
         maze_safe = False
-        # any boxes that mismatch the color of all agents will be assumed walls
-        # TODO: should this be done elsewhere maybe the level analyzer?
-        for i in range(len(boxes)):
-            type, pos, color = boxes[i]
-            if color in movable_colors:
-                self.box_by_cords[pos] = curr
-                self.box_positions.append(pos)
-                self.box_colors.append(color)
-                self.box_types.append(type)
-                curr += 1
-            else:
-                x, y = pos
-                # since we are editing them aze we need to make sure it doesnt get broken in the caller's maze
-                # TODO: make slightly more efficient by nto copying whole maze but only necessary parts?
-                if not maze_safe:
-                    self.maze = [[self.maze[j][i] for i in range(self.cols)] for j in range(self.rows)]
-                    maze_safe = True
-                self.maze[x][y] = False
 
         self.goal_types = [g[0] for g in goals]
         self.goal_positions = [g[1] for g in goals]
-        # self.goal_agent = [g[2] for g in goals]
+        self.goal_agent = [g[2] for g in goals]
         self.goal_by_cords = {pos: i for i, pos in enumerate(self.goal_positions)}
+
+        # any boxes that mismatch the color of all agents will be assumed walls
+        # TODO: should this be done elsewhere maybe the level analyzer?
+        immovable_boxes = set()
+
+        for i in range(len(boxes)):
+            type, pos, color = boxes[i]
+            if color not in movable_colors:
+                immovable_boxes.add(i)
+        self.remove_immovable_boxes(immovable_boxes)
 
         self.parent = None
         self.g = 0
         self.action = None
 
         self._hash = None
+
+
+
+    def remove_immovable_boxes(self, box_ids: set):
+
+        if len(box_ids) == 0:
+            return
+
+        invalid_positions = set()
+
+        new_positions = []
+        new_colors = []
+        new_types = []
+        curr = 0
+
+        for i in range(len(self.box_positions)):
+            pos = self.box_positions[i]
+            if i in box_ids:
+                invalid_positions.add(pos)
+                del self.box_by_cords[pos]
+                i, j = pos
+                self.maze[i][j] = False
+            else:
+                new_positions.append(pos)
+                new_colors.append(self.box_colors[i])
+                new_types.append(self.box_types[i])
+                self.box_by_cords[pos] = curr
+                curr += 1
+        self.box_positions = new_positions
+        self.box_types = new_types
+        self.box_colors = new_colors
+
+        invalid_goals = {self.goal_by_cords[i] for i in invalid_positions if i in self.goal_by_cords}
+        if len(invalid_goals) == 0:
+            return
+
+        new_positions = []
+        new_agent = []
+        new_types = []
+        curr = 0
+
+        for i in range(len(self.goal_positions)):
+            pos = self.goal_positions[i]
+            if i in invalid_goals:
+                del self.goal_by_cords[pos]
+            else:
+                new_positions.append(pos)
+                new_agent.append(self.goal_agent[i])
+                new_types.append(self.goal_types[i])
+                self.goal_by_cords[pos] = curr
+                curr += 1
+
+        self.goal_positions = new_positions
+        self.goal_agent = new_agent
+        self.goal_types = new_types
+
+
 
     def in_bounds(self, pos):
         row, col = pos
@@ -369,7 +418,7 @@ class StateMA:
         # TODO make a shallow copy solution
         maze = self.maze
         boxes = [(i,j,k) for i,j,k in zip(self.box_types ,self.box_positions, self.box_colors)]
-        goals = [(i,j) for i,j in zip(self.goal_types ,self.goal_positions)]
+        goals = [(i,j,k) for i,j,k in zip(self.goal_types ,self.goal_positions, self.goal_agent)]
         agents = [(i,j) for i,j in zip(self.agent_positions ,self.agent_colors)]
 
         return StateMA(maze, boxes, goals, agents)
@@ -657,6 +706,41 @@ class StateMA:
 
         return StateSA(maze, boxes, goals, self.agent_positions[agentID])
 
+    def unsolved_goals_to_string(self):
+        lines = []
+        chars = "abcdefghijklmnopqrstuvwxyz"
+        for row in range(self.rows):
+            line = []
+            for col in range(self.cols):
+                pos = (row, col)
+                agent = self.agent_by_cords.get(pos, None)
+                box = self.box_by_cords.get(pos, None)
+                goal = self.goal_by_cords.get(pos, None)
+                wall = ' ' if self.maze[row][col] else '+'
+                if goal is not None:
+                    if self.goal_agent[goal]:
+                        if agent is None or self.goal_types[goal] != agent:
+                            if isinstance(self.goal_types[goal], int):
+                                line.append(chars[self.goal_types[goal]].lower())
+                            else:
+                                line.append(self.goal_types[goal].lower())
+                        else:
+                            line.append(" ")
+                    else:
+
+                        if box is None or self.goal_types[goal] != self.box_types[box]:
+                            if isinstance(self.goal_types[goal], int):
+                                line.append(chars[self.goal_types[goal]].lower())
+                            else:
+                                line.append(self.goal_types[goal].lower())
+                        else:
+                            line.append(" ")
+                else:
+                    line.append(wall)
+            lines.append("".join(line))
+        x = "\n".join(lines)
+        return x
+
 
     def __repr__(self):
         lines = []
@@ -672,12 +756,12 @@ class StateMA:
                 if agent is not None:
                     line.append(str(agent))
                 elif box is not None:
-                    if self.box_types[box] is int:
+                    if isinstance(self.box_types[box], int):
                         line.append(chars[self.box_types[box]].upper())
                     else:
                         line.append(self.box_types[box].upper())
                 elif goal is not None:
-                    if self.goal_types[goal] is int:
+                    if isinstance(self.goal_types[goal], int):
                         line.append(chars[self.goal_types[goal]].lower())
                     else:
                         line.append(self.goal_types[goal].lower())

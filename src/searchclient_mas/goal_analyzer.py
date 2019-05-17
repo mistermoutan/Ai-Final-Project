@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 from state import StateMA, StateSA
 from collections import defaultdict
 import queue
@@ -9,6 +10,16 @@ def get_neighbours(vertex):
     (x, y) = vertex
     return {(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)}
 
+class GoalMetric:
+    def __init__(self, id, loss, spaces_lost, leaf, agent_goal):
+        self.id = id
+        self.storage_loss = loss
+        self.true_loss = spaces_lost
+        self.leaf = leaf
+        self.agent_goal = agent_goal
+
+    def __repr__(self):
+        return "{}: (loss:{}, leaf:{}, agent:{})".format(self.id, self.storage_loss, self.leaf, self.agent_goal)
 
 class GoalAnalyzer:
     def __init__(self, state: StateMA):
@@ -148,7 +159,7 @@ class GoalAnalyzer:
         return important_neighbours < 2, loss, losses
 
     def free_space(self, id):
-        return len(self.rooms[id])
+        return len(self.get_storage_spaces_for_room(id))
 
     def isolated(self,i, id, removed):
         # returns true if a room is isolated from all other vertices
@@ -160,12 +171,14 @@ class GoalAnalyzer:
 
     def compute_loss(self, id, removed):
         # computes the amount of lost free space from adjacent rooms if id is removed
-        loss = 0
+        storage_loss = 0
+        space_loss = 0
         for n in self.connections[id]:
             if n not in removed:
                 if self.isolated(n, id, removed):
-                    loss += self.free_space(n)
-        return loss
+                    storage_loss += self.free_space(n)
+                    space_loss += len(self.rooms[n])
+        return storage_loss, space_loss
 
     def check_cutsafe_cycle(self, id, removed, is_tree):
         neighbours = self.connections[id]
@@ -224,12 +237,6 @@ class GoalAnalyzer:
         # computes a plan on how to order to goals in order to complete them, operates under the assumption that
         # every box is mobile and currently assumes every room has infinite space and goal cells are empty
 
-        # TODO use different metric? perhaps use distance from largest room?
-        #eccentricities = self.compute_goal_eccentricity()
-        #eccentricity_order = [(eccentricities[i], pos) for i, pos in enumerate(self.state.goal_positions)]
-        #eccentricity_order = sorted(eccentricity_order,key=lambda x: -x[0])
-        #eccentricity_order = [x[1] for x in eccentricity_order]
-
         # TODO: find space left  and use as metric as well
 
         removed = set()
@@ -253,7 +260,7 @@ class GoalAnalyzer:
                 cutsafe, cycle = self.check_cutsafe_cycle(i, removed, is_tree)
                 cycle_found = cycle or cycle_found
                 if cutsafe:
-                    loss = self.compute_loss(i, removed)
+                    loss,_ = self.compute_loss(i, removed)
                     if loss == 0 and not cycle:
                         easy_removals.append(i)
                     if loss < lowest:
@@ -275,16 +282,22 @@ class GoalAnalyzer:
 
         return plan
 
-    def get_viable_goals(self, completed):
+    def get_viable_goals(self, completed=set()) -> List[GoalMetric]:
         incomplete_goals = {i for i, _ in enumerate(self.state.goal_positions) if i not in completed}
         available = []
 
         for i in incomplete_goals:
             cutsafe, cycle = self.check_cutsafe_cycle(i, completed, False)
             if cutsafe:
-                available.append(i)
+                storage_loss, space_loss = self.compute_loss(i, completed)
+                available.append(GoalMetric(i, storage_loss, space_loss, not cycle, self.state.goal_agent[i]))
 
+        # TODO: sort them by some metric before returning?
         return available
+
+    def update_viability(self, completed, old_viability, removed):
+        # TODO: we dont have to recompute the whole thing if we know which goal has jsut been completed
+        pass
 
     def get_isolated_by_goal_completion(self, goal, completed):
         """ computes which adjacent rooms will be isolated after given goal is completed given previously completed goals """
