@@ -9,6 +9,7 @@ from planner import Planner
 from level_analyser import LevelAnalyser
 from goal_analyzer import GoalAnalyzer
 from action import NOOP
+from itertools import combinations
 
 #from coordinator import Coordinator
 
@@ -379,7 +380,7 @@ This class decomposes a level into high level problems where tasks can be create
 on possible agents that can bring possible boxes to specific goals
 '''
 class problemDecomposer():
-    def __init__(self,state, graph_of_level):
+    def __init__(self,state, graph_of_level=None):
         self.Tasks = []
         self.Plan = []
         self.state = state
@@ -575,6 +576,65 @@ class problemDecomposer():
 
         self.agt_tasks=[(self.agt_boxes[i],self.agt_goals[i]) for i in range(0,len(self.agt_boxes))]
         return self.agt_tasks
+
+    def find_adj_boxes(self):
+
+        boxes = self.state.box_positions
+        comb = list(combinations(boxes, 2))
+
+        adj_boxes = []
+        for c in comb:
+            if self.are_adjacent(c[0], c[1]):
+                adj_boxes.append((self.state.box_by_cords[c[0]], self.state.box_by_cords[c[1]]))
+
+        adj_types= []
+        for b in adj_boxes:
+            adj_types.append((self.state.box_types[b[0]], self.state.box_types[b[1]]))
+
+        return adj_boxes, adj_types
+
+    def find_adj_goals(self):
+
+        boxes = self.state.goal_positions
+        comb = list(combinations(boxes, 2))
+
+        adj_goals = []
+        for c in comb:
+            if self.are_adjacent(c[0], c[1]):
+                adj_goals.append((self.state.goal_by_cords[c[0]], self.state.goal_by_cords[c[1]]))
+
+        adj_types= []
+        for b in adj_goals:
+            adj_types.append((self.state.goal_types[b[0]], self.state.goal_types[b[1]]))
+
+        return adj_goals, adj_types
+
+    def are_adjacent(self, pos1, pos2):
+
+        x,y= pos1
+        adj_nodes = [(x - 1, y), (x + 1, y), (x, y + 1), (x, y - 1)]
+        if pos2 in adj_nodes:
+            return True
+        else:
+            return False
+
+    def adj_box_goal_number(self):
+        '''
+        get adjacent boxes that also have adjacent goals -> parallel pushing makes sense
+        '''
+        _,adj_box_types = self.find_adj_boxes()
+        _,adj_goal_types = self.find_adj_goals()
+
+        #account for
+        adj_goal_types_twisted = [(g[1],g[0]) for g in adj_goal_types]
+
+        total_adj = [x for x in adj_box_types if x in adj_goal_types or x in adj_goal_types_twisted]
+
+        return len(total_adj), total_adj
+
+
+
+
 
 
     def getTasks(self):
