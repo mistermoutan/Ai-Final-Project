@@ -313,7 +313,7 @@ class ParallelPlanner:
         rooms_to_be_deleted = [self.goal_analyzer.rooms[room_id] for room_id in room_ids]
         rooms_to_be_deleted = set.union(*rooms_to_be_deleted) 
 
-        needed_box_types, needed_agent_ids, needed_agents_colors = self.level_analyzer.salvage_elements(rooms_to_be_deleted,state) 
+        needed_box_types, needed_agent_ids, needed_agents_colors = self.level_analyzer.salvage_elements(rooms_to_be_deleted, state)
         all_agent_ids, all_box_ids = set(), set() # of rooms to be deleted
         total_boxes_needed = sum([value for value in needed_box_types.values()])
         #print('\n',needed_box_types, needed_agent_ids, needed_agents_colors,'\n',file=sys.stderr, flush=True)
@@ -372,16 +372,10 @@ class ParallelPlanner:
 
 
         return state, current_plan
-        return state, must_salvage_elements
+        #return state, must_salvage_elements
                 
         # TODO: remove stuff that you need from this room
         # TODO: put useless stuff in this room?
-
-
-    
-
-    
-
 
     def required(self, item, is_box=True):
         # TODO: determine if we will need this to be accessible after goal is completed
@@ -532,6 +526,19 @@ class ParallelPlanner:
                 return None
         return state, current_plan
 
+    def need_to_clear_rooms(self, goal):
+        room_ids = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
+        rooms_to_be_deleted = [self.goal_analyzer.rooms[room_id] for room_id in room_ids]
+        rooms_to_be_deleted = set.union(*rooms_to_be_deleted)
+        needed_box_types, needed_agent_ids, needed_agents_colors = self.level_analyzer.salvage_elements(
+            rooms_to_be_deleted, self.state)
+
+        for v in needed_box_types.values():
+            if v > 0:
+                return True
+        if len(needed_agent_ids) > 0 or len(needed_agents_colors) > 0:
+            return True
+        return False
 
     def find_goal_plan(self, goal, agent, box):
         plan = []
@@ -543,8 +550,8 @@ class ParallelPlanner:
         if box is not None:
             box_pos = self.state.box_positions[box]
             if box_pos == goal_pos:
-                # TODO: if goal is already solved we may not need to do anything, but we also might want to clear rooms
-                return plan
+                if not self.need_to_clear_rooms(goal):
+                    return plan
 
             box_plan = self.find_easiest_path(box_pos, goal_pos)
             agent_plan = self.find_easiest_path(agent_pos, box_pos)
@@ -558,7 +565,7 @@ class ParallelPlanner:
         # TODO: While clearing path we might have to disallow the agent to return to it by setting the agent parameter as -1
         res = self.clear_path(path, agent, box, goal_pos)
         if res is None:
-            # this is a shitty fixx that might not always work
+            # this is a shitty fix that might not always work
             res = self.clear_path(path, None, box, goal_pos)
             if res is None:
                 return None
