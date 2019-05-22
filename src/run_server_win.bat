@@ -1,1 +1,1 @@
-java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "candidatelevels/SAGroupName.lvl" -g
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp17/SAgroupname.lvl" -g

@@ -542,6 +542,8 @@ class ParallelPlanner:
 
     def need_to_clear_rooms(self, goal):
         room_ids = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
+        if len(room_ids) == 0:
+            return False
         rooms_to_be_deleted = [self.goal_analyzer.rooms[room_id] for room_id in room_ids]
         rooms_to_be_deleted = set.union(*rooms_to_be_deleted)
         needed_box_types, needed_agent_ids, needed_agents_colors = self.level_analyzer.salvage_elements(
@@ -585,7 +587,6 @@ class ParallelPlanner:
                 return None
 
         state, plan = res
-
         isolated_rooms = self.goal_analyzer.get_isolated_by_goal_completion(goal, self.completed)
 
         # TODO: if the path has changed during clearing we need to recompute it here
@@ -917,7 +918,7 @@ class ParallelPlanner:
         end = time.time()
         print("plan computed in:", end - start, ", realizing...", file=sys.stderr, flush=True)
         start = end
-        realizer = ParallelRealizer(self.initial_state, self.dist)
+        realizer = ParallelRealizer(self.initial_state, self.dist, self.solo_agents)
         master_plan = realizer.realize_plan(plan)
         end = time.time()
         print("plan realized in:", end - start, file=sys.stderr, flush=True)

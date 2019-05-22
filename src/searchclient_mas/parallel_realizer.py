@@ -6,6 +6,7 @@ import heapq
 import copy
 import sys
 from distance_comp import DistanceComputer
+from queue import Queue
 import time
 
 
@@ -73,6 +74,14 @@ class HighLevelPartialPlan:
 
         return plan
 
+# Dummy space tracker object for SA
+class SpaceTrackerSA:
+    def __init__(self, spaces):
+        self.spaces = spaces
+
+    def is_free(self, time_step, pos):
+        row, col = pos
+        return self.spaces[row][col]
 
 class SpaceTracker:
     def __init__(self, state: StateMA):
@@ -179,11 +188,12 @@ class SpaceTracker:
 
 
 class ParallelRealizer:
-    def __init__(self, state: StateMA, dist_comp:DistanceComputer):
+    def __init__(self, state: StateMA, dist_comp:DistanceComputer, solo_agents:List):
+        self.solo_agents = solo_agents
         self.dist = dist_comp
         self.state = state
 
-    def get_children(self, state: PlanState, spaces:SpaceTracker):
+    def get_children(self, state: PlanState, spaces:SpaceTracker, allow_wait=True):
         timestep = state.time
         agent_pos = state.agent
         box_pos = state.box
@@ -196,7 +206,8 @@ class ParallelRealizer:
             return []
 
         # noop
-        children.append(PlanState(timestep, agent_pos, box_pos, state))
+        if allow_wait:
+            children.append(PlanState(timestep, agent_pos, box_pos, state))
 
         in_range = False
         for a in get_neighbours(agent_pos):
@@ -217,6 +228,88 @@ class ParallelRealizer:
                     s = PlanState(timestep, a, agent_pos, state)
                     children.append(s)
         return children
+
+    def realize_partial_planSA(self, partial_plan: HighLevelPartialPlan, spaces: SpaceTracker, time=0):
+        spaces = copy.deepcopy(spaces.spaces[-1])
+        agent_curr = partial_plan.agent_origin
+        box_curr = partial_plan.box_pos_origin
+
+        agent_target = partial_plan.agent_end
+        box_target = partial_plan.box_pos_end
+
+        a_x, a_y = agent_curr
+        spaces[a_x][a_y] = True
+
+        allowed_ends = set()
+        max_allowed = 40
+        if box_target is None:
+            allowed_ends.add(agent_target)
+        else:
+            b_x, b_y = box_curr
+            spaces[b_x][b_y] = True
+            be_x, be_y = box_target
+            spaces[be_x][be_y] = False
+
+            q = Queue()
+            q.put(agent_target)
+            while max_allowed > len(allowed_ends) and not q.empty():
+                curr = q.get()
+                if curr in allowed_ends:
+                    continue
+                allowed_ends.add(curr)
+                neighbors = get_neighbours(curr)
+                for n in neighbors:
+                    if spaces[n[0]][n[1]]:
+                        q.put(n)
+
+            spaces[be_x][be_y] = True
+        spaces = SpaceTrackerSA(spaces)
+
+        goal_diff = 0
+        if box_target is not None:
+            goal_diff = self.dist.dist(agent_target, box_target)
+
+        def heuristic(state: PlanState):
+
+            if state.box is None or self.dist.dist(state.box, box_target) == 0:
+                return 5*self.dist.dist(agent_target, state.agent) + state.time
+            else:
+                dist_to_box = self.dist.dist(state.box, state.agent) - 1
+                box_to_goal = self.dist.dist(box_target, state.box)
+
+                # TODO: find some coefficients for the different metrics
+                return 5*(dist_to_box) + 5*box_to_goal + goal_diff + state.time
+
+        initial = PlanState(time, agent_curr, box_curr, None)
+        pq = []
+        seen = set()
+
+        heapq.heappush(pq, (heuristic(initial), initial))
+
+        while pq:
+            _, state = heapq.heappop(pq)
+
+            children = self.get_children(state, spaces)
+
+            done = False
+            for c in children:
+                ba = (c.box, c.agent)
+                if ba not in seen:
+                    seen.add(ba)
+                    h = heuristic(c)
+                    if c.agent in allowed_ends and c.box == box_target:
+                        done = True
+                        goal = c
+                        break
+                    heapq.heappush(pq, (h, c))
+            if done:
+                break
+
+        assert goal is not None, "goal should always be completable here (SA)"
+
+        return goal
+
+
 
     def realize_partial_plan(self, partial_plan: HighLevelPartialPlan, spaces: SpaceTracker, time=0):
         agent_curr = partial_plan.agent_origin
@@ -361,6 +454,10 @@ class ParallelRealizer:
 
         counter = 0
         print("total_partials:", len(high_level_plan), file=sys.stderr)
+        last_position = {}
+        for i in range(len(self.solo_agents)):
+            if self.solo_agents[i]:
+                last_position[i] = None
         for partial in high_level_plan:
             #spaces.print_tracker()
             print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
@@ -373,7 +470,13 @@ class ParallelRealizer:
             # print("next:\n", self.state, file=sys.stderr,flush=True)
             start_step = agent_free[id]
             start = time.time()
-            plan = self.realize_partial_plan(partial, spaces, agent_free[id])
+            if self.solo_agents[id]:
+                if last_position[id] is not None:
+                    partial.agent_origin = last_position[id]
+                plan = self.realize_partial_planSA(partial, spaces, agent_free[id])
+                last_position[id] = plan.agent
+            else:
+                plan = self.realize_partial_plan(partial, spaces, agent_free[id])
             delta = time.time() - start
 
             spaces.update(agent_free[id], plan)
