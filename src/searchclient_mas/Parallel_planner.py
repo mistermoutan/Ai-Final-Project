@@ -51,10 +51,18 @@ class ParallelPlanner:
         self.blocked = set()
         self.completed = set()
         self.agent_business = [0 for _ in state.agent_positions]
+
+        self.solo_agents = [False for _ in range(len(self.state.agent_positions))]
+        for i in range(len(self.state.agent_positions)):
+            room = self.level_analyzer.room_of_agent[i]
+            if len(self.level_analyzer.agents_per_room[room]) == 1:
+                self.solo_agents[i] = True
+
         self.unusable_boxes = set()
         self.unusable_agents = set()
         self.dist = DistanceComputer(self.state)
         self.color_dict = defaultdict(set)
+
         for c,t in zip(self.state.box_colors, self.state.box_types):
             self.color_dict[c].add(t)
 
@@ -160,11 +168,10 @@ class ParallelPlanner:
         if box_final_pos in ignore:
             ignore.remove(box_final_pos)
 
-        if allowed_agent != state.agent_by_cords[box_final_pos]:
-            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, forbidden, cutoff=80)
-        else:
-            agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, set(), cutoff=80)
-
+        if allowed_agent == state.agent_by_cords[box_final_pos]:
+            forbidden = set()
+        agent_node_finished = self.find_path_to_storage(box_final_pos, state, False, ignore, forbidden, cutoff=80)
+        #self.level_analyzer.room_of_agent[]
         if agent_node_finished is None:
 
             # undo state changes made for search
@@ -172,8 +179,15 @@ class ParallelPlanner:
             state.set_box_position(box_final_pos, pos)
 
             return None
-
+        agent_id = state.agent_by_cords[box_final_pos]
         agent_final = agent_node_finished.pos
+
+        # if the agent is alone in the room, he has no need to go to storage
+        if self.solo_agents[agent_id]:
+            while agent_node_finished.pos != box_final_pos:
+                agent_final = agent_node_finished.pos
+                agent_node_finished = agent_node_finished.parent
+
         state.set_agent_position(box_final_pos, agent_final)
 
         return HighLevelPartialPlan(state.agent_by_cords[agent_final], agent_origin, agent_final,
