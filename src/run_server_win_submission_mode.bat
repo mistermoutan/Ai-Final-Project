@@ -1,0 +1,1 @@
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp19" -t 180 -o "GroupName.zip"

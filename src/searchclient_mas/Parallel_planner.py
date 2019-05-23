@@ -950,7 +950,7 @@ class ParallelPlanner:
                 random_plan = self.do_desperate_random_shit()
                 if len(random_plan) > 0 and rand_max >= 0:
                     sys.stdout.write("# could not finish the plan :(, trying random stuff\n")
-                    print(self.state)
+                    #print(self.state)
                     sys.stdout.flush()
                     complete_plan.extend(random_plan)
                 else:

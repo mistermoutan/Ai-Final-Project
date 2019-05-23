@@ -43,10 +43,10 @@ run_cmd = 'java -jar server.jar -c "python searchclient_mas/searchclient.py -par
 # SAWallZ: known failure: may be fixable with random moves
 
 # after improvement:
-# MAbob: unsolved: Agent goal adjacent to final goal (fixable?)
-# MAgTHIRTEEN: sliding puzzle
-# comp19\MASoulman.lvl: unlucky goal picked (fixable?)
-# MAVisualKei
+# MAbob: Agent goal adjacent to final goal, bad randomness in green segment (fixable??)
+# MAgTHIRTEEN: wont be solved by us
+# MASoulman: unlucky goal picked (fixable?)
+# MAVisualKei: Wont be solved by us
 # SAgTHIRTEEN: bad storage (fixable?)
 
 
