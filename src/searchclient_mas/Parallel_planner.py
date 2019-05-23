@@ -701,7 +701,21 @@ class ParallelPlanner:
                     return None
 
             # TODO: check if agent will be useful after goal is complete/ check which space is best storage
+            # if agent_final is None:
+            #     for n in get_neighbours(goal_pos):
+            #         if state.is_free(n) or n == box_pos or n == agent_pos:
+            #             agent_final = n
+            #         else:
+            #             continue
+            #         good = True
+            #         for room in isolated_rooms:
+            #             if n in self.goal_analyzer.rooms[room]:
+            #                 good = False
+            #         if good:
+            #             break
+
             if agent_final is None:
+                best = None
                 for n in get_neighbours(goal_pos):
                     if state.is_free(n) or n == box_pos or n == agent_pos:
                         agent_final = n
@@ -711,8 +725,14 @@ class ParallelPlanner:
                     for room in isolated_rooms:
                         if n in self.goal_analyzer.rooms[room]:
                             good = False
-                    if good:
+                    if good and n not in self.state.goal_by_cords:
+                        best = n
                         break
+                    elif good:
+                        if best is None:
+                            best = n
+                if best is not None:
+                    agent_final = best
 
             assert agent_final is not None, "something fucky happened when choosing final position for agent after delivering box"
             partial = HighLevelPartialPlan(agent, agent_pos, agent_final, box, box_pos, goal_pos)

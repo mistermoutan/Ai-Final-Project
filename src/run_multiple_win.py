@@ -53,6 +53,9 @@ run_cmd = 'java -jar server.jar -c "python searchclient_mas/searchclient.py -par
 # SAMASAI: weird behaviour due to search (still solved)
 # SANulPoint: bad plan: when clearing try to clear stuff close to agents?
 
+# MAGruppeTo: left agents in goals
+# MARegExAZ: left agents in goals
+
 if __name__ == '__main__':
     for sub in os.listdir(main_folder):
         if sub[-4:] == ".lvl":

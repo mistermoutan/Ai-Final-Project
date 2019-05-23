@@ -272,13 +272,13 @@ class ParallelRealizer:
         def heuristic(state: PlanState):
 
             if state.box is None or self.dist.dist(state.box, box_target) == 0:
-                return 5*self.dist.dist(agent_target, state.agent) + state.time
+                return 2*self.dist.dist(agent_target, state.agent) + state.time
             else:
                 dist_to_box = self.dist.dist(state.box, state.agent) - 1
                 box_to_goal = self.dist.dist(box_target, state.box)
 
                 # TODO: find some coefficients for the different metrics
-                return 5*(dist_to_box) + 5*box_to_goal + goal_diff + state.time
+                return 2*(dist_to_box) + 2*box_to_goal + goal_diff + state.time
 
         initial = PlanState(time, agent_curr, box_curr, None)
         pq = []
@@ -375,7 +375,7 @@ class ParallelRealizer:
             # this piece of code can speed up computation but may degrade solution
             est = estimated_time_to_solve(state)
             if est > 10:
-                print("wait skip estimated:", est,file=sys.stderr,flush=True)
+                # print("wait skip estimated:", est,file=sys.stderr,flush=True)
                 t = initial.time
                 while est > 0:
                     t += 1
@@ -460,7 +460,7 @@ class ParallelRealizer:
                 last_position[i] = None
         for partial in high_level_plan:
             #spaces.print_tracker()
-            print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
+            #print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             counter += 1
             id = partial.agent_id
             # print("curr:\n", self.state, file=sys.stderr)
@@ -484,7 +484,7 @@ class ParallelRealizer:
             actions = self.plan_to_actions(plan)
             start = agent_free[id]
             end = agent_free[id] + len(actions)
-            print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
+            #print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
             for i in range(start, end):
                 if i == len(action_plan):
                     action_plan.append([None for _ in agent_free])
