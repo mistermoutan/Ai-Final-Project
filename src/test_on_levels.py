@@ -21,4 +21,4 @@ for level in levels:
 #Command that I used to run the new server:
 #NOTE 1: NAGIVATE TO TOP LEVEL FOLDER (the one outside src)
 #NOTE 2: YOU HAVE TO DELETE OR RENAME GroupName.zip BEFORE YOU RUN THE COMMAND
-#java -jar src/new_server.jar -c 'python3 src/searchclient_mas/searchclient.py -par' -l "src/comp19" -t 180 -o "GroupName.zip"
+#java -jar src/server.jar -c 'python3 src/searchclient_mas/searchclient.py -par' -l "src/comp19" -t 180 -o "GroupName.zip"
