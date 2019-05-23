@@ -141,8 +141,15 @@ class SearchClient:
         elif solver=="par":
             planner = ParallelPlanner(self.initial_state)
             master_plan = planner.solve()
+            
+            #Record the results:
+            results_file = open("results_of_running_levels.txt", "a")
+            output = self.levelname + ", " + str(len(master_plan)) + "\n"
+            results_file.write(output)
+            results_file.close()            
             for action_vector in master_plan:
                 self.sendJointAction(action_vector)
+            
 
 
 
