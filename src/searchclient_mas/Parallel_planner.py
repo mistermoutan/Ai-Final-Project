@@ -949,9 +949,9 @@ class ParallelPlanner:
                 rand_max -= 1
                 random_plan = self.do_desperate_random_shit()
                 if len(random_plan) > 0 and rand_max >= 0:
-                    sys.stdout.write("# could not finish the plan :(, trying random stuff\n")
+                    #sys.stdout.write("# could not finish the plan :(, trying random stuff\n")
                     #print(self.state)
-                    sys.stdout.flush()
+                    #sys.stdout.flush()
                     complete_plan.extend(random_plan)
                 else:
                     sys.stdout.write("# RNG-sus has failed us :(, realizing plan with {} goals completed\n".format(len(self.completed)))
