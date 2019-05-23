@@ -82,8 +82,26 @@ def first_off_path_node(graph, path):
         return neighbours[0]
     return None
 
+def move_box_with_adjacent_agent(graph, agent, box, box_destination, agent_destination):
+  assert are_adjacent(agent, box)
+  assert are_adjacent(agent_destination, box_destination)
 
-
-
-def move_box_to(agent, box, box_destination, agent_destination):
+  box_to_target_path = graph.shortest_path_between(box, box_destination)
+  #
+  if agent_destination in box_to_target_path:
     pass
+
+def move_box_to(state, agent, box, box_destination, agent_destination):
+  
+  
+  """
+  move agent to box
+    - to push position
+    - to pull position 
+  move box to target
+    - pull to target
+    - push to target
+  move agent to destination
+    - move
+  """
+  pass
