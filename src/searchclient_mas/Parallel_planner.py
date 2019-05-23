@@ -83,7 +83,8 @@ class ParallelPlanner:
 
             for i, a_color in enumerate(self.state.agent_colors):
                 if a_color == b_color and i not in self.unusable_agents and i in relevant_agents:
-                    viable_agents.append(i)
+                    if self.state.agent_positions[i] not in self.blocked:
+                        viable_agents.append(i)
 
             g_pos = self.state.goal_positions[goal_id]
             viable_boxes.sort(key=lambda x: self.dist.dist(g_pos, self.state.box_positions[x]))
@@ -649,7 +650,11 @@ class ParallelPlanner:
                 if agent_to_goal is None:
                     return None
             else:
-                pushable = state.is_free(box_to_goal.pos) or box_pos == goal_pos
+                agent_path_set = agent_to_box.to_set()
+                if goal_pos not in agent_path_set:
+                    pushable = state.is_free(box_to_goal.pos) or box_pos == goal_pos
+                else:
+                    pushable = False
 
             can_turn = self.find_path_to_condition(goal_pos, state, check_turning)
             if can_turn is None:

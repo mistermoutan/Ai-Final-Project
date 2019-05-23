@@ -463,11 +463,12 @@ class ParallelRealizer:
             print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             counter += 1
             id = partial.agent_id
-            # print("curr:\n", self.state, file=sys.stderr)
-            # self.state.set_agent_position(partial.agent_origin, partial.agent_end)
-            # if partial.box_id is not None:
-            #      self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
-            # print("next:\n", self.state, file=sys.stderr,flush=True)
+            #print("curr:\n", self.state, file=sys.stderr)
+            #print(partial)
+            #self.state.set_agent_position(partial.agent_origin, partial.agent_end)
+            #if partial.box_id is not None:
+            #     self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
+            #print("next:\n", self.state, file=sys.stderr,flush=True)
             start_step = agent_free[id]
             start = time.time()
             if self.solo_agents[id]:

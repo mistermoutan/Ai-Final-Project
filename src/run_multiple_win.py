@@ -29,14 +29,15 @@ run_cmd = 'java -jar server.jar -c "python searchclient_mas/searchclient.py -par
 # no issues except slow realizer and sometimes subpar plans
 
 # Comp19
-# MAbob: unsolved
+# General: agents seem to trap themselves sometimes when they dont have to
+# MAbob: unsolved: Agent goal adjacent to final goal
 # MAForThePie: does some weird jiggles that waste 1-2 moves occasionally probably due to heuristic in SA solution
 # MAMASAI: might be solvable by doing random moves
-# MANOAsArk: fails for unknown reason
-# MASoulman: extremely slow realizer
+# MANOAsArk: fails for unknown reason: maybe goal pullable?
+# MASoulman: extremely slow realizer, seems unsolvable (at least consistently)
 # SAAvicii: unknown failure: should be easy to solve
 # SAdeepurple: bad plan
-# SAgTHIRTEEN: unknown failure
+# SAgTHIRTEEN: bad storage values
 # SANulPoint: bad plan
 # SARegExAZ: stupid ending, solves goal but keeps moving
 # SAWallZ: known failure: may be fixable with random moves
