@@ -4,6 +4,7 @@ from master_plan import MasterPlan
 from planner import Planner
 from graph import Graph
 from problemDecomposer import problemDecomposer
+from level_analyser import LevelAnalyser
 import sys
 import copy
 
@@ -12,6 +13,7 @@ class Coordinator:
         self.state = state
         self.bfs_counter = 0
         self.graph_of_level = Graph(state.maze, precompute = "all_shortest_paths")
+
 
     def bfs_heuristic(self, state):
         self.bfs_counter += 1
@@ -159,3 +161,38 @@ class Coordinator:
             master_plan.merge_plan_into_master(agent,plan)
 
         return master_plan.plan
+
+    def get_immovable_boxes(self):
+        '''
+        takes state, and a level LevelAnalyser object
+        if there is some room with a box that cant be pushed by any agent, convert it to wall
+        '''
+
+        LA = LevelAnalyser(self.state)
+
+        if LA.separate_rooms_exist():
+            LA.get_agent_distribution_per_room()
+            agents_per_room = LA.agents_per_room
+            LA.get_box_indices_per_room()
+            boxes_per_room = LA.boxes_per_room
+        else:
+            pass
+            #look only at this room
+
+        immovable_boxes = []
+
+        for room in agents_per_room:
+            # print("room: {}".format(room))
+            # agent_colors = [self.state.agent_colors[agt] for agt in agents_per_room[room]]
+            # print("agent_colors: {}".format(agent_colors))
+            # box_colors = [self.state.box_colors[box] for box in boxes_per_room[room]]
+            # print("box_colors: {}".format(box_colors))
+
+            for bx in boxes_per_room[room]:
+                if self.state.box_colors[bx] not in [self.state.agent_colors[a] for a in agents_per_room[room]]:
+                    print("remove box: {} from room: {}".format(bx, room))
+                    immovable_boxes.append(bx)
+
+
+            # potential bug - if there is a box in a color that is none of the agent colors it will not be returned by boxes_per_room
+            # if there is an angent with the same color somewhere in the level (even in other room) it will be detected

@@ -3,14 +3,14 @@ from coordinator import Coordinator
 import unittest
 # format agents, boxes, goals
 a0 = tu.agent(0,'r')
-a1 = tu.agent(1,'r')
-a2 = tu.agent(2,'g')
+a1 = tu.agent(1,'g')
+a2 = tu.agent(2,'y')
 a3 = tu.agent(3,'b')
 
 b0 = tu.box('a','r')
-b1 = tu.box('b','r')
-b2 = tu.box('c','r')
-b3 = tu.box('d','r')
+b1 = tu.box('b','g')
+b2 = tu.box('c','y')
+b3 = tu.box('d','b')
 b4 = tu.box('a','r')
 
 g0 = tu.goal('a')
@@ -39,6 +39,15 @@ matrix2 = [
     [False,False,False,False,False,False,False,False,False,False]
 ]
 
+matrix3 = [
+    [False,False,False,False,False,False,False,False,False,False],
+    [False,b3   ,False,b0   ,a0   ,False,True ,True ,True ,False],
+    [False,True ,False,True ,True ,False,True ,b2   ,a1   ,False],
+    [False,b2   ,False,True ,b1   ,False,True ,True ,True ,False],
+    [False,True ,False,True ,b1   ,False,True ,True ,True ,False],
+    [False,a2   ,False,True ,True ,False,True ,a3   ,True ,False],
+    [False,False,False,False,False,False,False,False,False,False]
+]
 
 st = tu.make_state(matrix2)
 st_SA = st.get_StateSA(0, True)
@@ -84,10 +93,14 @@ def test_heuristic_adv():
     print(coordinator.heuristic_adv(st_SA))
     #assert coordinator.heuristic_adv(st_SA) == 142
 
+def test_remove_unused_boxes():
+    coordinator.get_immovable_boxes()
+
 #test_distance_to()
 #test_min_distance_to_position_in_list()
 #test_distances_to_position_in_list()
 #test_ind_n_dis_goals_to_closest_box()
 
 #test_heuristic()
-test_heuristic_adv()
+#test_heuristic_adv()
+test_remove_unused_boxes()

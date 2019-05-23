@@ -4,10 +4,11 @@ from action import Action,ActionType,Dir
 from typing import List
 import heapq
 import copy
+import sys
+from distance_comp import DistanceComputer
+from queue import Queue
+import time
 
-
-def manhattan_dist(p1, p2):
-    return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
 dir_dict = {
     (-1,0) : Dir.N,
@@ -73,6 +74,14 @@ class HighLevelPartialPlan:
 
         return plan
 
+# Dummy space tracker object for SA
+class SpaceTrackerSA:
+    def __init__(self, spaces):
+        self.spaces = spaces
+
+    def is_free(self, time_step, pos):
+        row, col = pos
+        return self.spaces[row][col]
 
 class SpaceTracker:
     def __init__(self, state: StateMA):
@@ -102,6 +111,10 @@ class SpaceTracker:
     def changes(self, time_step, pos):
         row, col = pos
         return self.latest_update[row][col] > time_step
+
+    def time_til_change(self, time_step, pos):
+        row, col = pos
+        return self.latest_update[row][col] - time_step
 
     def print_time_step(self, t):
         if t >= len(self.spaces):
@@ -175,8 +188,127 @@ class SpaceTracker:
 
 
 class ParallelRealizer:
-    def __init__(self, state: StateMA):
+    def __init__(self, state: StateMA, dist_comp:DistanceComputer, solo_agents:List):
+        self.solo_agents = solo_agents
+        self.dist = dist_comp
         self.state = state
+
+    def get_children(self, state: PlanState, spaces:SpaceTracker, allow_wait=True):
+        timestep = state.time
+        agent_pos = state.agent
+        box_pos = state.box
+        timestep += 1
+        children = []
+        # if something is just about to occupy spaces that are already occupied now we know this cant happen
+        if not spaces.is_free(timestep, agent_pos):
+            return []
+        if box_pos is not None and not spaces.is_free(timestep, box_pos):
+            return []
+
+        # noop
+        if allow_wait:
+            children.append(PlanState(timestep, agent_pos, box_pos, state))
+
+        in_range = False
+        for a in get_neighbours(agent_pos):
+            if a == box_pos:
+                # if a neighbouring space is a box we can perform push and pull actions
+                in_range = True
+                for b in get_neighbours(box_pos):
+                    if b != agent_pos and spaces.is_free(timestep, b):
+                        children.append(PlanState(timestep, a, b, state))
+
+            elif spaces.is_free(timestep, a):
+                children.append(PlanState(timestep, a, box_pos, state))
+
+        # this means we can perform pull actions
+        if in_range:
+            for a in get_neighbours(agent_pos):
+                if spaces.is_free(timestep, a) and a != box_pos:
+                    s = PlanState(timestep, a, agent_pos, state)
+                    children.append(s)
+        return children
+
+    def realize_partial_planSA(self, partial_plan: HighLevelPartialPlan, spaces: SpaceTracker, time=0):
+        spaces = copy.deepcopy(spaces.spaces[-1])
+        agent_curr = partial_plan.agent_origin
+        box_curr = partial_plan.box_pos_origin
+
+        agent_target = partial_plan.agent_end
+        box_target = partial_plan.box_pos_end
+
+        a_x, a_y = agent_curr
+        spaces[a_x][a_y] = True
+
+        allowed_ends = set()
+        max_allowed = 40
+        if box_target is None:
+            allowed_ends.add(agent_target)
+        else:
+            b_x, b_y = box_curr
+            spaces[b_x][b_y] = True
+            be_x, be_y = box_target
+            spaces[be_x][be_y] = False
+
+            q = Queue()
+            q.put(agent_target)
+            while max_allowed > len(allowed_ends) and not q.empty():
+                curr = q.get()
+                if curr in allowed_ends:
+                    continue
+                allowed_ends.add(curr)
+                neighbors = get_neighbours(curr)
+                for n in neighbors:
+                    if spaces[n[0]][n[1]]:
+                        q.put(n)
+
+            spaces[be_x][be_y] = True
+        spaces = SpaceTrackerSA(spaces)
+
+        goal_diff = 0
+        if box_target is not None:
+            goal_diff = self.dist.dist(agent_target, box_target)
+
+        def heuristic(state: PlanState):
+
+            if state.box is None or self.dist.dist(state.box, box_target) == 0:
+                return 5*self.dist.dist(agent_target, state.agent) + state.time
+            else:
+                dist_to_box = self.dist.dist(state.box, state.agent) - 1
+                box_to_goal = self.dist.dist(box_target, state.box)
+
+                # TODO: find some coefficients for the different metrics
+                return 5*(dist_to_box) + 5*box_to_goal + goal_diff + state.time
+
+        initial = PlanState(time, agent_curr, box_curr, None)
+        pq = []
+        seen = set()
+
+        heapq.heappush(pq, (heuristic(initial), initial))
+
+        while pq:
+            _, state = heapq.heappop(pq)
+
+            children = self.get_children(state, spaces)
+
+            done = False
+            for c in children:
+                ba = (c.box, c.agent)
+                if ba not in seen:
+                    seen.add(ba)
+                    h = heuristic(c)
+                    if c.agent in allowed_ends and c.box == box_target:
+                        done = True
+                        goal = c
+                        break
+                    heapq.heappush(pq, (h, c))
+            if done:
+                break
+
+        assert goal is not None, "goal should always be completable here (SA)"
+
+        return goal
+
 
 
     def realize_partial_plan(self, partial_plan: HighLevelPartialPlan, spaces: SpaceTracker, time=0):
@@ -192,7 +324,7 @@ class ParallelRealizer:
 
         goal_diff = 0
         if box_target is not None:
-            goal_diff = manhattan_dist(agent_target, box_target)
+            goal_diff = self.dist.dist(agent_target, box_target)
 
         def heuristic(state: PlanState):
 
@@ -206,64 +338,57 @@ class ParallelRealizer:
             if state.box is not None and spaces.changes(state.time, state.box):
                 changes += 1
 
-            if state.box is None or manhattan_dist(state.box, box_target) == 0:
-                return steps + 5*manhattan_dist(agent_target, state.agent) + changes
+            if state.box is None or self.dist.dist(state.box, box_target) == 0:
+                return steps + 5*self.dist.dist(agent_target, state.agent) + changes
             else:
-                dist_to_box = manhattan_dist(state.agent, state.box) - 1
-                box_to_goal = manhattan_dist(state.box, box_target) + changes
+                dist_to_box = self.dist.dist(state.box, state.agent) - 1
+                box_to_goal = self.dist.dist(box_target, state.box) + changes
 
                 # TODO: find some coefficients for the different metrics
-                return steps + 5*dist_to_box + 5*box_to_goal + goal_diff
-
-        def get_children(state: PlanState):
-            timestep = state.time
-            agent_pos = state.agent
-            box_pos = state.box
-            timestep += 1
-            children = []
-            # if something is just about to occupy spaces that are already occupied now we know this cant happen
-            if not spaces.is_free(timestep, agent_pos):
-                return []
-            if box_pos is not None and not spaces.is_free(timestep, box_pos):
-                return []
-
-            in_range = False
-            for a in get_neighbours(agent_pos):
-                if a == box_pos:
-                    # if a neighbouring space is a box we can perform push and pull actions
-                    in_range = True
-                    for b in get_neighbours(box_pos):
-                        if b != agent_pos and spaces.is_free(timestep, b):
-                            children.append(PlanState(timestep, a, b, state))
-
-                elif spaces.is_free(timestep, a):
-                    children.append(PlanState(timestep, a, box_pos, state))
-
-            # this means we can perform pull actions
-            if in_range:
-                for a in get_neighbours(agent_pos):
-                    if spaces.is_free(timestep, a) and a != box_pos:
-                        s = PlanState(timestep, a, agent_pos, state)
-                        children.append(s)
-
-            # noop
-            children.append(PlanState(timestep, agent_pos, box_pos, state))
-            return children
+                return steps + 5*(dist_to_box) + 5*box_to_goal + goal_diff
 
 
         initial = PlanState(initial_time, agent_curr, box_curr, None)
         pq = []
         seen = set()
+        seen_unchanged = {}
         # TODO: all stuff at time_step > spaces is the same in terms of seen
 
         heapq.heappush(pq, (heuristic(initial), initial))
         goal = None
         best = 99999
         #print("target: a:", agent_target , " b:", box_target)
+
+        def estimated_time_to_solve(state: PlanState):
+            est = 0
+            if state.box is not None and state.box == box_target:
+                return spaces.time_til_change(state.time, box_target)
+            if state.agent != agent_target:
+                return est
+
+            est = max(spaces.time_til_change(state.time, agent_target), est)
+            return est
+
         while pq:
             _, state = heapq.heappop(pq)
 
-            children = get_children(state)
+            # this piece of code can speed up computation but may degrade solution
+            est = estimated_time_to_solve(state)
+            if est > 10:
+                print("wait skip estimated:", est,file=sys.stderr,flush=True)
+                t = initial.time
+                while est > 0:
+                    t += 1
+                    initial = PlanState(t, initial.agent, initial.box, initial)
+                    est -= 1
+                pq = []
+                seen = set()
+                h = heuristic(initial)
+                heapq.heappush(pq, (h, initial))
+                continue
+
+            children = self.get_children(state, spaces)
+
             done = False
             for c in children:
                 if c not in seen:
@@ -271,10 +396,6 @@ class ParallelRealizer:
                     h = heuristic(c)
                     delta = (c.time - initial_time)
                     goal_dist = h - delta
-                    # if goal_dist < best or goal_dist < 0:
-                    #     print(goal_dist,": ",c)
-                    #     h = heuristic(c)
-                    #     best = goal_dist
                     if goal_dist == 0:
                         done = True
                         goal = c
@@ -284,6 +405,7 @@ class ParallelRealizer:
                 break
 
         assert goal is not None, "goal should always be completable here"
+        #print("states seen:", len(seen),file=sys.stderr,flush=True)
 
         return goal
 
@@ -321,28 +443,56 @@ class ParallelRealizer:
 
         return actions
 
+    def estimate_min_completion_time(self, partial_plan: HighLevelPartialPlan):
+        pass
+
+
     def realize_plan(self, high_level_plan: List[HighLevelPartialPlan]):
         agent_free = [0 for _ in self.state.agent_positions]
         action_plan = []
         spaces = SpaceTracker(self.state)
 
         counter = 0
+        print("total_partials:", len(high_level_plan), file=sys.stderr)
+        last_position = {}
+        for i in range(len(self.solo_agents)):
+            if self.solo_agents[i]:
+                last_position[i] = None
         for partial in high_level_plan:
             #spaces.print_tracker()
-            #print("step:", counter)
-            #print("plan:", partial)
+            print("step:", counter, "agent:", partial.agent_id,file=sys.stderr,flush=True)
             counter += 1
             id = partial.agent_id
-            plan = self.realize_partial_plan(partial, spaces, agent_free[id])
+            # print("curr:\n", self.state, file=sys.stderr)
+            # self.state.set_agent_position(partial.agent_origin, partial.agent_end)
+            # if partial.box_id is not None:
+            #      self.state.set_box_position(partial.box_pos_origin, partial.box_pos_end)
+            # print("next:\n", self.state, file=sys.stderr,flush=True)
+            start_step = agent_free[id]
+            start = time.time()
+            if self.solo_agents[id]:
+                if last_position[id] is not None:
+                    partial.agent_origin = last_position[id]
+                plan = self.realize_partial_planSA(partial, spaces, agent_free[id])
+                last_position[id] = plan.agent
+            else:
+                plan = self.realize_partial_plan(partial, spaces, agent_free[id])
+            delta = time.time() - start
+
             spaces.update(agent_free[id], plan)
             actions = self.plan_to_actions(plan)
             start = agent_free[id]
             end = agent_free[id] + len(actions)
+            print("timesteps: (", start_step,"-",end,") time_taken:", delta,"\n",file=sys.stderr,flush=True)
             for i in range(start, end):
                 if i == len(action_plan):
                     action_plan.append([None for _ in agent_free])
 
                 action_plan[i][id] = actions[i - start]
             agent_free[id] = end
+            # if counter == 180:
+            #     print("breaking early for test in realizer\n", file=sys.stderr,flush=True)
+            #     print("last agent planned for:", id)
+            #     break
 
         return action_plan

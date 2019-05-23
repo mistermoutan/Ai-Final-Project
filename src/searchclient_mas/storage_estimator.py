@@ -52,10 +52,14 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
     # returns high values for good storage spaces and low values for bad ones
     # TODO: everything but the adjacency map can be precomputed before even seeing the state and loaded from file
     adj_map = get_adjacency_map(pos, state, ignore_spaces, blocked_spaces)
+    on_goal_penalty = 0
+    if pos in state.goal_positions:
+        on_goal_penalty = 20
     occupied = [space for space in adj_map.keys() if adj_map[space] > 0]
     n_free = 8 - len(occupied)
 
     value = 100
+    value -= on_goal_penalty
     if n_free == 8:
         return value - 1
     elif n_free == 7:
@@ -70,7 +74,7 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
             return value - 10
 
         if adj_map[p1] == wall and adj_map[p2] == wall:
-            return 30
+            return value - 70
 
     curr = 1
     if is_box:
@@ -99,9 +103,9 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
 
     # TODO: check if we are blocking stuff off
     # ex: * is being blocked off from the rest
-    #
+    # #
     # #0#
-    # #*
+    # #*#
     if n_blocked == 3:
         return value - 10 - 5*same - 10*diff - 15*goals
 
@@ -111,8 +115,8 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
 
     # here we check if it is the
     #
-    # *0* or *0
-    #        **
+    # #0# or #0
+    #        ##
     # case
 
     for i in imm_neighbors:
@@ -121,11 +125,11 @@ def storage_value(pos, state: StateMA, ignore_spaces=set(), blocked_spaces=set()
             n = i
             p = prev_dict[i]
 
-            while n not in seen and adj_map[n] == free or adj_map[n] == goal:
+            while n not in seen and (adj_map[n] == free or adj_map[n] == goal):
                 seen.add(n)
                 n = next_dict[n]
 
-            while p not in seen and adj_map[p] == free or adj_map[n] == goal:
+            while p not in seen and (adj_map[p] == free or adj_map[n] == goal):
                 seen.add(p)
                 p = prev_dict[p]
 
@@ -148,7 +152,7 @@ def print_state_storage_values(state: StateMA):
             if not state.maze[i][j]:
                 s += "+"
             else:
-                if not state.is_free(i, j):
+                if not state.maze[i][j]:
                     s += "+"
                 else:
                     val = storage_value((i,j), state)

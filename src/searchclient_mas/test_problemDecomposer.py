@@ -10,14 +10,16 @@ a2 = tu.agent(2,'g')
 a3 = tu.agent(3,'b')
 
 b0 = tu.box('a','r')
-b1 = tu.box('a','r')
-b2 = tu.box('b','b')
-b3 = tu.box('b','b')
+b1 = tu.box('b','r')
+b2 = tu.box('c','b')
+b3 = tu.box('d','b')
+b4 = tu.box('e','b')
 
 g0 = tu.goal('a')
-g1 = tu.goal('a')
-g2 = tu.goal('b')
-g3 = tu.goal('b')
+g1 = tu.goal('b')
+g2 = tu.goal('c')
+g3 = tu.goal('d')
+g4 = tu.goal('e')
 
 #hardcode possible initial state
 matrix = [
@@ -30,9 +32,21 @@ matrix = [
     [False,False,False,False,False,False,False,False,False,False]
 ]
 
-st = tu.make_state(matrix)
-pd = problemDecomposer(st)
+matrix2 = [
+    [False,False,False,False,False,False,False,False,False,False],
+    [False,True ,b0   ,True ,a0   ,True ,True ,g0   ,False,False],
+    [False,True ,b1   ,True ,True ,True ,True ,True ,g1   ,False],
+    [False,True ,b2   ,True ,True ,True ,True ,True ,g2   ,False],
+    [False,True ,b3   ,True ,True ,a1   ,True ,True ,g3   ,False],
+    [False,True ,True ,b4   ,True ,True ,True ,True ,g4   ,False],
+    [False,False,False,False,False,False,False,False,False,False]
+]
+
+st = tu.make_state(matrix2)
 graph = Graph(st.maze)
+pd = problemDecomposer(st, graph)
+
+
 #test for class HTN
 '''
 def test_checkTasksLength():

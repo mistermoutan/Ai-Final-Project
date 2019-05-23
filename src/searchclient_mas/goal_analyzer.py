@@ -11,15 +11,15 @@ def get_neighbours(vertex):
     return {(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)}
 
 class GoalMetric:
-    def __init__(self, id, loss, leaf, agent_goal):
+    def __init__(self, id, loss, spaces_lost, leaf, agent_goal):
         self.id = id
-        self.loss = loss
+        self.storage_loss = loss
+        self.true_loss = spaces_lost
         self.leaf = leaf
         self.agent_goal = agent_goal
 
     def __repr__(self):
-        return "{}: (loss:{}, leaf:{}, agent:{})".format(self.id, self.loss, self.leaf, self.agent_goal)
-
+        return "{}: (loss:{}, leaf:{}, agent:{})".format(self.id, self.storage_loss, self.leaf, self.agent_goal)
 
 class GoalAnalyzer:
     def __init__(self, state: StateMA):
@@ -171,12 +171,14 @@ class GoalAnalyzer:
 
     def compute_loss(self, id, removed):
         # computes the amount of lost free space from adjacent rooms if id is removed
-        loss = 0
+        storage_loss = 0
+        space_loss = 0
         for n in self.connections[id]:
             if n not in removed:
                 if self.isolated(n, id, removed):
-                    loss += self.free_space(n)
-        return loss
+                    storage_loss += self.free_space(n)
+                    space_loss += len(self.rooms[n])
+        return storage_loss, space_loss
 
     def check_cutsafe_cycle(self, id, removed, is_tree):
         neighbours = self.connections[id]
@@ -258,7 +260,7 @@ class GoalAnalyzer:
                 cutsafe, cycle = self.check_cutsafe_cycle(i, removed, is_tree)
                 cycle_found = cycle or cycle_found
                 if cutsafe:
-                    loss = self.compute_loss(i, removed)
+                    loss,_ = self.compute_loss(i, removed)
                     if loss == 0 and not cycle:
                         easy_removals.append(i)
                     if loss < lowest:
@@ -287,7 +289,8 @@ class GoalAnalyzer:
         for i in incomplete_goals:
             cutsafe, cycle = self.check_cutsafe_cycle(i, completed, False)
             if cutsafe:
-                available.append(GoalMetric(i, self.compute_loss(i, completed), not cycle, self.state.goal_agent[i]))
+                storage_loss, space_loss = self.compute_loss(i, completed)
+                available.append(GoalMetric(i, storage_loss, space_loss, not cycle, self.state.goal_agent[i]))
 
         # TODO: sort them by some metric before returning?
         return available
