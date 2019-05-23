@@ -849,6 +849,8 @@ class ParallelPlanner:
                         continue
                     a1_pos = self.state.agent_positions[a1]
                     a2_pos = self.state.agent_positions[a2]
+                    if a1_pos in self.blocked or a2_pos in self.blocked:
+                        continue
                     if self.reachable(a1_pos, a2_pos, self.state, ignore_agents=True):
                         res = (self.state, [])
                     else:
@@ -924,6 +926,7 @@ class ParallelPlanner:
     def compute_plan(self):
         complete_plan = []
         rand_max = 10
+        ScrambledInitial = False
         while len(self.completed) < len(self.state.goal_positions):
             # print(len(self.completed), file=sys.stderr,flush=True)
             viable_goals = self.goal_analyzer.get_viable_goals(self.completed)
@@ -954,9 +957,20 @@ class ParallelPlanner:
                     #sys.stdout.flush()
                     complete_plan.extend(random_plan)
                 else:
-                    sys.stdout.write("# RNG-sus has failed us :(, realizing plan with {} goals completed\n".format(len(self.completed)))
-                    sys.stdout.flush()
-                    return complete_plan
+                    if ScrambledInitial or len(complete_plan) == 0:
+                        sys.stdout.write("# RNG-sus has failed us :(, realizing plan with {} goals completed\n".format(len(self.completed)))
+                        sys.stdout.flush()
+                        return complete_plan
+                    else:
+                        self.__init__(self.initial_state)
+                        #print(self.state, file=sys.stderr)
+                        sys.stdout.write("# checking if randomizing initial state helps\n".format(len(self.completed)))
+                        sys.stdout.flush()
+                        complete_plan = self.do_desperate_random_shit()
+                        ScrambledInitial = True
+                        #complete_plan = []
+                        rand_max = 5
+
                 #assert False, "no solution could be found"
             else:
                 for p in goal_plan:
