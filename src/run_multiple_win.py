@@ -38,9 +38,20 @@ run_cmd = 'java -jar server.jar -c "python searchclient_mas/searchclient.py -par
 # SAAvicii: unknown failure: should be easy to solve
 # SAdeepurple: bad plan
 # SAgTHIRTEEN: bad storage values
-# SANulPoint: bad plan
+# SANulPoint: bad plan: when clearing try to clear stuff close to agents?
 # SARegExAZ: stupid ending, solves goal but keeps moving
 # SAWallZ: known failure: may be fixable with random moves
+
+# after improvement:
+# MAbob: unsolved: Agent goal adjacent to final goal (fixable?)
+# MAgTHIRTEEN: sliding puzzle
+# comp19\MASoulman.lvl: unlucky goal picked (fixable?)
+# MAVisualKei
+# SAgTHIRTEEN: bad storage (fixable?)
+
+
+# SAMASAI: weird behaviour due to search (still solved)
+# SANulPoint: bad plan: when clearing try to clear stuff close to agents?
 
 if __name__ == '__main__':
     for sub in os.listdir(main_folder):

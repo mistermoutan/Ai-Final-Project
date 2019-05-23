@@ -1,1 +1,1 @@
-java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp19\SAgTHIRTEEN.lvl" -g
+java -jar server.jar -c "python searchclient_mas/searchclient.py -par" -l "comp19\MANOAsArk.lvl" -g

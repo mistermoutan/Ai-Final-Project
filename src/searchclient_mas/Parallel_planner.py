@@ -154,11 +154,31 @@ class ParallelPlanner:
         # so we do 3 checks 1 search from the agent, 1 search from the goal and
         # finally we do 1 simple check at the box position
         can_turn = self.find_path_to_condition(pos, state, check_turning, is_free)
-        if can_turn is None:
-            # TODO: we may still be able to come up with a valid plan even if we cant orient the agent
-            return None
-
         box_final_pos = storage_node.pos
+        if can_turn is None:
+            path = storage_node.to_set()
+            push = True
+            if agent_origin in path:
+                push = False
+            agent_final = None
+            ignorable = set()
+            ignorable.add(pos)
+            ignorable.add(agent_origin)
+            for n in get_neighbours(box_final_pos):
+                if n in ignorable or state.is_free(n):
+                    if push and n in path:
+                        agent_final = n
+                    elif not push and n not in path:
+                        agent_final = n
+
+
+            if agent_final is None:
+                return None
+            else:
+                state.set_box_position(pos, box_final_pos)
+                state.set_agent_position(agent_origin, agent_final)
+                return HighLevelPartialPlan(state.agent_by_cords[agent_final], agent_origin, agent_final,
+                                                      box_id, pos, box_final_pos)
 
         state.set_box_position(pos, box_final_pos)
         # Temporarily remove agent from the board before deciding where to put him around the box
@@ -643,6 +663,7 @@ class ParallelPlanner:
             if agent_to_box is None:
                 return None
             box_to_goal = self.find_path_to_condition(box_pos, state, is_goal)
+            agent_to_goal = None
             if box_to_goal is None:
                 # if the box is unable to reach the goal the agent may be able to reach it
                 pushable = False
@@ -667,9 +688,16 @@ class ParallelPlanner:
             if can_turn is None:
                 if pushable:
                     agent_final = box_to_goal.parent.pos
+                elif agent_to_box is not None and agent_to_goal is not None:
+                    box_path = agent_to_box.to_set().union(agent_to_goal.to_set())
+
+                    g_neighbors = get_neighbours(goal_pos)
+                    for n in g_neighbors:
+                        if n not in box_path and self.state.is_free(n):
+                            agent_final = n
+                    if agent_final is None:
+                        return None
                 else:
-                    # TODO: we may still be able to solve the goal even if we pull, we must just insure that there is 1
-                    # extra space left
                     return None
 
             # TODO: check if agent will be useful after goal is complete/ check which space is best storage
@@ -726,6 +754,7 @@ class ParallelPlanner:
                     return goal_plan
 
 
+        original_state = self.state.copy()
         # we could not complete the goal but we might after we unblock some agents
         unblocking_plan = self.mediocre_unblock_agents(goal)
 
@@ -742,6 +771,7 @@ class ParallelPlanner:
                     return unblocking_plan
 
         # we are fucked here
+        self.state = original_state
         return None
 
     def reachable(self, frm, to, state: StateMA=None, ignore_boxes=False, ignore_agents=False):
@@ -787,7 +817,6 @@ class ParallelPlanner:
         max_count = 10
         clearing_plan = []
         #TODO: maybe we wanna restore this state?
-        og_state = self.state
         changed = True
         agent_set_dict = dict()
         for i in room_agents:
@@ -847,8 +876,34 @@ class ParallelPlanner:
             freebies.sort(key=lambda x: x.storage_loss)
             return [g for g in freebies]
 
+    def do_desperate_random_shit(self):
+        random_plan = []
+        # TODO: import random? and randomly select boxes to be moved?
+        for b, b_pos in enumerate(self.state.box_positions):
+            if b_pos in self.blocked:
+                continue
+
+            forbidden = set()
+            forbidden.add(b_pos)
+            partial = self.move_box_to_storage(b_pos, self.state, forbidden)
+            if partial is not None:
+                random_plan.append(partial)
+
+        for a, a_pos in enumerate(self.state.agent_positions):
+            if a_pos in self.blocked:
+                continue
+
+            forbidden = set()
+            forbidden.add(a_pos)
+            partial = self.move_agent_to_storage(a_pos, self.state, forbidden)
+            if partial is not None:
+                random_plan.append(partial)
+        return random_plan
+
+
     def compute_plan(self):
         complete_plan = []
+        rand_max = 10
         while len(self.completed) < len(self.state.goal_positions):
             # print(len(self.completed), file=sys.stderr,flush=True)
             viable_goals = self.goal_analyzer.get_viable_goals(self.completed)
@@ -870,11 +925,18 @@ class ParallelPlanner:
             if goal_plan is None:
                 # TODO: by setting some stuff as immovable we may be able to change path choice to one that is solvable
                 # TODO: by moving some stuff to storage first we may also be able to solve it
-                #sys.stdout.write("# " + self.state.unsolved_goals_to_string())
-                sys.stdout.write("# could not finish the plan :(, realizing current plan with {} goals completed\n".format(len(self.completed)))
-                sys.stdout.flush()
                 #print(self.state, file=sys.stderr, flush=True)
-                return complete_plan
+                rand_max -= 1
+                random_plan = self.do_desperate_random_shit()
+                if len(random_plan) > 0 and rand_max >= 0:
+                    sys.stdout.write("# could not finish the plan :(, trying random stuff\n")
+                    print(self.state)
+                    sys.stdout.flush()
+                    complete_plan.extend(random_plan)
+                else:
+                    sys.stdout.write("# RNG-sus has failed us :(, realizing plan with {} goals completed\n".format(len(self.completed)))
+                    sys.stdout.flush()
+                    return complete_plan
                 #assert False, "no solution could be found"
             else:
                 for p in goal_plan:
