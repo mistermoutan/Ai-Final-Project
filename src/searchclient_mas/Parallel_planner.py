@@ -66,6 +66,8 @@ class ParallelPlanner:
         for c,t in zip(self.state.box_colors, self.state.box_types):
             self.color_dict[c].add(t)
 
+        self.discouraged_storage = defaultdict(int)
+
 
     def find_boxes_and_agents_for_goal(self, goal_id):
         g_type = self.state.goal_types[goal_id]
@@ -253,7 +255,7 @@ class ParallelPlanner:
                         # TODO: what if we are sitting on top of a goal?
                         # TODO: balance this with distance somehow?
                         # TODO: reduce value if going to be blocked and is needed
-                        value = storage_value(n, state, empty, self.blocked, is_box)
+                        value = storage_value(n, state, empty, self.blocked, is_box) - self.discouraged_storage[n]*2
                         if value >= cutoff:
                             return node
                         if value > best_val:
@@ -910,6 +912,7 @@ class ParallelPlanner:
             partial = self.move_box_to_storage(b_pos, self.state, forbidden)
             if partial is not None:
                 random_plan.append(partial)
+                self.discouraged_storage[partial.box_pos_end] += 1
 
         for a, a_pos in enumerate(self.state.agent_positions):
             if a_pos in self.blocked:
